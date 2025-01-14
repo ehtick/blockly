@@ -4,17 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.VariablesDynamic');
+// Former goog.module ID: Blockly.VariablesDynamic
 
 import {Blocks} from './blocks.js';
+import type {FlyoutButton} from './flyout_button.js';
 import {Msg} from './msg.js';
 import * as xml from './utils/xml.js';
 import {VariableModel} from './variable_model.js';
 import * as Variables from './variables.js';
 import type {Workspace} from './workspace.js';
 import type {WorkspaceSvg} from './workspace_svg.js';
-import type {FlyoutButton} from './flyout_button.js';
 
 /**
  * String for use in the "custom" attribute of a category in toolbox XML.
@@ -34,7 +33,7 @@ function stringButtonClickHandler(button: FlyoutButton) {
   Variables.createVariableButtonHandler(
     button.getTargetWorkspace(),
     undefined,
-    'String'
+    'String',
   );
 }
 // eslint-disable-next-line camelcase
@@ -49,7 +48,7 @@ function numberButtonClickHandler(button: FlyoutButton) {
   Variables.createVariableButtonHandler(
     button.getTargetWorkspace(),
     undefined,
-    'Number'
+    'Number',
   );
 }
 // eslint-disable-next-line camelcase
@@ -64,7 +63,7 @@ function colourButtonClickHandler(button: FlyoutButton) {
   Variables.createVariableButtonHandler(
     button.getTargetWorkspace(),
     undefined,
-    'Colour'
+    'Colour',
   );
 }
 // eslint-disable-next-line camelcase
@@ -94,15 +93,15 @@ export function flyoutCategory(workspace: WorkspaceSvg): Element[] {
 
   workspace.registerButtonCallback(
     'CREATE_VARIABLE_STRING',
-    stringButtonClickHandler
+    stringButtonClickHandler,
   );
   workspace.registerButtonCallback(
     'CREATE_VARIABLE_NUMBER',
-    numberButtonClickHandler
+    numberButtonClickHandler,
   );
   workspace.registerButtonCallback(
     'CREATE_VARIABLE_COLOUR',
-    colourButtonClickHandler
+    colourButtonClickHandler,
   );
 
   const blockList = flyoutCategoryBlocks(workspace);

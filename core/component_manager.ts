@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.ComponentManager');
+// Former goog.module ID: Blockly.ComponentManager
 
 import type {IAutoHideable} from './interfaces/i_autohideable.js';
 import type {IComponent} from './interfaces/i_component.js';
@@ -24,10 +23,10 @@ class Capability<_T> {
   static DRAG_TARGET = new Capability<IDragTarget>('drag_target');
   static DELETE_AREA = new Capability<IDeleteArea>('delete_area');
   static AUTOHIDEABLE = new Capability<IAutoHideable>('autohideable');
-  private readonly name_: string;
+  private readonly name: string;
   /** @param name The name of the component capability. */
   constructor(name: string) {
-    this.name_ = name;
+    this.name = name;
   }
 
   /**
@@ -36,7 +35,7 @@ class Capability<_T> {
    * @returns The name.
    */
   toString(): string {
-    return this.name_;
+    return this.name;
   }
 }
 
@@ -70,7 +69,7 @@ export class ComponentManager {
           id +
           '" with capabilities "' +
           this.componentData.get(id)?.capabilities +
-          '" already added.'
+          '" already added.',
       );
     }
     this.componentData.set(id, componentInfo);
@@ -117,12 +116,12 @@ export class ComponentManager {
           capability +
           '". Plugin "' +
           id +
-          '" has not been added to the ComponentManager'
+          '" has not been added to the ComponentManager',
       );
     }
     if (this.hasCapability(id, capability)) {
       console.warn(
-        'Plugin "' + id + 'already has capability "' + capability + '"'
+        'Plugin "' + id + 'already has capability "' + capability + '"',
       );
       return;
     }
@@ -144,7 +143,7 @@ export class ComponentManager {
           capability +
           '". Plugin "' +
           id +
-          '" has not been added to the ComponentManager'
+          '" has not been added to the ComponentManager',
       );
     }
     if (!this.hasCapability(id, capability)) {
@@ -153,7 +152,7 @@ export class ComponentManager {
           id +
           'doesn\'t have capability "' +
           capability +
-          '" to remove'
+          '" to remove',
       );
       return;
     }
@@ -173,7 +172,7 @@ export class ComponentManager {
     capability = `${capability}`.toLowerCase();
     return (
       this.componentData.has(id) &&
-      this.componentData.get(id)!.capabilities.indexOf(capability) !== -1
+      this.componentData.get(id)!.capabilities.includes(capability)
     );
   }
 
@@ -196,7 +195,7 @@ export class ComponentManager {
    */
   getComponents<T extends IComponent>(
     capability: string | Capability<T>,
-    sorted: boolean
+    sorted: boolean,
   ): T[] {
     capability = `${capability}`.toLowerCase();
     const componentIds = this.capabilityToComponentIds.get(capability);
@@ -225,6 +224,16 @@ export class ComponentManager {
 }
 
 export namespace ComponentManager {
+  export enum ComponentWeight {
+    // The toolbox weight is lower (higher precedence) than the flyout, so that
+    // if both are under the pointer, the toolbox takes precedence even though
+    // the flyout's drag target area is large enough to include the toolbox.
+    TOOLBOX_WEIGHT = 0,
+    FLYOUT_WEIGHT = 1,
+    TRASHCAN_WEIGHT = 2,
+    ZOOM_CONTROLS_WEIGHT = 3,
+  }
+
   /** An object storing component information. */
   export interface ComponentDatum {
     component: IComponent;
@@ -233,4 +242,6 @@ export namespace ComponentManager {
   }
 }
 
+export type ComponentWeight = ComponentManager.ComponentWeight;
+export const ComponentWeight = ComponentManager.ComponentWeight;
 export type ComponentDatum = ComponentManager.ComponentDatum;

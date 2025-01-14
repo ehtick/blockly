@@ -4,8 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.utils.deprecation');
+// Former goog.module ID: Blockly.utils.deprecation
+
+// Set of previously-emitted warnings.
+const previousWarnings = new Set();
 
 /**
  * Warn developers that a function or property is deprecated.
@@ -22,7 +24,7 @@ export function warn(
   name: string,
   deprecationDate: string,
   deletionDate: string,
-  opt_use?: string
+  opt_use?: string,
 ) {
   let msg =
     name +
@@ -34,5 +36,12 @@ export function warn(
   if (opt_use) {
     msg += '\nUse ' + opt_use + ' instead.';
   }
+
+  // Don't log deprecation warnings multiple times.
+  if (previousWarnings.has(msg)) {
+    return;
+  }
+
+  previousWarnings.add(msg);
   console.warn(msg);
 }

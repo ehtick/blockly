@@ -10,11 +10,9 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.BasicCursor');
+// Former goog.module ID: Blockly.BasicCursor
 
 import * as registry from '../registry.js';
-
 import {ASTNode} from './ast_node.js';
 import {Cursor} from './cursor.js';
 
@@ -105,7 +103,7 @@ export class BasicCursor extends Cursor {
    */
   protected getNextNode_(
     node: ASTNode | null,
-    isValid: (p1: ASTNode | null) => boolean
+    isValid: (p1: ASTNode | null) => boolean,
   ): ASTNode | null {
     if (!node) {
       return null;
@@ -138,7 +136,7 @@ export class BasicCursor extends Cursor {
    */
   protected getPreviousNode_(
     node: ASTNode | null,
-    isValid: (p1: ASTNode | null) => boolean
+    isValid: (p1: ASTNode | null) => boolean,
   ): ASTNode | null {
     if (!node) {
       return null;
@@ -220,5 +218,5 @@ export class BasicCursor extends Cursor {
 registry.register(
   registry.Type.CURSOR,
   BasicCursor.registrationName,
-  BasicCursor
+  BasicCursor,
 );

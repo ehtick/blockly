@@ -10,8 +10,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.ThemeManager');
+// Former goog.module ID: Blockly.ThemeManager
 
 import type {Theme} from './theme.js';
 import * as arrayUtils from './utils/array.js';
@@ -24,7 +23,7 @@ import type {WorkspaceSvg} from './workspace_svg.js';
  */
 export class ThemeManager {
   /** A list of workspaces that are subscribed to this theme. */
-  private subscribedWorkspaces_: Workspace[] = [];
+  private subscribedWorkspaces: Workspace[] = [];
   private componentDB = new Map<string, Component[]>();
 
   /**
@@ -32,7 +31,10 @@ export class ThemeManager {
    * @param theme The workspace theme.
    * @internal
    */
-  constructor(private readonly workspace: WorkspaceSvg, private theme: Theme) {}
+  constructor(
+    private readonly workspace: WorkspaceSvg,
+    private theme: Theme,
+  ) {}
 
   /**
    * Get the workspace theme.
@@ -71,7 +73,7 @@ export class ThemeManager {
     // Refresh all subscribed workspaces.
     for (
       let i = 0, workspace;
-      (workspace = this.subscribedWorkspaces_[i]);
+      (workspace = this.subscribedWorkspaces[i]);
       i++
     ) {
       (workspace as WorkspaceSvg).refreshTheme();
@@ -87,7 +89,7 @@ export class ThemeManager {
       }
     }
 
-    for (const workspace of this.subscribedWorkspaces_) {
+    for (const workspace of this.subscribedWorkspaces) {
       (workspace as WorkspaceSvg).hideChaff();
     }
   }
@@ -100,7 +102,7 @@ export class ThemeManager {
    * @internal
    */
   subscribeWorkspace(workspace: Workspace) {
-    this.subscribedWorkspaces_.push(workspace);
+    this.subscribedWorkspaces.push(workspace);
   }
 
   /**
@@ -110,9 +112,9 @@ export class ThemeManager {
    * @internal
    */
   unsubscribeWorkspace(workspace: Workspace) {
-    if (!arrayUtils.removeElem(this.subscribedWorkspaces_, workspace)) {
+    if (!arrayUtils.removeElem(this.subscribedWorkspaces, workspace)) {
       throw Error(
-        "Cannot unsubscribe a workspace that hasn't been subscribed."
+        "Cannot unsubscribe a workspace that hasn't been subscribed.",
       );
     }
   }
@@ -130,7 +132,7 @@ export class ThemeManager {
   subscribe(
     element: HTMLElement | SVGElement,
     componentName: string,
-    propertyName: string
+    propertyName: string,
   ) {
     if (!this.componentDB.has(componentName)) {
       this.componentDB.set(componentName, []);
@@ -171,11 +173,10 @@ export class ThemeManager {
   /**
    * Dispose of this theme manager.
    *
-   * @suppress {checkTypes}
    * @internal
    */
   dispose() {
-    this.subscribedWorkspaces_.length = 0;
+    this.subscribedWorkspaces.length = 0;
     this.componentDB.clear();
   }
 }

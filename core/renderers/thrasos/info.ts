@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.thrasos.RenderInfo');
+// Former goog.module ID: Blockly.thrasos.RenderInfo
 
 import type {BlockSvg} from '../../block_svg.js';
 import {RenderInfo as BaseRenderInfo} from '../common/info.js';
@@ -16,7 +15,6 @@ import {InRowSpacer} from '../measurables/in_row_spacer.js';
 import type {Row} from '../measurables/row.js';
 import type {TopRow} from '../measurables/top_row.js';
 import {Types} from '../measurables/types.js';
-
 import type {Renderer} from './renderer.js';
 
 /**
@@ -66,8 +64,8 @@ export class RenderInfo extends BaseRenderInfo {
         row.elements.push(
           new InRowSpacer(
             this.constants_,
-            this.getInRowSpacing_(null, oldElems[0])
-          )
+            this.getInRowSpacing_(null, oldElems[0]),
+          ),
         );
       }
       if (!oldElems.length) {
@@ -82,7 +80,7 @@ export class RenderInfo extends BaseRenderInfo {
       if (row.endsWithElemSpacer()) {
         let spacing = this.getInRowSpacing_(
           oldElems[oldElems.length - 1],
-          null
+          null,
         );
         if (hasExternalInputs && row.hasDummyInput) {
           spacing += this.constants_.TAB_WIDTH;
@@ -290,7 +288,7 @@ export class RenderInfo extends BaseRenderInfo {
 
       widestRowWithConnectedBlocks = Math.max(
         widestRowWithConnectedBlocks,
-        row.widthWithConnectedBlocks
+        row.widthWithConnectedBlocks,
       );
       // Add padding to the bottom row if block height is less than minimum
       const heightWithoutHat = yCursor - this.topRow.ascenderHeight;
@@ -315,7 +313,7 @@ export class RenderInfo extends BaseRenderInfo {
         // Include width of connected block in value to stack width measurement.
         widestRowWithConnectedBlocks = Math.max(
           widestRowWithConnectedBlocks,
-          target.getHeightWidth().width
+          target.getHeightWidth().width,
         );
       }
     }

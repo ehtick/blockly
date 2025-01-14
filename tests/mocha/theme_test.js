@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.theme');
-
+import {EventType} from '../../build/src/core/events/type.js';
+import {assert} from '../../node_modules/chai/chai.js';
 import {assertEventFired} from './test_helpers/events.js';
-import * as eventUtils from '../../build/src/core/events/utils.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -77,7 +76,7 @@ suite('Theme', function () {
   function stringifyAndCompare(val1, val2) {
     const stringVal1 = JSON.stringify(val1);
     const stringVal2 = JSON.stringify(val2);
-    chai.assert.equal(stringVal1, stringVal2);
+    assert.equal(stringVal1, stringVal2);
   }
 
   test('Set All BlockStyles', function () {
@@ -128,7 +127,7 @@ suite('Theme', function () {
     try {
       const blockStyles = createBlockStyles();
       const theme = new Blockly.Theme('themeName', blockStyles);
-      workspace = new Blockly.WorkspaceSvg(new Blockly.Options({}));
+      workspace = Blockly.inject('blocklyDiv', {});
       const blockA = workspace.newBlock('stack_block');
 
       blockA.setStyle = function () {
@@ -136,7 +135,7 @@ suite('Theme', function () {
       };
       const refreshToolboxSelectionStub = sinon.stub(
         workspace,
-        'refreshToolboxSelection'
+        'refreshToolboxSelection',
       );
       blockA.styleName_ = 'styleOne';
 
@@ -146,7 +145,7 @@ suite('Theme', function () {
       stringifyAndCompare(workspace.getTheme(), theme);
 
       // Checks that the setTheme function was called on the block
-      chai.assert.equal(blockA.getStyleName(), 'styleTwo');
+      assert.equal(blockA.getStyleName(), 'styleTwo');
 
       // Checks that the toolbox refreshed method was called
       sinon.assert.calledOnce(refreshToolboxSelectionStub);
@@ -154,8 +153,8 @@ suite('Theme', function () {
       assertEventFired(
         this.eventsFireStub,
         Blockly.Events.ThemeChange,
-        {themeName: 'themeName', type: eventUtils.THEME_CHANGE},
-        workspace.id
+        {themeName: 'themeName', type: EventType.THEME_CHANGE},
+        workspace.id,
       );
     } finally {
       workspaceTeardown.call(this, workspace);
@@ -177,7 +176,7 @@ suite('Theme', function () {
       };
       stringifyAndCompare(
         this.constants.validatedBlockStyle_(inputStyle),
-        expectedOutput
+        expectedOutput,
       );
     });
 
@@ -191,7 +190,7 @@ suite('Theme', function () {
       };
       stringifyAndCompare(
         this.constants.validatedBlockStyle_(inputStyle),
-        expectedOutput
+        expectedOutput,
       );
     });
 
@@ -207,7 +206,7 @@ suite('Theme', function () {
       };
       stringifyAndCompare(
         this.constants.validatedBlockStyle_(inputStyle),
-        expectedOutput
+        expectedOutput,
       );
     });
 
@@ -226,7 +225,7 @@ suite('Theme', function () {
       };
       stringifyAndCompare(
         this.constants.validatedBlockStyle_(inputStyle),
-        expectedOutput
+        expectedOutput,
       );
     });
 
@@ -244,7 +243,7 @@ suite('Theme', function () {
       };
       stringifyAndCompare(
         this.constants.validatedBlockStyle_(inputStyle),
-        expectedOutput
+        expectedOutput,
       );
     });
 
@@ -260,7 +259,7 @@ suite('Theme', function () {
       };
       stringifyAndCompare(
         this.constants.validatedBlockStyle_(inputStyle),
-        expectedOutput
+        expectedOutput,
       );
     });
 
@@ -278,7 +277,7 @@ suite('Theme', function () {
       };
       stringifyAndCompare(
         this.constants.validatedBlockStyle_(inputStyle),
-        expectedOutput
+        expectedOutput,
       );
     });
 
@@ -294,7 +293,7 @@ suite('Theme', function () {
       };
       stringifyAndCompare(
         this.constants.validatedBlockStyle_(inputStyle),
-        expectedOutput
+        expectedOutput,
       );
     });
   });
@@ -302,7 +301,7 @@ suite('Theme', function () {
   suite('defineTheme', function () {
     test('Normalizes to lowercase', function () {
       const theme = Blockly.Theme.defineTheme('TEST', {});
-      chai.assert.equal(theme.name, 'test');
+      assert.equal(theme.name, 'test');
     });
   });
 });

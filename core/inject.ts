@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.inject');
+// Former goog.module ID: Blockly.inject
 
 import type {BlocklyOptions} from './blockly_options.js';
 import * as browserEvents from './browser_events.js';
@@ -23,7 +22,6 @@ import * as Touch from './touch.js';
 import * as aria from './utils/aria.js';
 import * as dom from './utils/dom.js';
 import {Svg} from './utils/svg.js';
-import * as userAgent from './utils/useragent.js';
 import * as WidgetDiv from './widgetdiv.js';
 import {WorkspaceSvg} from './workspace_svg.js';
 
@@ -36,7 +34,7 @@ import {WorkspaceSvg} from './workspace_svg.js';
  */
 export function inject(
   container: Element | string,
-  opt_options?: BlocklyOptions
+  opt_options?: BlocklyOptions,
 ): WorkspaceSvg {
   let containerElement: Element | null = null;
   if (typeof container === 'string') {
@@ -46,19 +44,25 @@ export function inject(
     containerElement = container;
   }
   // Verify that the container is in document.
-  if (!document.contains(containerElement)) {
+  if (
+    !document.contains(containerElement) &&
+    document !== containerElement?.ownerDocument
+  ) {
     throw Error('Error: container is not in current document');
   }
   const options = new Options(opt_options || ({} as BlocklyOptions));
   const subContainer = document.createElement('div');
-  subContainer.className = 'injectionDiv';
+  dom.addClass(subContainer, 'injectionDiv');
+  if (opt_options?.rtl) {
+    dom.addClass(subContainer, 'blocklyRTL');
+  }
   subContainer.tabIndex = 0;
   aria.setState(subContainer, aria.State.LABEL, Msg['WORKSPACE_ARIA_LABEL']);
 
   containerElement!.appendChild(subContainer);
   const svg = createDom(subContainer, options);
 
-  const workspace = createMainWorkspace(svg, options);
+  const workspace = createMainWorkspace(subContainer, svg, options);
 
   init(workspace);
 
@@ -71,6 +75,18 @@ export function inject(
   subContainer.addEventListener('focusin', function () {
     common.setMainWorkspace(workspace);
   });
+
+  browserEvents.conditionalBind(subContainer, 'keydown', null, onKeyDown);
+  browserEvents.conditionalBind(
+    dropDownDiv.getContentDiv(),
+    'keydown',
+    null,
+    onKeyDown,
+  );
+  const widgetContainer = WidgetDiv.getDiv();
+  if (widgetContainer) {
+    browserEvents.conditionalBind(widgetContainer, 'keydown', null, onKeyDown);
+  }
 
   return workspace;
 }
@@ -112,7 +128,7 @@ function createDom(container: Element, options: Options): SVGElement {
       'class': 'blocklySvg',
       'tabindex': '0',
     },
-    container
+    container,
   );
   /*
     <defs>
@@ -136,15 +152,20 @@ function createDom(container: Element, options: Options): SVGElement {
  * @param options Dictionary of options.
  * @returns Newly created main workspace.
  */
-function createMainWorkspace(svg: SVGElement, options: Options): WorkspaceSvg {
+function createMainWorkspace(
+  injectionDiv: Element,
+  svg: SVGElement,
+  options: Options,
+): WorkspaceSvg {
   options.parentWorkspace = null;
   const mainWorkspace = new WorkspaceSvg(options);
   const wsOptions = mainWorkspace.options;
   mainWorkspace.scale = wsOptions.zoomOptions.startScale;
-  svg.appendChild(mainWorkspace.createDom('blocklyMainBackground'));
+  svg.appendChild(
+    mainWorkspace.createDom('blocklyMainBackground', injectionDiv),
+  );
 
   // Set the theme name and renderer name onto the injection div.
-  const injectionDiv = mainWorkspace.getInjectionDiv();
   const rendererClassName = mainWorkspace.getRenderer().getClassName();
   if (rendererClassName) {
     dom.addClass(injectionDiv, rendererClassName);
@@ -174,7 +195,7 @@ function createMainWorkspace(svg: SVGElement, options: Options): WorkspaceSvg {
   mainWorkspace.translate(0, 0);
 
   mainWorkspace.addChangeListener(
-    bumpObjects.bumpIntoBoundsHandler(mainWorkspace)
+    bumpObjects.bumpIntoBoundsHandler(mainWorkspace),
   );
 
   // The SVG is now fully assembled.
@@ -203,7 +224,7 @@ function init(mainWorkspace: WorkspaceSvg) {
       if (!browserEvents.isTargetInput(e)) {
         e.preventDefault();
       }
-    }
+    },
   );
 
   const workspaceResizeHandler = browserEvents.conditionalBind(
@@ -219,7 +240,7 @@ function init(mainWorkspace: WorkspaceSvg) {
       WidgetDiv.repositionForWindowResize();
       common.svgResize(mainWorkspace);
       bumpObjects.bumpTopObjectsIntoBounds(mainWorkspace);
-    }
+    },
   );
   mainWorkspace.setResizeHandlerWrapper(workspaceResizeHandler);
 
@@ -258,7 +279,7 @@ function init(mainWorkspace: WorkspaceSvg) {
       mainWorkspace,
       horizontalScroll,
       verticalScroll,
-      'blocklyMainWorkspaceScrollbar'
+      'blocklyMainWorkspaceScrollbar',
     );
     mainWorkspace.scrollbar.resize();
   } else {
@@ -310,8 +331,6 @@ let documentEventsBound = false;
  * Most of these events should be bound to the SVG's surface.
  * However, 'mouseup' has to be on the whole document so that a block dragged
  * out of bounds and released will know that it has been released.
- * Also, 'keydown' has to be on the whole document since the browser doesn't
- * understand a concept of focus on the SVG image.
  */
 function bindDocumentEvents() {
   if (!documentEventsBound) {
@@ -323,23 +342,10 @@ function bindDocumentEvents() {
         }
       }
     });
-    browserEvents.conditionalBind(document, 'keydown', null, onKeyDown);
     // longStop needs to run to stop the context menu from showing up.  It
     // should run regardless of what other touch event handlers have run.
     browserEvents.bind(document, 'touchend', null, Touch.longStop);
     browserEvents.bind(document, 'touchcancel', null, Touch.longStop);
-    // Some iPad versions don't fire resize after portrait to landscape change.
-    if (userAgent.IPAD) {
-      browserEvents.conditionalBind(
-        window,
-        'orientationchange',
-        document,
-        function () {
-          // TODO (#397): Fix for multiple Blockly workspaces.
-          common.svgResize(common.getMainWorkspace() as WorkspaceSvg);
-        }
-      );
-    }
   }
   documentEventsBound = true;
 }
@@ -358,7 +364,7 @@ function loadSounds(pathToMedia: string, workspace: WorkspaceSvg) {
       pathToMedia + 'click.wav',
       pathToMedia + 'click.ogg',
     ],
-    'click'
+    'click',
   );
   audioMgr.load(
     [
@@ -366,7 +372,7 @@ function loadSounds(pathToMedia: string, workspace: WorkspaceSvg) {
       pathToMedia + 'disconnect.mp3',
       pathToMedia + 'disconnect.ogg',
     ],
-    'disconnect'
+    'disconnect',
   );
   audioMgr.load(
     [
@@ -374,7 +380,7 @@ function loadSounds(pathToMedia: string, workspace: WorkspaceSvg) {
       pathToMedia + 'delete.ogg',
       pathToMedia + 'delete.wav',
     ],
-    'delete'
+    'delete',
   );
 
   // Bind temporary hooks that preload the sounds.
@@ -404,8 +410,8 @@ function loadSounds(pathToMedia: string, workspace: WorkspaceSvg) {
       'pointermove',
       null,
       unbindSounds,
-      true
-    )
+      true,
+    ),
   );
   soundBinds.push(
     browserEvents.conditionalBind(
@@ -413,7 +419,7 @@ function loadSounds(pathToMedia: string, workspace: WorkspaceSvg) {
       'touchstart',
       null,
       unbindSounds,
-      true
-    )
+      true,
+    ),
   );
 }

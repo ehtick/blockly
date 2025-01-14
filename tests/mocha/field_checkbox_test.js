@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.fieldCheckbox');
-
 import * as Blockly from '../../build/src/core/blockly.js';
+import {assert} from '../../node_modules/chai/chai.js';
+import {defineRowBlock} from './test_helpers/block_definitions.js';
 import {
   assertFieldValue,
   runConstructorSuiteTests,
@@ -18,7 +18,6 @@ import {
   sharedTestTeardown,
   workspaceTeardown,
 } from './test_helpers/setup_teardown.js';
-import {defineRowBlock} from './test_helpers/block_definitions.js';
 
 suite('Checkbox Fields', function () {
   setup(function () {
@@ -99,7 +98,7 @@ suite('Checkbox Fields', function () {
     assertFieldValue(
       field,
       testCase.expectedValue,
-      testCase.expectedValue.toLowerCase()
+      testCase.expectedValue.toLowerCase(),
     );
   };
 
@@ -108,7 +107,7 @@ suite('Checkbox Fields', function () {
     validValueTestCases,
     invalidValueTestCases,
     validTestCaseAssertField,
-    assertFieldDefault
+    assertFieldDefault,
   );
 
   runFromJsonSuiteTests(
@@ -116,7 +115,7 @@ suite('Checkbox Fields', function () {
     validValueTestCases,
     invalidValueTestCases,
     validTestCaseAssertField,
-    assertFieldDefault
+    assertFieldDefault,
   );
 
   suite('setValue', function () {
@@ -128,7 +127,7 @@ suite('Checkbox Fields', function () {
         validValueTestCases,
         invalidValueTestCases,
         'TRUE',
-        'true'
+        'true',
       );
     });
     suite('False -> New Value', function () {
@@ -139,7 +138,7 @@ suite('Checkbox Fields', function () {
         validValueTestCases,
         invalidValueTestCases,
         'FALSE',
-        'false'
+        'false',
       );
     });
   });
@@ -189,7 +188,7 @@ suite('Checkbox Fields', function () {
           assertFieldValue(
             this.field,
             suiteInfo.expectedValue,
-            String(suiteInfo.expectedValue).toLowerCase()
+            String(suiteInfo.expectedValue).toLowerCase(),
           );
         });
       });
@@ -201,7 +200,7 @@ suite('Checkbox Fields', function () {
         field.fieldGroup_ = Blockly.utils.dom.createSvgElement(
           Blockly.utils.Svg.G,
           {},
-          null
+          null,
         );
         field.sourceBlock_ = {
           RTL: false,
@@ -225,7 +224,7 @@ suite('Checkbox Fields', function () {
         };
         field.initView();
         field.render_();
-        chai.assert(field.textContent_.nodeValue, char);
+        assert(field.textContent_.nodeValue, char);
       }
       test('Constant', function () {
         const checkChar = Blockly.FieldCheckbox.CHECK_CHAR;
@@ -253,7 +252,7 @@ suite('Checkbox Fields', function () {
         assertCharacter(field, Blockly.FieldCheckbox.CHECK_CHAR);
         field.setCheckCharacter('\u2661');
         // Don't call assertCharacter b/c we don't want to re-initialize.
-        chai.assert.equal(field.textContent_.nodeValue, '\u2661');
+        assert.equal(field.textContent_.nodeValue, '\u2661');
       });
       test('setCheckCharacter Before Init', function () {
         const field = new Blockly.FieldCheckbox();
@@ -266,10 +265,7 @@ suite('Checkbox Fields', function () {
         });
         assertCharacter(field, '\u2661');
         field.setCheckCharacter(null);
-        chai.assert(
-          field.textContent_.nodeValue,
-          Blockly.FieldCheckbox.CHECK_CHAR
-        );
+        assert(field.textContent_.nodeValue, Blockly.FieldCheckbox.CHECK_CHAR);
       });
     });
   });
@@ -284,7 +280,7 @@ suite('Checkbox Fields', function () {
         const field = new Blockly.FieldCheckbox(value);
         block.getInput('INPUT').appendField(field, 'CHECK');
         const jso = Blockly.serialization.blocks.save(block);
-        chai.assert.deepEqual(jso['fields'], {'CHECK': value});
+        assert.deepEqual(jso['fields'], {'CHECK': value});
       };
     });
 

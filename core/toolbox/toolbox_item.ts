@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.ToolboxItem');
+// Former goog.module ID: Blockly.ToolboxItem
 
 import type {ICollapsibleToolboxItem} from '../interfaces/i_collapsible_toolbox_item.js';
 import type {IToolbox} from '../interfaces/i_toolbox.js';
@@ -40,7 +39,7 @@ export class ToolboxItem implements IToolboxItem {
   constructor(
     toolboxItemDef: toolbox.ToolboxItemInfo,
     parentToolbox: IToolbox,
-    opt_parent?: ICollapsibleToolboxItem
+    opt_parent?: ICollapsibleToolboxItem,
   ) {
     /** The ID for the category. */
     this.id_ =

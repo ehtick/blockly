@@ -6,6 +6,9 @@
 
 import type {IIcon} from '../interfaces/i_icon.js';
 
+/**
+ * Thrown when you add more than one icon of the same type to a block.
+ */
 export class DuplicateIconType extends Error {
   /**
    * @internal
@@ -14,7 +17,7 @@ export class DuplicateIconType extends Error {
     super(
       `Tried to append an icon of type ${icon.getType()} when an icon of ` +
         `that type already exists on the block. ` +
-        `Use getIcon to access the existing icon.`
+        `Use getIcon to access the existing icon.`,
     );
   }
 }

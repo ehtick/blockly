@@ -19,20 +19,15 @@ const path = require('path');
 // - tests/scripts/compile_typings.sh
 // - tests/scripts/check_metadata.sh
 // - tests/scripts/update_metadata.sh
-// - tests/bootstrap.js (for location of deps.js)
-// - tests/mocha/index.html (for location of deps.mocha.js)
 
 // Directory to write compiled output to.
 exports.BUILD_DIR = 'build';
 
-// Dependencies file (used by bootstrap.js in uncompiled mode):
-exports.DEPS_FILE = path.join(exports.BUILD_DIR, 'deps.js');
-
-// Mocha test dependencies file (used by tests/mocha/index.html):
-exports.TEST_DEPS_FILE = path.join(exports.BUILD_DIR, 'deps.mocha.js');
-
 // Directory to write typings output to.
 exports.TYPINGS_BUILD_DIR = path.join(exports.BUILD_DIR, 'declarations');
+
+// Directory to write langfile output to.
+exports.LANG_BUILD_DIR = path.join(exports.BUILD_DIR, 'msg');
 
 // Directory where typescript compiler output can be found.
 // Matches the value in tsconfig.json: outDir

@@ -9,25 +9,24 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.BlockCreate');
+// Former goog.module ID: Blockly.Events.BlockCreate
 
 import type {Block} from '../block.js';
 import * as registry from '../registry.js';
 import * as blocks from '../serialization/blocks.js';
 import * as utilsXml from '../utils/xml.js';
-import * as Xml from '../xml.js';
-
-import {BlockBase, BlockBaseJson} from './events_block_base.js';
-import * as eventUtils from './utils.js';
 import {Workspace} from '../workspace.js';
+import * as Xml from '../xml.js';
+import {BlockBase, BlockBaseJson} from './events_block_base.js';
+import {EventType} from './type.js';
+import * as eventUtils from './utils.js';
 
 /**
  * Notifies listeners when a block (or connected stack of blocks) is
  * created.
  */
 export class BlockCreate extends BlockBase {
-  override type = eventUtils.BLOCK_CREATE;
+  override type = EventType.BLOCK_CREATE;
 
   /** The XML representation of the created block(s). */
   xml?: Element | DocumentFragment;
@@ -67,19 +66,19 @@ export class BlockCreate extends BlockBase {
     if (!this.xml) {
       throw new Error(
         'The block XML is undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (!this.ids) {
       throw new Error(
         'The block IDs are undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (!this.json) {
       throw new Error(
         'The block JSON is undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     json['xml'] = Xml.domToText(this.xml);
@@ -103,12 +102,12 @@ export class BlockCreate extends BlockBase {
   static fromJson(
     json: BlockCreateJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): BlockCreate {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new BlockCreate()
+      event ?? new BlockCreate(),
     ) as BlockCreate;
     newEvent.xml = utilsXml.textToDom(json['xml']);
     newEvent.ids = json['ids'];
@@ -129,15 +128,16 @@ export class BlockCreate extends BlockBase {
     if (!this.json) {
       throw new Error(
         'The block JSON is undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (!this.ids) {
       throw new Error(
         'The block IDs are undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
+    if (allShadowBlocks(workspace, this.ids)) return;
     if (forward) {
       blocks.append(this.json, workspace);
     } else {
@@ -154,6 +154,26 @@ export class BlockCreate extends BlockBase {
     }
   }
 }
+/**
+ * Returns true if all blocks in the list are shadow blocks. If so, that means
+ * the top-level block being created is a shadow block. This only happens when a
+ * block that was covering up a shadow block is removed. We don't need to create
+ * an additional block in that case because the original block still has its
+ * shadow block.
+ *
+ * @param workspace Workspace to check for blocks
+ * @param ids A list of block ids that were created in this event
+ * @returns True if all block ids in the list are shadow blocks
+ */
+const allShadowBlocks = function (
+  workspace: Workspace,
+  ids: string[],
+): boolean {
+  const shadows = ids
+    .map((id) => workspace.getBlockById(id))
+    .filter((block) => block && block.isShadow());
+  return shadows.length === ids.length;
+};
 
 export interface BlockCreateJson extends BlockBaseJson {
   xml: string;
@@ -162,4 +182,4 @@ export interface BlockCreateJson extends BlockBaseJson {
   recordUndo?: boolean;
 }
 
-registry.register(registry.Type.EVENT, eventUtils.CREATE, BlockCreate);
+registry.register(registry.Type.EVENT, EventType.BLOCK_CREATE, BlockCreate);

@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Tooltip');
+// Former goog.module ID: Blockly.Tooltip
 
 import * as browserEvents from './browser_events.js';
 import * as common from './common.js';
@@ -20,7 +19,7 @@ import * as blocklyString from './utils/string.js';
 export type TipInfo =
   | string
   | {tooltip: AnyDuringMigration}
-  | (() => TipInfo | string | Function);
+  | (() => TipInfo | string);
 
 /**
  * A function that renders custom tooltip UI.
@@ -167,7 +166,7 @@ export function getTooltipOfObject(object: AnyDuringMigration | null): string {
  * @returns The target tooltip object.
  */
 function getTargetObject(
-  obj: object | null
+  obj: object | null,
 ): {tooltip: AnyDuringMigration} | null {
   while (obj && (obj as any).tooltip) {
     if (
@@ -185,7 +184,7 @@ function getTargetObject(
  * Create the tooltip div and inject it onto the page.
  */
 export function createDom() {
-  if (containerDiv) {
+  if (document.querySelector('.blocklyTooltipDiv')) {
     return; // Already created.
   }
   // Create an HTML container for popup overlays (e.g. editor widgets).
@@ -206,13 +205,13 @@ export function bindMouseEvents(element: Element) {
     element,
     'pointerover',
     null,
-    onMouseOver
+    onMouseOver,
   );
   (element as AnyDuringMigration).mouseOutWrapper_ = browserEvents.bind(
     element,
     'pointerout',
     null,
-    onMouseOut
+    onMouseOut,
   );
 
   // Don't use bindEvent_ for mousemove since that would create a

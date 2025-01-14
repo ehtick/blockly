@@ -4,15 +4,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.RenderInfo');
+// Former goog.module ID: Blockly.blockRendering.RenderInfo
 
 import type {BlockSvg} from '../../block_svg.js';
-import {Align, Input} from '../../inputs/input.js';
+import {Align} from '../../inputs/align.js';
+import {DummyInput} from '../../inputs/dummy_input.js';
+import {EndRowInput} from '../../inputs/end_row_input.js';
+import {Input} from '../../inputs/input.js';
+import {StatementInput} from '../../inputs/statement_input.js';
+import {ValueInput} from '../../inputs/value_input.js';
 import type {RenderedConnection} from '../../rendered_connection.js';
 import type {Measurable} from '../measurables/base.js';
 import {BottomRow} from '../measurables/bottom_row.js';
-import {DummyInput} from '../../inputs/dummy_input.js';
+import {Connection} from '../measurables/connection.js';
 import {ExternalValueInput} from '../measurables/external_value_input.js';
 import {Field} from '../measurables/field.js';
 import {Hat} from '../measurables/hat.js';
@@ -29,11 +33,8 @@ import type {Row} from '../measurables/row.js';
 import {SpacerRow} from '../measurables/spacer_row.js';
 import {SquareCorner} from '../measurables/square_corner.js';
 import {StatementInput as StatementInputMeasurable} from '../measurables/statement_input.js';
-import {StatementInput} from '../../inputs/statement_input.js';
 import {TopRow} from '../measurables/top_row.js';
 import {Types} from '../measurables/types.js';
-import {ValueInput} from '../../inputs/value_input.js';
-
 import type {ConstantProvider} from './constants.js';
 import type {Renderer} from './renderer.js';
 
@@ -75,8 +76,6 @@ export class RenderInfo {
   /** An array of input rows on the block. */
   inputRows: InputRow[] = [];
 
-  /** An array of measurable objects containing hidden icons. */
-  hiddenIcons: Icon[] = [];
   topRow: TopRow;
   bottomRow: BottomRow;
 
@@ -144,8 +143,7 @@ export class RenderInfo {
   }
 
   /**
-   * Populate and return an object containing all sizing information needed to
-   * draw this block.
+   * Populate this object with all sizing information needed to draw the block.
    *
    * This measure pass does not propagate changes to the block (although fields
    * may choose to rerender when getSize() is called).  However, calling it
@@ -174,9 +172,7 @@ export class RenderInfo {
     const icons = this.block_.getIcons();
     for (let i = 0, icon; (icon = icons[i]); i++) {
       const iconInfo = new Icon(this.constants_, icon);
-      if (this.isCollapsed && icon.collapseHidden) {
-        this.hiddenIcons.push(iconInfo);
-      } else {
+      if (!this.isCollapsed || icon.isShownWhenCollapsed()) {
         activeRow.elements.push(iconInfo);
       }
     }
@@ -240,7 +236,7 @@ export class RenderInfo {
       this.topRow.hasPreviousConnection = true;
       this.topRow.connection = new PreviousConnection(
         this.constants_,
-        this.block_.previousConnection as RenderedConnection
+        this.block_.previousConnection as RenderedConnection,
       );
       this.topRow.elements.push(this.topRow.connection);
     }
@@ -295,7 +291,7 @@ export class RenderInfo {
     if (this.bottomRow.hasNextConnection) {
       this.bottomRow.connection = new NextConnection(
         this.constants_,
-        this.block_.nextConnection as RenderedConnection
+        this.block_.nextConnection as RenderedConnection,
       );
       this.bottomRow.elements.push(this.bottomRow.connection);
     }
@@ -323,20 +319,20 @@ export class RenderInfo {
       activeRow.hasInlineInput = true;
     } else if (input instanceof StatementInput) {
       activeRow.elements.push(
-        new StatementInputMeasurable(this.constants_, input)
+        new StatementInputMeasurable(this.constants_, input),
       );
       activeRow.hasStatement = true;
     } else if (input instanceof ValueInput) {
       activeRow.elements.push(new ExternalValueInput(this.constants_, input));
       activeRow.hasExternalInput = true;
-    } else if (input instanceof DummyInput) {
-      // Dummy inputs have no visual representation, but the information is
-      // still important.
+    } else if (input instanceof DummyInput || input instanceof EndRowInput) {
+      // Dummy and end-row inputs have no visual representation, but the
+      // information is still important.
       activeRow.minHeight = Math.max(
         activeRow.minHeight,
         input.getSourceBlock() && input.getSourceBlock()!.isShadow()
           ? this.constants_.DUMMY_INPUT_SHADOW_MIN_HEIGHT
-          : this.constants_.DUMMY_INPUT_MIN_HEIGHT
+          : this.constants_.DUMMY_INPUT_MIN_HEIGHT,
       );
       activeRow.hasDummyInput = true;
     }
@@ -348,25 +344,35 @@ export class RenderInfo {
   /**
    * Decide whether to start a new row between the two Blockly.Inputs.
    *
-   * @param input The first input to consider
-   * @param lastInput The input that follows.
-   * @returns True if the next input should be rendered on a new row.
+   * @param currInput The current input.
+   * @param prevInput The previous input.
+   * @returns True if the current input should be rendered on a new row.
    */
-  protected shouldStartNewRow_(input: Input, lastInput?: Input): boolean {
+  protected shouldStartNewRow_(currInput: Input, prevInput?: Input): boolean {
     // If this is the first input, just add to the existing row.
     // That row is either empty or has some icons in it.
-    if (!lastInput) {
+    if (!prevInput) {
       return false;
+    }
+    // If the previous input was an end-row input, then any following input
+    // should always be rendered on the next row.
+    if (prevInput instanceof EndRowInput) {
+      return true;
     }
     // A statement input or an input following one always gets a new row.
     if (
-      input instanceof StatementInput ||
-      lastInput instanceof StatementInput
+      currInput instanceof StatementInput ||
+      prevInput instanceof StatementInput
     ) {
       return true;
     }
-    // Value and dummy inputs get new row if inputs are not inlined.
-    if (input instanceof ValueInput || input instanceof DummyInput) {
+    // Value inputs, dummy inputs, and any input following an external value
+    // input get a new row if inputs are not inlined.
+    if (
+      currInput instanceof ValueInput ||
+      currInput instanceof DummyInput ||
+      prevInput instanceof ValueInput
+    ) {
       return !this.isInline;
     }
     return false;
@@ -383,8 +389,8 @@ export class RenderInfo {
         row.elements.push(
           new InRowSpacer(
             this.constants_,
-            this.getInRowSpacing_(null, oldElems[0])
-          )
+            this.getInRowSpacing_(null, oldElems[0]),
+          ),
         );
       }
       if (!oldElems.length) {
@@ -401,8 +407,8 @@ export class RenderInfo {
         row.elements.push(
           new InRowSpacer(
             this.constants_,
-            this.getInRowSpacing_(oldElems[oldElems.length - 1], null)
-          )
+            this.getInRowSpacing_(oldElems[oldElems.length - 1], null),
+          ),
         );
       }
     }
@@ -419,7 +425,7 @@ export class RenderInfo {
    */
   protected getInRowSpacing_(
     prev: Measurable | null,
-    next: Measurable | null
+    next: Measurable | null,
   ): number {
     if (!prev) {
       // Statement input padding.
@@ -471,12 +477,12 @@ export class RenderInfo {
         const innerWidth = row.width - (statementInput?.width ?? 0);
         widestStatementRowFields = Math.max(
           widestStatementRowFields,
-          innerWidth
+          innerWidth,
         );
       }
       widestRowWithConnectedBlocks = Math.max(
         widestRowWithConnectedBlocks,
-        row.widthWithConnectedBlocks
+        row.widthWithConnectedBlocks,
       );
     }
 
@@ -591,7 +597,7 @@ export class RenderInfo {
     row.width += desiredWidth - currentWidth;
     row.widthWithConnectedBlocks = Math.max(
       row.width,
-      this.statementEdge + row.connectedBlockWidths
+      this.statementEdge + row.connectedBlockWidths,
     );
   }
 
@@ -720,7 +726,7 @@ export class RenderInfo {
 
       widestRowWithConnectedBlocks = Math.max(
         widestRowWithConnectedBlocks,
-        row.widthWithConnectedBlocks
+        row.widthWithConnectedBlocks,
       );
       this.recordElemPositions_(row);
     }
@@ -730,7 +736,7 @@ export class RenderInfo {
         // Include width of connected block in value to stack width measurement.
         widestRowWithConnectedBlocks = Math.max(
           widestRowWithConnectedBlocks,
-          target.getHeightWidth().width
+          target.getHeightWidth().width,
         );
       }
     }
@@ -740,5 +746,22 @@ export class RenderInfo {
     this.height = yCursor;
     this.startY = this.topRow.capline;
     this.bottomRow.baseline = yCursor - this.bottomRow.descenderHeight;
+  }
+
+  /** Returns the connection measurable associated with the given connection. */
+  getMeasureableForConnection(conn: RenderedConnection): Connection | null {
+    if (this.outputConnection?.connectionModel === conn) {
+      return this.outputConnection;
+    }
+
+    for (const row of this.rows) {
+      for (const elem of row.elements) {
+        if (elem instanceof Connection && elem.connectionModel === conn) {
+          return elem;
+        }
+      }
+    }
+
+    return null;
   }
 }

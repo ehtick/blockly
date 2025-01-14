@@ -4,21 +4,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.bumpObjects');
+// Former goog.module ID: Blockly.bumpObjects
 
-import type {BlockSvg} from './block_svg.js';
+import {RenderedWorkspaceComment} from './comments/rendered_workspace_comment.js';
 import type {Abstract} from './events/events_abstract.js';
 import type {BlockCreate} from './events/events_block_create.js';
 import type {BlockMove} from './events/events_block_move.js';
 import type {CommentCreate} from './events/events_comment_create.js';
 import type {CommentMove} from './events/events_comment_move.js';
-import type {ViewportChange} from './events/events_viewport.js';
+import type {CommentResize} from './events/events_comment_resize.js';
+import {isViewportChange} from './events/predicates.js';
+import {BUMP_EVENTS, EventType} from './events/type.js';
 import * as eventUtils from './events/utils.js';
 import type {IBoundedElement} from './interfaces/i_bounded_element.js';
 import type {ContainerRegion} from './metrics_manager.js';
 import * as mathUtils from './utils/math.js';
-import type {WorkspaceCommentSvg} from './workspace_comment_svg.js';
 import type {WorkspaceSvg} from './workspace_svg.js';
 
 /**
@@ -35,7 +35,7 @@ import type {WorkspaceSvg} from './workspace_svg.js';
 function bumpObjectIntoBounds(
   workspace: WorkspaceSvg,
   bounds: ContainerRegion,
-  object: IBoundedElement
+  object: IBoundedElement,
 ): boolean {
   // Compute new top/left position for object.
   const objectMetrics = object.getBoundingRectangle();
@@ -50,7 +50,7 @@ function bumpObjectIntoBounds(
   const newYPosition = mathUtils.clamp(
     topClamp,
     objectMetrics.top,
-    bottomClamp
+    bottomClamp,
   );
   const deltaY = newYPosition - objectMetrics.top;
 
@@ -73,7 +73,7 @@ function bumpObjectIntoBounds(
   const newXPosition = mathUtils.clamp(
     leftClamp,
     objectMetrics.left,
-    rightClamp
+    rightClamp,
   );
   const deltaX = newXPosition - objectMetrics.left;
 
@@ -92,7 +92,7 @@ export const bumpIntoBounds = bumpObjectIntoBounds;
  * @returns The event handler.
  */
 export function bumpIntoBoundsHandler(
-  workspace: WorkspaceSvg
+  workspace: WorkspaceSvg,
 ): (p1: Abstract) => void {
   return (e) => {
     const metricsManager = workspace.getMetricsManager();
@@ -100,13 +100,13 @@ export function bumpIntoBoundsHandler(
       return;
     }
 
-    if (eventUtils.BUMP_EVENTS.indexOf(e.type ?? '') !== -1) {
+    if (BUMP_EVENTS.includes(e.type ?? '')) {
       const scrollMetricsInWsCoords = metricsManager.getScrollMetrics(true);
 
       // Triggered by move/create event
       const object = extractObjectFromEvent(
         workspace,
-        e as eventUtils.BumpEvent
+        e as eventUtils.BumpEvent,
       );
       if (!object) {
         return;
@@ -118,23 +118,18 @@ export function bumpIntoBoundsHandler(
       const wasBumped = bumpObjectIntoBounds(
         workspace,
         scrollMetricsInWsCoords,
-        object as IBoundedElement
+        object as IBoundedElement,
       );
 
       if (wasBumped && !e.group) {
         console.warn(
           'Moved object in bounds but there was no' +
-            ' event group. This may break undo.'
+            ' event group. This may break undo.',
         );
       }
       eventUtils.setGroup(existingGroup);
-    } else if (e.type === eventUtils.VIEWPORT_CHANGE) {
-      const viewportEvent = e as ViewportChange;
-      if (
-        viewportEvent.scale &&
-        viewportEvent.oldScale &&
-        viewportEvent.scale > viewportEvent.oldScale
-      ) {
+    } else if (isViewportChange(e)) {
+      if (e.scale && e.oldScale && e.scale > e.oldScale) {
         bumpTopObjectsIntoBounds(workspace);
       }
     }
@@ -152,22 +147,23 @@ export function bumpIntoBoundsHandler(
  */
 function extractObjectFromEvent(
   workspace: WorkspaceSvg,
-  e: eventUtils.BumpEvent
-): BlockSvg | null | WorkspaceCommentSvg {
+  e: eventUtils.BumpEvent,
+): IBoundedElement | null {
   let object = null;
   switch (e.type) {
-    case eventUtils.BLOCK_CREATE:
-    case eventUtils.BLOCK_MOVE:
+    case EventType.BLOCK_CREATE:
+    case EventType.BLOCK_MOVE:
       object = workspace.getBlockById((e as BlockCreate | BlockMove).blockId!);
       if (object) {
         object = object.getRootBlock();
       }
       break;
-    case eventUtils.COMMENT_CREATE:
-    case eventUtils.COMMENT_MOVE:
+    case EventType.COMMENT_CREATE:
+    case EventType.COMMENT_MOVE:
+    case EventType.COMMENT_RESIZE:
       object = workspace.getCommentById(
-        (e as CommentCreate | CommentMove).commentId!
-      ) as WorkspaceCommentSvg | null;
+        (e as CommentCreate | CommentMove | CommentResize).commentId!,
+      ) as RenderedWorkspaceComment;
       break;
   }
   return object;

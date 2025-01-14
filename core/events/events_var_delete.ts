@@ -4,15 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.VarDelete');
+// Former goog.module ID: Blockly.Events.VarDelete
 
 import * as registry from '../registry.js';
 import type {VariableModel} from '../variable_model.js';
-
-import {VarBase, VarBaseJson} from './events_var_base.js';
-import * as eventUtils from './utils.js';
 import type {Workspace} from '../workspace.js';
+import {VarBase, VarBaseJson} from './events_var_base.js';
+import {EventType} from './type.js';
 
 /**
  * Notifies listeners that a variable model has been deleted.
@@ -20,7 +18,7 @@ import type {Workspace} from '../workspace.js';
  * @class
  */
 export class VarDelete extends VarBase {
-  override type = eventUtils.VAR_DELETE;
+  override type = EventType.VAR_DELETE;
   /** The type of the variable that was deleted. */
   varType?: string;
   /** The name of the variable that was deleted. */
@@ -49,13 +47,13 @@ export class VarDelete extends VarBase {
     if (this.varType === undefined) {
       throw new Error(
         'The var type is undefined. Either pass a variable to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (!this.varName) {
       throw new Error(
         'The var name is undefined. Either pass a variable to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     json['varType'] = this.varType;
@@ -75,12 +73,12 @@ export class VarDelete extends VarBase {
   static fromJson(
     json: VarDeleteJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): VarDelete {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new VarDelete()
+      event ?? new VarDelete(),
     ) as VarDelete;
     newEvent.varType = json['varType'];
     newEvent.varName = json['varName'];
@@ -97,13 +95,13 @@ export class VarDelete extends VarBase {
     if (!this.varId) {
       throw new Error(
         'The var ID is undefined. Either pass a variable to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (!this.varName) {
       throw new Error(
         'The var name is undefined. Either pass a variable to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (forward) {
@@ -119,4 +117,4 @@ export interface VarDeleteJson extends VarBaseJson {
   varName: string;
 }
 
-registry.register(registry.Type.EVENT, eventUtils.VAR_DELETE, VarDelete);
+registry.register(registry.Type.EVENT, EventType.VAR_DELETE, VarDelete);

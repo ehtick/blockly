@@ -4,14 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.common');
+// Former goog.module ID: Blockly.common
 
-/* eslint-disable-next-line no-unused-vars */
 import type {Block} from './block.js';
+import {ISelectable} from './blockly.js';
 import {BlockDefinition, Blocks} from './blocks.js';
 import type {Connection} from './connection.js';
-import type {ICopyable} from './interfaces/i_copyable.js';
+import {EventType} from './events/type.js';
+import * as eventUtils from './events/utils.js';
 import type {Workspace} from './workspace.js';
 import type {WorkspaceSvg} from './workspace_svg.js';
 
@@ -88,12 +88,12 @@ export function setMainWorkspace(workspace: Workspace) {
 /**
  * Currently selected copyable object.
  */
-let selected: ICopyable | null = null;
+let selected: ISelectable | null = null;
 
 /**
  * Returns the currently selected copyable object.
  */
-export function getSelected(): ICopyable | null {
+export function getSelected(): ISelectable | null {
   return selected;
 }
 
@@ -105,8 +105,19 @@ export function getSelected(): ICopyable | null {
  * @param newSelection The newly selected block.
  * @internal
  */
-export function setSelected(newSelection: ICopyable | null) {
+export function setSelected(newSelection: ISelectable | null) {
+  if (selected === newSelection) return;
+
+  const event = new (eventUtils.get(EventType.SELECTED))(
+    selected?.id ?? null,
+    newSelection?.id ?? null,
+    newSelection?.workspace.id ?? selected?.workspace.id ?? '',
+  );
+  eventUtils.fire(event);
+
+  selected?.unselect();
   selected = newSelection;
+  selected?.select();
 }
 
 /**
@@ -188,7 +199,7 @@ export const draggingConnections: Connection[] = [];
  */
 export function getBlockTypeCounts(
   block: Block,
-  opt_stripFollowing?: boolean
+  opt_stripFollowing?: boolean,
 ): {[key: string]: number} {
   const typeCountsMap = Object.create(null);
   const descendants = block.getDescendants(true);
@@ -249,7 +260,7 @@ function defineBlocksWithJsonArrayInternal(jsonArray: AnyDuringMigration[]) {
  *     definitions created.
  */
 export function createBlockDefinitionsFromJsonArray(
-  jsonArray: AnyDuringMigration[]
+  jsonArray: AnyDuringMigration[],
 ): {[key: string]: BlockDefinition} {
   const blocks: {[key: string]: BlockDefinition} = {};
   for (let i = 0; i < jsonArray.length; i++) {
@@ -262,7 +273,7 @@ export function createBlockDefinitionsFromJsonArray(
     if (!type) {
       console.warn(
         `Block definition #${i} in JSON array is missing a type attribute. ` +
-          'Skipping.'
+          'Skipping.',
       );
       continue;
     }
@@ -283,7 +294,9 @@ export function defineBlocks(blocks: {[key: string]: BlockDefinition}) {
   for (const type of Object.keys(blocks)) {
     const definition = blocks[type];
     if (type in Blocks) {
-      console.warn(`Block definiton "${type}" overwrites previous definition.`);
+      console.warn(
+        `Block definition "${type}" overwrites previous definition.`,
+      );
     }
     Blocks[type] = definition;
   }

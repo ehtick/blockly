@@ -4,14 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.Field');
+// Former goog.module ID: Blockly.blockRendering.Field
 
-/* eslint-disable-next-line no-unused-vars */
 import type {Field as BlocklyField} from '../../field.js';
 import type {Input} from '../../inputs/input.js';
 import type {ConstantProvider} from '../common/constants.js';
-
 import {Measurable} from './base.js';
 import {Types} from './types.js';
 
@@ -33,7 +30,7 @@ export class Field extends Measurable {
   constructor(
     constants: ConstantProvider,
     public field: BlocklyField,
-    public parentInput: Input
+    public parentInput: Input,
   ) {
     super(constants);
 

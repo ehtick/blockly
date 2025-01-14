@@ -4,10 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.utils.dom');
+// Former goog.module ID: Blockly.utils.dom
 
-import * as deprecation from './deprecation.js';
 import type {Svg} from './svg.js';
 
 /**
@@ -55,7 +53,7 @@ let canvasContext: CanvasRenderingContext2D | null = null;
 export function createSvgElement<T extends SVGElement>(
   name: string | Svg<T>,
   attrs: {[key: string]: string | number},
-  opt_parent?: Element | null
+  opt_parent?: Element | null,
 ): T {
   const e = document.createElementNS(SVG_NS, `${name}`) as T;
   for (const key in attrs) {
@@ -156,24 +154,6 @@ export function insertAfter(newNode: Element, refNode: Element) {
 }
 
 /**
- * Whether a node contains another node.
- *
- * @param parent The node that should contain the other node.
- * @param descendant The node to test presence of.
- * @returns Whether the parent node contains the descendant node.
- * @deprecated Use native 'contains' DOM method.
- */
-export function containsNode(parent: Node, descendant: Node): boolean {
-  deprecation.warn(
-    'Blockly.utils.dom.containsNode',
-    'version 10',
-    'version 11',
-    'Use native "contains" DOM method'
-  );
-  return parent.contains(descendant);
-}
-
-/**
  * Sets the CSS transform property on an element. This function sets the
  * non-vendor-prefixed and vendor-prefixed versions for backwards compatibility
  * with older browsers. See https://caniuse.com/#feat=transforms2d
@@ -183,7 +163,7 @@ export function containsNode(parent: Node, descendant: Node): boolean {
  */
 export function setCssTransform(
   element: HTMLElement | SVGElement,
-  transform: string
+  transform: string,
 ) {
   element.style['transform'] = transform;
   element.style['-webkit-transform' as any] = transform;
@@ -231,7 +211,7 @@ export function getTextWidth(textElement: SVGTextElement): number {
   // Attempt to compute fetch the width of the SVG text element.
   try {
     width = textElement.getComputedTextLength();
-  } catch (e) {
+  } catch {
     // In other cases where we fail to get the computed text. Instead, use an
     // approximation and do not cache the result. At some later point in time
     // when the block is inserted into the visible DOM, this method will be
@@ -261,13 +241,13 @@ export function getFastTextWidth(
   textElement: SVGTextElement,
   fontSize: number,
   fontWeight: string,
-  fontFamily: string
+  fontFamily: string,
 ): number {
   return getFastTextWidthWithSizeString(
     textElement,
     fontSize + 'pt',
     fontWeight,
-    fontFamily
+    fontFamily,
   );
 }
 
@@ -288,7 +268,7 @@ export function getFastTextWidthWithSizeString(
   textElement: SVGTextElement,
   fontSize: string,
   fontWeight: string,
-  fontFamily: string
+  fontFamily: string,
 ): number {
   const text = textElement.textContent;
   const key = text + '\n' + textElement.className.baseVal;
@@ -343,7 +323,7 @@ export function measureFontMetrics(
   text: string,
   fontSize: string,
   fontWeight: string,
-  fontFamily: string
+  fontFamily: string,
 ): {height: number; baseline: number} {
   const span = document.createElement('span');
   span.style.font = fontWeight + ' ' + fontSize + ' ' + fontFamily;
@@ -354,7 +334,10 @@ export function measureFontMetrics(
   block.style.height = '0';
 
   const div = document.createElement('div');
-  div.setAttribute('style', 'position: fixed; top: 0; left: 0; display: flex;');
+  div.style.display = 'flex';
+  div.style.position = 'fixed';
+  div.style.top = '0';
+  div.style.left = '0';
   div.appendChild(span);
   div.appendChild(block);
 

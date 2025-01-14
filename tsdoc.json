@@ -21,10 +21,6 @@
     },
     {
       "tagName": "@suppress",
-      "syntaxKind": "block"
-    },
-    {
-      "tagName": "@unrestricted",
       "syntaxKind": "modifier"
     }
   ],
@@ -34,7 +30,6 @@
     "@define": true,
     "@license": true,
     "@nocollapse": true,
-    "@suppress": true,
-    "@unrestricted": true
+    "@suppress": true
   }
 }

@@ -4,9 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.fieldVariable');
-
 import * as Blockly from '../../build/src/core/blockly.js';
+import {assert} from '../../node_modules/chai/chai.js';
+import {
+  createTestBlock,
+  defineRowBlock,
+} from './test_helpers/block_definitions.js';
 import {
   assertFieldValue,
   runConstructorSuiteTests,
@@ -19,10 +22,6 @@ import {
   sharedTestTeardown,
   workspaceTeardown,
 } from './test_helpers/setup_teardown.js';
-import {
-  createTestBlock,
-  defineRowBlock,
-} from './test_helpers/block_definitions.js';
 
 suite('Variable Fields', function () {
   const FAKE_VARIABLE_NAME = 'default_name';
@@ -122,7 +121,7 @@ suite('Variable Fields', function () {
     invalidValueCreationTestCases,
     validTestCaseAssertField,
     assertFieldDefault,
-    customCreateWithJs
+    customCreateWithJs,
   );
 
   runFromJsonSuiteTests(
@@ -131,14 +130,14 @@ suite('Variable Fields', function () {
     invalidValueCreationTestCases,
     validTestCaseAssertField,
     assertFieldDefault,
-    customCreateWithJson
+    customCreateWithJson,
   );
 
   suite('initModel', function () {
     test('No Value Before InitModel', function () {
       const fieldVariable = new Blockly.FieldVariable('name1');
-      chai.assert.equal(fieldVariable.getText(), '');
-      chai.assert.isNull(fieldVariable.getValue());
+      assert.equal(fieldVariable.getText(), '');
+      assert.isNull(fieldVariable.getValue());
     });
   });
 
@@ -192,7 +191,7 @@ suite('Variable Fields', function () {
       validValueTestCases,
       invalidValueTestCases,
       FAKE_ID,
-      defaultFieldName
+      defaultFieldName,
     );
   });
 
@@ -201,19 +200,13 @@ suite('Variable Fields', function () {
       const dropdownOptions =
         Blockly.FieldVariable.dropdownCreate.call(fieldVariable);
       // Expect variable options, a rename option, and a delete option.
-      chai.assert.lengthOf(dropdownOptions, expectedVarOptions.length + 2);
+      assert.lengthOf(dropdownOptions, expectedVarOptions.length + 2);
       for (let i = 0, option; (option = expectedVarOptions[i]); i++) {
-        chai.assert.deepEqual(dropdownOptions[i], option);
+        assert.deepEqual(dropdownOptions[i], option);
       }
-      chai.assert.include(
-        dropdownOptions[dropdownOptions.length - 2][0],
-        'Rename'
-      );
+      assert.include(dropdownOptions[dropdownOptions.length - 2][0], 'Rename');
 
-      chai.assert.include(
-        dropdownOptions[dropdownOptions.length - 1][0],
-        'Delete'
-      );
+      assert.include(dropdownOptions[dropdownOptions.length - 1][0], 'Delete');
     };
     test('Contains variables created before field', function () {
       this.workspace.createVariable('name1', '', 'id1');
@@ -221,7 +214,7 @@ suite('Variable Fields', function () {
       // Expect that the dropdown options will contain the variables that exist
       const fieldVariable = initVariableField(
         this.workspace,
-        new Blockly.FieldVariable('name2')
+        new Blockly.FieldVariable('name2'),
       );
       assertDropdownContents(fieldVariable, [
         ['name1', 'id1'],
@@ -232,7 +225,7 @@ suite('Variable Fields', function () {
       // Expect that the dropdown options will contain the variables that exist
       const fieldVariable = initVariableField(
         this.workspace,
-        new Blockly.FieldVariable('name1')
+        new Blockly.FieldVariable('name1'),
       );
       // Expect that variables created after field creation will show up too.
       this.workspace.createVariable('name2', '', 'id2');
@@ -247,7 +240,7 @@ suite('Variable Fields', function () {
       // Expect that the dropdown options will contain the variables that exist
       const fieldVariable = initVariableField(
         this.workspace,
-        new Blockly.FieldVariable('name1')
+        new Blockly.FieldVariable('name1'),
       );
       // Expect that variables created after field creation will show up too.
       this.workspace.createVariable('name3', '', 'id3');
@@ -266,7 +259,7 @@ suite('Variable Fields', function () {
       this.workspace.createVariable('name3', null, 'id3');
       this.variableField = initVariableField(
         this.workspace,
-        new Blockly.FieldVariable('name1')
+        new Blockly.FieldVariable('name1'),
       );
     });
     suite('Null Validator', function () {
@@ -311,10 +304,10 @@ suite('Variable Fields', function () {
           'test',
           undefined,
           ['Type1'],
-          'Type1'
+          'Type1',
         );
-        chai.assert.deepEqual(field.variableTypes, ['Type1']);
-        chai.assert.equal(field.defaultType, 'Type1');
+        assert.deepEqual(field.variableTypes, ['Type1']);
+        assert.equal(field.defaultType, 'Type1');
       });
       test('JSON Definition', function () {
         const field = Blockly.FieldVariable.fromJson({
@@ -322,8 +315,8 @@ suite('Variable Fields', function () {
           variableTypes: ['Type1'],
           defaultType: 'Type1',
         });
-        chai.assert.deepEqual(field.variableTypes, ['Type1']);
-        chai.assert.equal(field.defaultType, 'Type1');
+        assert.deepEqual(field.variableTypes, ['Type1']);
+        assert.equal(field.defaultType, 'Type1');
       });
       test('JS Configuration - Simple', function () {
         const field = new Blockly.FieldVariable(
@@ -334,10 +327,10 @@ suite('Variable Fields', function () {
           {
             variableTypes: ['Type1'],
             defaultType: 'Type1',
-          }
+          },
         );
-        chai.assert.deepEqual(field.variableTypes, ['Type1']);
-        chai.assert.equal(field.defaultType, 'Type1');
+        assert.deepEqual(field.variableTypes, ['Type1']);
+        assert.equal(field.defaultType, 'Type1');
       });
       test('JS Configuration - Ignore', function () {
         const field = new Blockly.FieldVariable(
@@ -348,10 +341,10 @@ suite('Variable Fields', function () {
           {
             variableTypes: ['Type1'],
             defaultType: 'Type1',
-          }
+          },
         );
-        chai.assert.deepEqual(field.variableTypes, ['Type1']);
-        chai.assert.equal(field.defaultType, 'Type1');
+        assert.deepEqual(field.variableTypes, ['Type1']);
+        assert.equal(field.defaultType, 'Type1');
       });
     });
   });
@@ -365,7 +358,7 @@ suite('Variable Fields', function () {
       // will be returned (regardless of what types are available on the workspace).
       const fieldVariable = new Blockly.FieldVariable('name1');
       const resultTypes = fieldVariable.getVariableTypes();
-      chai.assert.deepEqual(resultTypes, ['']);
+      assert.deepEqual(resultTypes, ['']);
     });
     test('variableTypes is explicit', function () {
       // Expect that since variableTypes is defined, it will be the return
@@ -374,14 +367,14 @@ suite('Variable Fields', function () {
         'name1',
         null,
         ['type1', 'type2'],
-        'type1'
+        'type1',
       );
       const resultTypes = fieldVariable.getVariableTypes();
-      chai.assert.deepEqual(resultTypes, ['type1', 'type2']);
-      chai.assert.equal(
+      assert.deepEqual(resultTypes, ['type1', 'type2']);
+      assert.equal(
         fieldVariable.defaultType,
         'type1',
-        'Default type was wrong'
+        'Default type was wrong',
       );
     });
     test('variableTypes is null', function () {
@@ -396,7 +389,7 @@ suite('Variable Fields', function () {
 
       const resultTypes = fieldVariable.getVariableTypes();
       // The empty string is always one of the options.
-      chai.assert.deepEqual(resultTypes, ['type1', 'type2', '']);
+      assert.deepEqual(resultTypes, ['type1', 'type2', '']);
     });
     test('variableTypes is the empty list', function () {
       const fieldVariable = new Blockly.FieldVariable('name1');
@@ -405,7 +398,7 @@ suite('Variable Fields', function () {
       fieldVariable.setSourceBlock(mockBlock);
       fieldVariable.variableTypes = [];
 
-      chai.assert.throws(function () {
+      assert.throws(function () {
         fieldVariable.getVariableTypes();
       });
     });
@@ -413,33 +406,33 @@ suite('Variable Fields', function () {
   suite('Default types', function () {
     test('Default type exists', function () {
       const fieldVariable = new Blockly.FieldVariable(null, null, ['b'], 'b');
-      chai.assert.equal(
+      assert.equal(
         fieldVariable.defaultType,
         'b',
-        'The variable field\'s default type should be "b"'
+        'The variable field\'s default type should be "b"',
       );
     });
     test('No default type', function () {
       const fieldVariable = new Blockly.FieldVariable(null);
-      chai.assert.equal(
+      assert.equal(
         fieldVariable.defaultType,
         '',
-        "The variable field's default type should be the empty string"
+        "The variable field's default type should be the empty string",
       );
-      chai.assert.isNull(
+      assert.isNull(
         fieldVariable.variableTypes,
-        "The variable field's allowed types should be null"
+        "The variable field's allowed types should be null",
       );
     });
     test('Default type mismatch', function () {
       // Invalid default type when creating a variable field.
-      chai.assert.throws(function () {
+      assert.throws(function () {
         new Blockly.FieldVariable(null, null, ['a'], 'b');
       });
     });
     test('Default type mismatch with empty array', function () {
       // Invalid default type when creating a variable field.
-      chai.assert.throws(function () {
+      assert.throws(function () {
         new Blockly.FieldVariable(null, null, ['a']);
       });
     });
@@ -462,20 +455,20 @@ suite('Variable Fields', function () {
       ]);
       this.variableBlock = new Blockly.Block(
         this.workspace,
-        'field_variable_test_block'
+        'field_variable_test_block',
       );
       this.variableField = this.variableBlock.getField('VAR');
     });
     test('Rename & Keep Old ID', function () {
       this.workspace.renameVariableById('id1', 'name2');
-      chai.assert.equal(this.variableField.getText(), 'name2');
-      chai.assert.equal(this.variableField.getValue(), 'id1');
+      assert.equal(this.variableField.getText(), 'name2');
+      assert.equal(this.variableField.getValue(), 'id1');
     });
     test('Rename & Get New ID', function () {
       this.workspace.createVariable('name2', null, 'id2');
       this.workspace.renameVariableById('id1', 'name2');
-      chai.assert.equal(this.variableField.getText(), 'name2');
-      chai.assert.equal(this.variableField.getValue(), 'id2');
+      assert.equal(this.variableField.getText(), 'name2');
+      assert.equal(this.variableField.getValue(), 'id2');
     });
   });
 
@@ -496,7 +489,7 @@ suite('Variable Fields', function () {
         const field = new Blockly.FieldVariable('x');
         block.getInput('INPUT').appendField(field, 'VAR');
         const jso = Blockly.serialization.blocks.save(block);
-        chai.assert.deepEqual(jso['fields'], {
+        assert.deepEqual(jso['fields'], {
           'VAR': {'id': 'id2', 'name': 'x', 'type': ''},
         });
       });
@@ -507,11 +500,11 @@ suite('Variable Fields', function () {
           'x',
           undefined,
           undefined,
-          'String'
+          'String',
         );
         block.getInput('INPUT').appendField(field, 'VAR');
         const jso = Blockly.serialization.blocks.save(block);
-        chai.assert.deepEqual(jso['fields'], {
+        assert.deepEqual(jso['fields'], {
           'VAR': {'id': 'id2', 'name': 'x', 'type': 'String'},
         });
       });
@@ -525,9 +518,9 @@ suite('Variable Fields', function () {
         const jso = Blockly.serialization.blocks.save(block, {
           doFullSerialization: false,
         });
-        chai.assert.deepEqual(jso['fields'], {'VAR': {'id': 'id2'}});
-        chai.assert.isUndefined(jso['fields']['VAR']['name']);
-        chai.assert.isUndefined(jso['fields']['VAR']['type']);
+        assert.deepEqual(jso['fields'], {'VAR': {'id': 'id2'}});
+        assert.isUndefined(jso['fields']['VAR']['name']);
+        assert.isUndefined(jso['fields']['VAR']['type']);
       });
 
       test('Typed', function () {
@@ -536,15 +529,15 @@ suite('Variable Fields', function () {
           'x',
           undefined,
           undefined,
-          'String'
+          'String',
         );
         block.getInput('INPUT').appendField(field, 'VAR');
         const jso = Blockly.serialization.blocks.save(block, {
           doFullSerialization: false,
         });
-        chai.assert.deepEqual(jso['fields'], {'VAR': {'id': 'id2'}});
-        chai.assert.isUndefined(jso['fields']['VAR']['name']);
-        chai.assert.isUndefined(jso['fields']['VAR']['type']);
+        assert.deepEqual(jso['fields'], {'VAR': {'id': 'id2'}});
+        assert.isUndefined(jso['fields']['VAR']['name']);
+        assert.isUndefined(jso['fields']['VAR']['type']);
       });
     });
   });
@@ -571,12 +564,12 @@ suite('Variable Fields', function () {
             },
           },
         },
-        this.workspace
+        this.workspace,
       );
       const variable = block.getField('VAR').getVariable();
-      chai.assert.equal(variable.name, 'test');
-      chai.assert.equal(variable.type, '');
-      chai.assert.equal(variable.getId(), 'id1');
+      assert.equal(variable.name, 'test');
+      assert.equal(variable.type, '');
+      assert.equal(variable.getId(), 'id1');
     });
 
     test('Name, untyped', function () {
@@ -589,12 +582,12 @@ suite('Variable Fields', function () {
             },
           },
         },
-        this.workspace
+        this.workspace,
       );
       const variable = block.getField('VAR').getVariable();
-      chai.assert.equal(variable.name, 'test');
-      chai.assert.equal(variable.type, '');
-      chai.assert.equal(variable.getId(), 'id2');
+      assert.equal(variable.name, 'test');
+      assert.equal(variable.type, '');
+      assert.equal(variable.getId(), 'id2');
     });
 
     test('Name, typed', function () {
@@ -608,12 +601,12 @@ suite('Variable Fields', function () {
             },
           },
         },
-        this.workspace
+        this.workspace,
       );
       const variable = block.getField('VAR').getVariable();
-      chai.assert.equal(variable.name, 'test');
-      chai.assert.equal(variable.type, 'string');
-      chai.assert.equal(variable.getId(), 'id2');
+      assert.equal(variable.name, 'test');
+      assert.equal(variable.type, 'string');
+      assert.equal(variable.getId(), 'id2');
     });
   });
 });

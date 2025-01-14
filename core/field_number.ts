@@ -9,16 +9,15 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.FieldNumber');
+// Former goog.module ID: Blockly.FieldNumber
 
 import {Field} from './field.js';
-import * as fieldRegistry from './field_registry.js';
 import {
   FieldInput,
   FieldInputConfig,
   FieldInputValidator,
 } from './field_input.js';
+import * as fieldRegistry from './field_registry.js';
 import * as aria from './utils/aria.js';
 
 /**
@@ -68,7 +67,7 @@ export class FieldNumber extends FieldInput<number> {
     max?: string | number | null,
     precision?: string | number | null,
     validator?: FieldNumberValidator | null,
-    config?: FieldNumberConfig
+    config?: FieldNumberConfig,
   ) {
     // Pass SENTINEL so that we can define properties before value validation.
     super(Field.SKIP_SETUP);
@@ -113,7 +112,7 @@ export class FieldNumber extends FieldInput<number> {
   setConstraints(
     min: number | string | undefined | null,
     max: number | string | undefined | null,
-    precision: number | string | undefined | null
+    precision: number | string | undefined | null,
   ) {
     this.setMinInternal(min);
     this.setMaxInternal(max);
@@ -217,7 +216,7 @@ export class FieldNumber extends FieldInput<number> {
   private setPrecisionInternal(precision: number | string | undefined | null) {
     this.precision_ = Number(precision) || 0;
     let precisionString = String(this.precision_);
-    if (precisionString.indexOf('e') !== -1) {
+    if (precisionString.includes('e')) {
       // String() is fast.  But it turns .0000001 into '1e-7'.
       // Use the much slower toLocaleString to access all the digits.
       precisionString = this.precision_.toLocaleString('en-US', {
@@ -253,7 +252,7 @@ export class FieldNumber extends FieldInput<number> {
    * @returns A valid number, or null if invalid.
    */
   protected override doClassValidation_(
-    newValue?: AnyDuringMigration
+    newValue?: AnyDuringMigration,
   ): number | null {
     if (newValue === null) {
       return null;
@@ -295,7 +294,6 @@ export class FieldNumber extends FieldInput<number> {
    */
   protected override widgetCreate_(): HTMLInputElement {
     const htmlInput = super.widgetCreate_() as HTMLInputElement;
-    htmlInput.type = 'number';
 
     // Set the accessibility state
     if (this.min_ > -Infinity) {
@@ -317,7 +315,7 @@ export class FieldNumber extends FieldInput<number> {
    * @nocollapse
    * @internal
    */
-  static fromJson(options: FieldNumberFromJsonConfig): FieldNumber {
+  static override fromJson(options: FieldNumberFromJsonConfig): FieldNumber {
     // `this` might be a subclass of FieldNumber if that class doesn't override
     // the static fromJson method.
     return new this(
@@ -326,7 +324,7 @@ export class FieldNumber extends FieldInput<number> {
       undefined,
       undefined,
       undefined,
-      options
+      options,
     );
   }
 }

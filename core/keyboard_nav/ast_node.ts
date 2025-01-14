@@ -10,18 +10,20 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.ASTNode');
+// Former goog.module ID: Blockly.ASTNode
 
-import type {Block} from '../block.js';
+import {Block} from '../block.js';
 import type {Connection} from '../connection.js';
 import {ConnectionType} from '../connection_type.js';
 import type {Field} from '../field.js';
+import {FlyoutItem} from '../flyout_base.js';
+import {FlyoutButton} from '../flyout_button.js';
 import type {Input} from '../inputs/input.js';
 import type {IASTNodeLocation} from '../interfaces/i_ast_node_location.js';
 import type {IASTNodeLocationWithBlock} from '../interfaces/i_ast_node_location_with_block.js';
 import {Coordinate} from '../utils/coordinate.js';
 import type {Workspace} from '../workspace.js';
+import {WorkspaceSvg} from '../workspace_svg.js';
 
 /**
  * Class for an AST node.
@@ -174,7 +176,7 @@ export class ASTNode {
     const block = location.getSourceBlock();
     if (!block) {
       throw new Error(
-        'The current AST location is not associated with a block'
+        'The current AST location is not associated with a block',
       );
     }
     const curIdx = block.inputList.indexOf(input);
@@ -238,7 +240,7 @@ export class ASTNode {
     const block = location.getSourceBlock();
     if (!block) {
       throw new Error(
-        'The current AST location is not associated with a block'
+        'The current AST location is not associated with a block',
       );
     }
     const curIdx = block.inputList.indexOf(parentInput);
@@ -287,6 +289,9 @@ export class ASTNode {
     if (!curLocationAsBlock || curLocationAsBlock.isDeadOrDying()) {
       return null;
     }
+    if (curLocationAsBlock.workspace.isFlyout) {
+      return this.navigateFlyoutContents(forward);
+    }
     const curRoot = curLocationAsBlock.getRootBlock();
     const topBlocks = curRoot.workspace.getTopBlocks(true);
     for (let i = 0; i < topBlocks.length; i++) {
@@ -301,8 +306,90 @@ export class ASTNode {
       }
     }
     throw Error(
-      "Couldn't find " + (forward ? 'next' : 'previous') + ' stack?!'
+      "Couldn't find " + (forward ? 'next' : 'previous') + ' stack?!',
     );
+  }
+
+  /**
+   * Navigate between buttons and stacks of blocks on the flyout workspace.
+   *
+   * @param forward True to go forward. False to go backwards.
+   * @returns The next button, or next stack's first block, or null
+   */
+  private navigateFlyoutContents(forward: boolean): ASTNode | null {
+    const nodeType = this.getType();
+    let location;
+    let targetWorkspace;
+
+    switch (nodeType) {
+      case ASTNode.types.STACK: {
+        location = this.getLocation() as Block;
+        const workspace = location.workspace as WorkspaceSvg;
+        targetWorkspace = workspace.targetWorkspace as WorkspaceSvg;
+        break;
+      }
+      case ASTNode.types.BUTTON: {
+        location = this.getLocation() as FlyoutButton;
+        targetWorkspace = location.getTargetWorkspace() as WorkspaceSvg;
+        break;
+      }
+      default:
+        return null;
+    }
+
+    const flyout = targetWorkspace.getFlyout();
+    if (!flyout) return null;
+
+    const nextItem = this.findNextLocationInFlyout(
+      flyout.getContents(),
+      location,
+      forward,
+    );
+    if (!nextItem) return null;
+
+    if (nextItem.type === 'button' && nextItem.button) {
+      return ASTNode.createButtonNode(nextItem.button);
+    } else if (nextItem.type === 'block' && nextItem.block) {
+      return ASTNode.createStackNode(nextItem.block);
+    }
+
+    return null;
+  }
+
+  /**
+   * Finds the next (or previous if navigating backward) item in the flyout that should be navigated to.
+   *
+   * @param flyoutContents Contents of the current flyout.
+   * @param currentLocation Current ASTNode location.
+   * @param forward True if we're navigating forward, else false.
+   * @returns The next (or previous) FlyoutItem, or null if there is none.
+   */
+  private findNextLocationInFlyout(
+    flyoutContents: FlyoutItem[],
+    currentLocation: IASTNodeLocation,
+    forward: boolean,
+  ): FlyoutItem | null {
+    const currentIndex = flyoutContents.findIndex((item: FlyoutItem) => {
+      if (currentLocation instanceof Block && item.block === currentLocation) {
+        return true;
+      }
+      if (
+        currentLocation instanceof FlyoutButton &&
+        item.button === currentLocation
+      ) {
+        return true;
+      }
+      return false;
+    });
+
+    if (currentIndex < 0) return null;
+
+    const resultIndex = forward ? currentIndex + 1 : currentIndex - 1;
+    if (resultIndex === -1 || resultIndex === flyoutContents.length) {
+      return null;
+    }
+
+    return flyoutContents[resultIndex];
   }
 
   /**
@@ -348,7 +435,7 @@ export class ASTNode {
       // AnyDuringMigration because:  Argument of type 'Input | null' is not
       // assignable to parameter of type 'Input'.
       return ASTNode.createInputNode(
-        topConnection.targetConnection.getParentInput() as AnyDuringMigration
+        topConnection.targetConnection.getParentInput() as AnyDuringMigration,
       );
     } else {
       // Go to stack level if you are not underneath an input.
@@ -386,7 +473,7 @@ export class ASTNode {
    * Finds the source block of the location of this node.
    *
    * @returns The source block of the location, or null if the node is of type
-   *     workspace.
+   *     workspace or button.
    */
   getSourceBlock(): Block | null {
     if (this.getType() === ASTNode.types.BLOCK) {
@@ -394,6 +481,8 @@ export class ASTNode {
     } else if (this.getType() === ASTNode.types.STACK) {
       return this.getLocation() as Block;
     } else if (this.getType() === ASTNode.types.WORKSPACE) {
+      return null;
+    } else if (this.getType() === ASTNode.types.BUTTON) {
       return null;
     } else {
       return (this.getLocation() as IASTNodeLocationWithBlock).getSourceBlock();
@@ -436,6 +525,8 @@ export class ASTNode {
         const targetConnection = connection.targetConnection;
         return ASTNode.createConnectionNode(targetConnection!);
       }
+      case ASTNode.types.BUTTON:
+        return this.navigateFlyoutContents(true);
     }
 
     return null;
@@ -514,6 +605,8 @@ export class ASTNode {
         const connection = this.location as Connection;
         return ASTNode.createBlockNode(connection.getSourceBlock());
       }
+      case ASTNode.types.BUTTON:
+        return this.navigateFlyoutContents(false);
     }
 
     return null;
@@ -534,7 +627,7 @@ export class ASTNode {
         // TODO: Make sure this is in the bounds of the workspace.
         const wsCoordinate = new Coordinate(
           blockPos.x,
-          blockPos.y + ASTNode.DEFAULT_OFFSET_Y
+          blockPos.y + ASTNode.DEFAULT_OFFSET_Y,
         );
         return ASTNode.createWorkspaceNode(block.workspace, wsCoordinate);
       }
@@ -551,7 +644,7 @@ export class ASTNode {
         const block = field.getSourceBlock();
         if (!block) {
           throw new Error(
-            'The current AST location is not associated with a block'
+            'The current AST location is not associated with a block',
           );
         }
         return ASTNode.createBlockNode(block);
@@ -624,7 +717,7 @@ export class ASTNode {
       // AnyDuringMigration because:  Argument of type 'Input | null' is not
       // assignable to parameter of type 'Input'.
       return ASTNode.createInputNode(
-        connection.getParentInput() as AnyDuringMigration
+        connection.getParentInput() as AnyDuringMigration,
       );
     } else if (
       type === ConnectionType.NEXT_STATEMENT &&
@@ -633,7 +726,7 @@ export class ASTNode {
       // AnyDuringMigration because:  Argument of type 'Input | null' is not
       // assignable to parameter of type 'Input'.
       return ASTNode.createInputNode(
-        connection.getParentInput() as AnyDuringMigration
+        connection.getParentInput() as AnyDuringMigration,
       );
     } else if (type === ConnectionType.NEXT_STATEMENT) {
       return new ASTNode(ASTNode.types.NEXT, connection);
@@ -690,6 +783,22 @@ export class ASTNode {
   }
 
   /**
+   * Create an AST node of type button. A button in this case refers
+   * specifically to a button in a flyout.
+   *
+   * @param button A top block has no parent and can be found in the list
+   *     returned by workspace.getTopBlocks().
+   * @returns An AST node of type stack that points to the top block on the
+   *     stack.
+   */
+  static createButtonNode(button: FlyoutButton): ASTNode | null {
+    if (!button) {
+      return null;
+    }
+    return new ASTNode(ASTNode.types.BUTTON, button);
+  }
+
+  /**
    * Creates an AST node pointing to a workspace.
    *
    * @param workspace The workspace that we are on.
@@ -699,7 +808,7 @@ export class ASTNode {
    */
   static createWorkspaceNode(
     workspace: Workspace | null,
-    wsCoordinate: Coordinate | null
+    wsCoordinate: Coordinate | null,
   ): ASTNode | null {
     if (!wsCoordinate || !workspace) {
       return null;
@@ -741,6 +850,7 @@ export namespace ASTNode {
     PREVIOUS = 'previous',
     STACK = 'stack',
     WORKSPACE = 'workspace',
+    BUTTON = 'button',
   }
 }
 

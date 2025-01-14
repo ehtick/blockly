@@ -4,54 +4,81 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Xml');
+// Former goog.module ID: Blockly.Xml
 
 import type {Block} from './block.js';
 import type {BlockSvg} from './block_svg.js';
+import {RenderedWorkspaceComment} from './comments/rendered_workspace_comment.js';
+import {WorkspaceComment} from './comments/workspace_comment.js';
 import type {Connection} from './connection.js';
+import {MANUALLY_DISABLED} from './constants.js';
+import {EventType} from './events/type.js';
 import * as eventUtils from './events/utils.js';
 import type {Field} from './field.js';
+import {IconType} from './icons/icon_types.js';
 import {inputTypes} from './inputs/input_types.js';
+import * as renderManagement from './render_management.js';
+import {Coordinate} from './utils/coordinate.js';
 import * as dom from './utils/dom.js';
 import {Size} from './utils/size.js';
 import * as utilsXml from './utils/xml.js';
 import type {VariableModel} from './variable_model.js';
 import * as Variables from './variables.js';
 import type {Workspace} from './workspace.js';
-import {WorkspaceComment} from './workspace_comment.js';
-import {WorkspaceCommentSvg} from './workspace_comment_svg.js';
-import type {WorkspaceSvg} from './workspace_svg.js';
+import {WorkspaceSvg} from './workspace_svg.js';
 
 /**
  * Encode a block tree as XML.
  *
  * @param workspace The workspace containing blocks.
- * @param opt_noId True if the encoder should skip the block IDs.
+ * @param skipId True if the encoder should skip the block IDs. False by
+ *     default.
  * @returns XML DOM element.
  */
-export function workspaceToDom(
-  workspace: Workspace,
-  opt_noId?: boolean
-): Element {
+export function workspaceToDom(workspace: Workspace, skipId = false): Element {
   const treeXml = utilsXml.createElement('xml');
   const variablesElement = variablesToDom(
-    Variables.allUsedVarModels(workspace)
+    Variables.allUsedVarModels(workspace),
   );
   if (variablesElement.hasChildNodes()) {
     treeXml.appendChild(variablesElement);
   }
-  const comments = workspace.getTopComments(true);
-  for (let i = 0; i < comments.length; i++) {
-    const comment = comments[i];
-    treeXml.appendChild(comment.toXmlWithXY(opt_noId));
+  for (const comment of workspace.getTopComments()) {
+    treeXml.appendChild(
+      saveWorkspaceComment(comment as AnyDuringMigration, skipId),
+    );
   }
   const blocks = workspace.getTopBlocks(true);
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
-    treeXml.appendChild(blockToDomWithXY(block, opt_noId));
+    treeXml.appendChild(blockToDomWithXY(block, skipId));
   }
   return treeXml;
+}
+
+/** Serializes the given workspace comment to XML. */
+export function saveWorkspaceComment(
+  comment: WorkspaceComment,
+  skipId = false,
+): Element {
+  const elem = utilsXml.createElement('comment');
+  if (!skipId) elem.setAttribute('id', comment.id);
+
+  const workspace = comment.workspace;
+  const loc = comment.getRelativeToSurfaceXY();
+  loc.x = workspace.RTL ? workspace.getWidth() - loc.x : loc.x;
+  elem.setAttribute('x', `${loc.x}`);
+  elem.setAttribute('y', `${loc.y}`);
+  elem.setAttribute('w', `${comment.getSize().width}`);
+  elem.setAttribute('h', `${comment.getSize().height}`);
+
+  if (comment.getText()) elem.textContent = comment.getText();
+  if (comment.isCollapsed()) elem.setAttribute('collapsed', 'true');
+  if (!comment.isOwnEditable()) elem.setAttribute('editable', 'false');
+  if (!comment.isOwnMovable()) elem.setAttribute('movable', 'false');
+  if (!comment.isOwnDeletable()) elem.setAttribute('deletable', 'false');
+
+  return elem;
 }
 
 /**
@@ -85,7 +112,7 @@ export function variablesToDom(variableList: VariableModel[]): Element {
  */
 export function blockToDomWithXY(
   block: Block,
-  opt_noId?: boolean
+  opt_noId?: boolean,
 ): Element | DocumentFragment {
   if (block.isInsertionMarker()) {
     // Skip over insertion markers.
@@ -106,7 +133,7 @@ export function blockToDomWithXY(
     const xy = block.getRelativeToSurfaceXY();
     element.setAttribute(
       'x',
-      String(Math.round(block.workspace.RTL ? width - xy.x : xy.x))
+      String(Math.round(block.workspace.RTL ? width - xy.x : xy.x)),
     );
     element.setAttribute('y', String(Math.round(xy.y)));
   }
@@ -158,7 +185,7 @@ function allFieldsToDom(block: Block, element: Element) {
  */
 export function blockToDom(
   block: Block,
-  opt_noId?: boolean
+  opt_noId?: boolean,
 ): Element | DocumentFragment {
   // Skip over insertion markers.
   if (block.isInsertionMarker()) {
@@ -188,8 +215,9 @@ export function blockToDom(
 
   const commentText = block.getCommentText();
   if (commentText) {
-    const size = block.commentModel.size;
-    const pinned = block.commentModel.pinned;
+    const comment = block.getIcon(IconType.COMMENT)!;
+    const size = comment.getBubbleSize();
+    const pinned = comment.bubbleIsVisible();
 
     const commentElement = utilsXml.createElement('comment');
     commentElement.appendChild(utilsXml.createTextNode(commentText));
@@ -210,7 +238,7 @@ export function blockToDom(
     const input = block.inputList[i];
     let container: Element;
     let empty = true;
-    if (input.type === inputTypes.DUMMY) {
+    if (input.type === inputTypes.DUMMY || input.type === inputTypes.END_ROW) {
       continue;
     } else {
       const childBlock = input.connection!.targetBlock();
@@ -246,15 +274,21 @@ export function blockToDom(
     element.setAttribute('collapsed', 'true');
   }
   if (!block.isEnabled()) {
-    element.setAttribute('disabled', 'true');
+    // Set the value of the attribute to a comma-separated list of reasons.
+    // Use encodeURIComponent to escape commas in the reasons so that they
+    // won't be confused with separator commas.
+    element.setAttribute(
+      'disabled-reasons',
+      Array.from(block.getDisabledReasons()).map(encodeURIComponent).join(','),
+    );
   }
-  if (!block.isDeletable() && !block.isShadow()) {
+  if (!block.isOwnDeletable()) {
     element.setAttribute('deletable', 'false');
   }
-  if (!block.isMovable() && !block.isShadow()) {
+  if (!block.isOwnMovable()) {
     element.setAttribute('movable', 'false');
   }
-  if (!block.isEditable()) {
+  if (!block.isOwnEditable()) {
     element.setAttribute('editable', 'false');
   }
 
@@ -383,7 +417,7 @@ export function domToPrettyText(dom: Node): string {
  */
 export function clearWorkspaceAndLoadFromXml(
   xml: Element,
-  workspace: WorkspaceSvg
+  workspace: WorkspaceSvg,
 ): string[] {
   workspace.setResizesEnabled(false);
   workspace.clear();
@@ -398,8 +432,6 @@ export function clearWorkspaceAndLoadFromXml(
  * @param xml XML DOM.
  * @param workspace The workspace.
  * @returns An array containing new block IDs.
- * @suppress {strictModuleDepCheck} Suppress module check while workspace
- * comments are not bundled in.
  */
 export function domToWorkspace(xml: Element, workspace: Workspace): string[] {
   let width = 0; // Not used in LTR.
@@ -430,7 +462,7 @@ export function domToWorkspace(xml: Element, workspace: Workspace): string[] {
         // Allow top-level shadow blocks if recordUndo is disabled since
         // that means an undo is in progress.  Such a block is expected
         // to be moved to a nested destination in the next operation.
-        const block = domToBlock(xmlChildElement, workspace);
+        const block = domToBlockInternal(xmlChildElement, workspace);
         newBlockIds.push(block.id);
         const blockX = parseInt(xmlChildElement.getAttribute('x') ?? '10', 10);
         const blockY = parseInt(xmlChildElement.getAttribute('y') ?? '10', 10);
@@ -443,15 +475,7 @@ export function domToWorkspace(xml: Element, workspace: Workspace): string[] {
       } else if (name === 'shadow') {
         throw TypeError('Shadow block cannot be a top-level block.');
       } else if (name === 'comment') {
-        if (workspace.rendered) {
-          WorkspaceCommentSvg.fromXmlRendered(
-            xmlChildElement,
-            workspace as WorkspaceSvg,
-            width
-          );
-        } else {
-          WorkspaceComment.fromXml(xmlChildElement, workspace);
-        }
+        loadWorkspaceComment(xmlChildElement, workspace);
       } else if (name === 'variables') {
         if (variablesFirst) {
           domToVariables(xmlChildElement, workspace);
@@ -459,7 +483,7 @@ export function domToWorkspace(xml: Element, workspace: Workspace): string[] {
           throw Error(
             "'variables' tag must exist once before block and " +
               'shadow tag elements in the workspace XML, but it was found in ' +
-              'another location.'
+              'another location.',
           );
         }
         variablesFirst = false;
@@ -467,14 +491,46 @@ export function domToWorkspace(xml: Element, workspace: Workspace): string[] {
     }
   } finally {
     eventUtils.setGroup(existingGroup);
+    if ((workspace as WorkspaceSvg).setResizesEnabled) {
+      (workspace as WorkspaceSvg).setResizesEnabled(true);
+    }
+    if (workspace.rendered) renderManagement.triggerQueuedRenders();
     dom.stopTextWidthCache();
   }
   // Re-enable workspace resizing.
-  if ((workspace as WorkspaceSvg).setResizesEnabled) {
-    (workspace as WorkspaceSvg).setResizesEnabled(true);
-  }
-  eventUtils.fire(new (eventUtils.get(eventUtils.FINISHED_LOADING))(workspace));
+  eventUtils.fire(new (eventUtils.get(EventType.FINISHED_LOADING))(workspace));
   return newBlockIds;
+}
+
+/** Deserializes the given comment state into the given workspace. */
+export function loadWorkspaceComment(
+  elem: Element,
+  workspace: Workspace,
+): WorkspaceComment {
+  const id = elem.getAttribute('id') ?? undefined;
+  const comment = workspace.rendered
+    ? new RenderedWorkspaceComment(workspace as WorkspaceSvg, id)
+    : new WorkspaceComment(workspace, id);
+
+  comment.setText(elem.textContent ?? '');
+
+  let x = parseInt(elem.getAttribute('x') ?? '', 10);
+  const y = parseInt(elem.getAttribute('y') ?? '', 10);
+  if (!isNaN(x) && !isNaN(y)) {
+    x = workspace.RTL ? workspace.getWidth() - x : x;
+    comment.moveTo(new Coordinate(x, y));
+  }
+
+  const w = parseInt(elem.getAttribute('w') ?? '', 10);
+  const h = parseInt(elem.getAttribute('h') ?? '', 10);
+  if (!isNaN(w) && !isNaN(h)) comment.setSize(new Size(w, h));
+
+  if (elem.getAttribute('collapsed') === 'true') comment.setCollapsed(true);
+  if (elem.getAttribute('editable') === 'false') comment.setEditable(false);
+  if (elem.getAttribute('movable') === 'false') comment.setMovable(false);
+  if (elem.getAttribute('deletable') === 'false') comment.setDeletable(false);
+
+  return comment;
 }
 
 /**
@@ -487,7 +543,7 @@ export function domToWorkspace(xml: Element, workspace: Workspace): string[] {
  */
 export function appendDomToWorkspace(
   xml: Element,
-  workspace: WorkspaceSvg
+  workspace: WorkspaceSvg,
 ): string[] {
   // First check if we have a WorkspaceSvg, otherwise the blocks have no shape
   // and the position does not matter.
@@ -545,6 +601,27 @@ export function appendDomToWorkspace(
  * @returns The root block created.
  */
 export function domToBlock(xmlBlock: Element, workspace: Workspace): Block {
+  const block = domToBlockInternal(xmlBlock, workspace);
+  if (workspace.rendered) renderManagement.triggerQueuedRenders();
+  return block;
+}
+
+/**
+ * Decode an XML block tag and create a block (and possibly sub blocks) on the
+ * workspace.
+ *
+ * This is defined internally so that it doesn't trigger an immediate render,
+ * which we do want to happen for external calls.
+ *
+ * @param xmlBlock XML block element.
+ * @param workspace The workspace.
+ * @returns The root block created.
+ * @internal
+ */
+export function domToBlockInternal(
+  xmlBlock: Element,
+  workspace: Workspace,
+): Block {
   // Create top-level block.
   eventUtils.disable();
   const variablesBeforeCreation = workspace.getAllVariables();
@@ -561,7 +638,7 @@ export function domToBlock(xmlBlock: Element, workspace: Workspace): Block {
         (blocks[i] as BlockSvg).initSvg();
       }
       for (let i = blocks.length - 1; i >= 0; i--) {
-        (blocks[i] as BlockSvg).render(false);
+        (blocks[i] as BlockSvg).queueRender();
       }
       // Populating the connection database may be deferred until after the
       // blocks have rendered.
@@ -570,7 +647,6 @@ export function domToBlock(xmlBlock: Element, workspace: Workspace): Block {
           topBlockSvg.setConnectionTracking(true);
         }
       }, 1);
-      topBlockSvg.updateDisabled();
       // Allow the scrollbars to resize and move based on the new contents.
       // TODO(@picklesrus): #387. Remove when domToBlock avoids resizing.
       (workspace as WorkspaceSvg).resizeContents();
@@ -586,18 +662,16 @@ export function domToBlock(xmlBlock: Element, workspace: Workspace): Block {
   if (eventUtils.isEnabled()) {
     const newVariables = Variables.getAddedVariables(
       workspace,
-      variablesBeforeCreation
+      variablesBeforeCreation,
     );
     // Fire a VarCreate event for each (if any) new variable created.
     for (let i = 0; i < newVariables.length; i++) {
       const thisVariable = newVariables[i];
-      eventUtils.fire(
-        new (eventUtils.get(eventUtils.VAR_CREATE))(thisVariable)
-      );
+      eventUtils.fire(new (eventUtils.get(EventType.VAR_CREATE))(thisVariable));
     }
     // Block events come after var events, in case they refer to newly created
     // variables.
-    eventUtils.fire(new (eventUtils.get(eventUtils.CREATE))(topBlock));
+    eventUtils.fire(new (eventUtils.get(EventType.BLOCK_CREATE))(topBlock));
   }
   return topBlock;
 }
@@ -722,17 +796,14 @@ function applyCommentTagNodes(xmlChildren: Element[], block: Block) {
     const height = parseInt(xmlChild.getAttribute('h') ?? '50', 10);
 
     block.setCommentText(text);
-    block.commentModel.pinned = pinned;
+    const comment = block.getIcon(IconType.COMMENT)!;
     if (!isNaN(width) && !isNaN(height)) {
-      block.commentModel.size = new Size(width, height);
+      comment.setBubbleSize(new Size(width, height));
     }
-
-    if (pinned && (block as BlockSvg).getCommentIcon && !block.isInFlyout) {
-      const blockSvg = block as BlockSvg;
-      setTimeout(function () {
-        blockSvg.getCommentIcon()!.setVisible(true);
-      }, 1);
-    }
+    // Set the pinned state of the bubble.
+    comment.setBubbleVisible(pinned);
+    // Actually show the bubble after the block has been rendered.
+    setTimeout(() => comment.setBubbleVisible(pinned), 1);
   }
 }
 
@@ -803,7 +874,7 @@ function applyInputTagNodes(
   xmlChildren: Element[],
   workspace: Workspace,
   block: Block,
-  prototypeName: string
+  prototypeName: string,
 ) {
   for (let i = 0; i < xmlChildren.length; i++) {
     const xmlChild = xmlChildren[i];
@@ -811,7 +882,10 @@ function applyInputTagNodes(
     const input = nodeName ? block.getInput(nodeName) : null;
     if (!input) {
       console.warn(
-        'Ignoring non-existent input ' + nodeName + ' in block ' + prototypeName
+        'Ignoring non-existent input ' +
+          nodeName +
+          ' in block ' +
+          prototypeName,
       );
       break;
     }
@@ -824,7 +898,7 @@ function applyInputTagNodes(
         childBlockInfo.childBlockElement,
         workspace,
         input.connection,
-        false
+        false,
       );
     }
     // Set shadow after so we don't create a shadow we delete immediately.
@@ -844,7 +918,7 @@ function applyInputTagNodes(
 function applyNextTagNodes(
   xmlChildren: Element[],
   workspace: Workspace,
-  block: Block
+  block: Block,
 ) {
   for (let i = 0; i < xmlChildren.length; i++) {
     const xmlChild = xmlChildren[i];
@@ -862,7 +936,7 @@ function applyNextTagNodes(
         childBlockInfo.childBlockElement,
         workspace,
         block.nextConnection,
-        true
+        true,
       );
     }
     // Set shadow after so we don't create a shadow we delete immediately.
@@ -878,7 +952,7 @@ function applyNextTagNodes(
  *
  * @param xmlBlock XML block element.
  * @param workspace The workspace.
- * @param parentConnection The parent connection to to connect this block to
+ * @param parentConnection The parent connection to connect this block to
  *     after instantiating.
  * @param connectedToParentNext Whether the provided parent connection is a next
  *     connection, rather than output or statement.
@@ -888,7 +962,7 @@ function domToBlockHeadless(
   xmlBlock: Element,
   workspace: Workspace,
   parentConnection?: Connection,
-  connectedToParentNext?: boolean
+  connectedToParentNext?: boolean,
 ): Block {
   let block = null;
   const prototypeName = xmlBlock.getAttribute('type');
@@ -903,7 +977,7 @@ function domToBlockHeadless(
 
   const shouldCallInitSvg = applyMutationTagNodes(
     xmlChildNameMap.mutation,
-    block
+    block,
   );
   applyCommentTagNodes(xmlChildNameMap.comment, block);
   applyDataTagNodes(xmlChildNameMap.data, block);
@@ -923,7 +997,7 @@ function domToBlockHeadless(
         parentConnection.connect(block.previousConnection);
       } else {
         throw TypeError(
-          'Child block does not have output or previous statement.'
+          'Child block does not have output or previous statement.',
         );
       }
     }
@@ -947,7 +1021,20 @@ function domToBlockHeadless(
   }
   const disabled = xmlBlock.getAttribute('disabled');
   if (disabled) {
-    block.setEnabled(disabled !== 'true' && disabled !== 'disabled');
+    // Before May 2024 we just used 'disabled', with no reasons.
+    // Contiune to support this syntax.
+    block.setDisabledReason(
+      disabled === 'true' || disabled === 'disabled',
+      MANUALLY_DISABLED,
+    );
+  }
+  const disabledReasons = xmlBlock.getAttribute('disabled-reasons');
+  if (disabledReasons !== null) {
+    for (const reason of disabledReasons.split(',')) {
+      // Use decodeURIComponent to restore characters that were encoded in the
+      // value, such as commas.
+      block.setDisabledReason(true, decodeURIComponent(reason));
+    }
   }
   const deletable = xmlBlock.getAttribute('deletable');
   if (deletable) {
@@ -974,10 +1061,7 @@ function domToBlockHeadless(
         throw TypeError('Shadow block not allowed non-shadow child.');
       }
     }
-    // Ensure this block doesn't have any variable inputs.
-    if (block.getVarModels().length) {
-      throw TypeError('Shadow blocks cannot have variable references.');
-    }
+
     block.setShadow(true);
   }
   return block;
@@ -994,7 +1078,7 @@ function domToField(block: Block, fieldName: string, xml: Element) {
   const field = block.getField(fieldName);
   if (!field) {
     console.warn(
-      'Ignoring non-existent field ' + fieldName + ' in block ' + block.type
+      'Ignoring non-existent field ' + fieldName + ' in block ' + block.type,
     );
     return;
   }

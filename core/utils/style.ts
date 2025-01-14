@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.utils.style');
+// Former goog.module ID: Blockly.utils.style
 
 import {Coordinate} from './coordinate.js';
+import * as deprecation from './deprecation.js';
 import {Rect} from './rect.js';
 import {Size} from './size.js';
 
@@ -59,6 +59,7 @@ function getSizeInternal(element: Element): Size {
  * @returns Object with width/height properties.
  */
 function getSizeWithDisplay(element: Element): Size {
+  deprecation.warn(`Blockly.utils.style.getSizeWithDisplay()`, 'v11.2', 'v13');
   const offsetWidth = (element as HTMLElement).offsetWidth;
   const offsetHeight = (element as HTMLElement).offsetHeight;
   return new Size(offsetWidth, offsetHeight);
@@ -101,7 +102,7 @@ export function getPageOffset(el: Element): Coordinate {
   // the viewport.
   const scrollCoord = new Coordinate(
     window.pageXOffset || documentElement.scrollLeft,
-    window.pageYOffset || documentElement.scrollTop
+    window.pageYOffset || documentElement.scrollTop,
   );
   pos.x = box.left + scrollCoord.x;
   pos.y = box.top + scrollCoord.y;
@@ -131,6 +132,7 @@ export function getViewportPageOffset(): Coordinate {
  * @returns The computed border widths.
  */
 export function getBorderBox(element: Element): Rect {
+  deprecation.warn(`Blockly.utils.style.getBorderBox()`, 'v11.2', 'v13');
   const left = parseFloat(getComputedStyle(element, 'borderLeftWidth'));
   const right = parseFloat(getComputedStyle(element, 'borderRightWidth'));
   const top = parseFloat(getComputedStyle(element, 'borderTopWidth'));
@@ -155,8 +157,14 @@ export function getBorderBox(element: Element): Rect {
 export function scrollIntoContainerView(
   element: Element,
   container: Element,
-  opt_center?: boolean
+  opt_center?: boolean,
 ) {
+  deprecation.warn(
+    `Blockly.utils.style.scrollIntoContainerView()`,
+    'v11.2',
+    'v13',
+    'the native Element.scrollIntoView()',
+  );
   const offset = getContainerOffsetToScrollInto(element, container, opt_center);
   container.scrollLeft = offset.x;
   container.scrollTop = offset.y;
@@ -179,8 +187,13 @@ export function scrollIntoContainerView(
 export function getContainerOffsetToScrollInto(
   element: Element,
   container: Element,
-  opt_center?: boolean
+  opt_center?: boolean,
 ): Coordinate {
+  deprecation.warn(
+    `Blockly.utils.style.getContainerOffsetToScrollInto()`,
+    'v11.2',
+    'v13',
+  );
   // Absolute position of the element's border's top left corner.
   const elementPos = getPageOffset(element);
   // Absolute position of the container's border's top left corner.

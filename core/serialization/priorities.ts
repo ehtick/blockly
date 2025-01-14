@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.serialization.priorities');
+// Former goog.module ID: Blockly.serialization.priorities
 
 /**
  * The priority for deserializing variables.
@@ -21,3 +20,6 @@ export const PROCEDURES = 75;
  * The priority for deserializing blocks.
  */
 export const BLOCKS = 50;
+
+/** The priority for deserializing workspace comments. */
+export const WORKSPACE_COMMENTS = 25;

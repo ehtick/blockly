@@ -4,15 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.PathObject');
+// Former goog.module ID: Blockly.blockRendering.PathObject
 
 import type {BlockSvg} from '../../block_svg.js';
 import type {Connection} from '../../connection.js';
+import {RenderedConnection} from '../../rendered_connection.js';
 import type {BlockStyle} from '../../theme.js';
+import {Coordinate} from '../../utils/coordinate.js';
 import * as dom from '../../utils/dom.js';
 import {Svg} from '../../utils/svg.js';
-
 import type {ConstantProvider} from './constants.js';
 import type {IPathObject} from './i_path_object.js';
 
@@ -39,6 +39,12 @@ export class PathObject implements IPathObject {
   constants: ConstantProvider;
   style: BlockStyle;
 
+  /** Highlight paths associated with connections. */
+  private connectionHighlights = new WeakMap<RenderedConnection, SVGElement>();
+
+  /** Locations of connection highlights. */
+  private highlightOffsets = new WeakMap<RenderedConnection, Coordinate>();
+
   /**
    * @param root The root SVG element.
    * @param style The style object to use for colouring.
@@ -47,7 +53,7 @@ export class PathObject implements IPathObject {
   constructor(
     root: SVGElement,
     style: BlockStyle,
-    constants: ConstantProvider
+    constants: ConstantProvider,
   ) {
     this.constants = constants;
     this.style = style;
@@ -57,7 +63,7 @@ export class PathObject implements IPathObject {
     this.svgPath = dom.createSvgElement(
       Svg.PATH,
       {'class': 'blocklyPath'},
-      this.svgRoot
+      this.svgRoot,
     );
   }
 
@@ -165,7 +171,7 @@ export class PathObject implements IPathObject {
     if (enable) {
       this.svgPath.setAttribute(
         'filter',
-        'url(#' + this.constants.embossFilterId + ')'
+        'url(#' + this.constants.embossFilterId + ')',
       );
     } else {
       this.svgPath.setAttribute('filter', 'none');
@@ -194,7 +200,7 @@ export class PathObject implements IPathObject {
     if (disabled) {
       this.svgPath.setAttribute(
         'fill',
-        'url(#' + this.constants.disabledPatternId + ')'
+        'url(#' + this.constants.disabledPatternId + ')',
       );
     }
   }
@@ -256,5 +262,54 @@ export class PathObject implements IPathObject {
    */
   updateShapeForInputHighlight(_conn: Connection, _enable: boolean) {
     // NOOP
+  }
+
+  /** Adds the given path as a connection highlight for the given connection. */
+  addConnectionHighlight(
+    connection: RenderedConnection,
+    connectionPath: string,
+    offset: Coordinate,
+    rtl: boolean,
+  ) {
+    if (this.connectionHighlights.has(connection)) {
+      if (this.currentHighlightMatchesNew(connection, connectionPath, offset)) {
+        return;
+      }
+      this.removeConnectionHighlight(connection);
+    }
+
+    const highlight = dom.createSvgElement(
+      Svg.PATH,
+      {
+        'class': 'blocklyHighlightedConnectionPath',
+        'd': connectionPath,
+        'transform':
+          `translate(${offset.x}, ${offset.y})` + (rtl ? ' scale(-1 1)' : ''),
+      },
+      this.svgRoot,
+    );
+    this.connectionHighlights.set(connection, highlight);
+  }
+
+  private currentHighlightMatchesNew(
+    connection: RenderedConnection,
+    newPath: string,
+    newOffset: Coordinate,
+  ): boolean {
+    const currPath = this.connectionHighlights
+      .get(connection)
+      ?.getAttribute('d');
+    const currOffset = this.highlightOffsets.get(connection);
+    return currPath === newPath && Coordinate.equals(currOffset, newOffset);
+  }
+
+  /**
+   * Removes any highlight associated with the given connection, if it exists.
+   */
+  removeConnectionHighlight(connection: RenderedConnection) {
+    const highlight = this.connectionHighlights.get(connection);
+    if (!highlight) return;
+    dom.removeNode(highlight);
+    this.connectionHighlights.delete(connection);
   }
 }

@@ -4,10 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.serialization.registry');
+// Former goog.module ID: Blockly.serialization.registry
 
-// eslint-disable-next-line no-unused-vars
 import type {ISerializer} from '../interfaces/i_serializer.js';
 import * as registry from '../registry.js';
 

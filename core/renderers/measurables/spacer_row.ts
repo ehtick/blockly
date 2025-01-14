@@ -4,11 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.SpacerRow');
+// Former goog.module ID: Blockly.blockRendering.SpacerRow
 
 import type {ConstantProvider} from '../common/constants.js';
-
 import {InRowSpacer} from './in_row_spacer.js';
 import {Row} from './row.js';
 import {Types} from './types.js';
@@ -32,7 +30,7 @@ export class SpacerRow extends Row {
   constructor(
     constants: ConstantProvider,
     public override height: number,
-    public override width: number
+    public override width: number,
   ) {
     super(constants);
     this.type |= Types.SPACER | Types.BETWEEN_ROW_SPACER;

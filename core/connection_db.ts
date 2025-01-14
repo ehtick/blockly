@@ -11,8 +11,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.ConnectionDB');
+// Former goog.module ID: Blockly.ConnectionDB
 
 import {ConnectionType} from './connection_type.js';
 import type {IConnectionChecker} from './interfaces/i_connection_checker.js';
@@ -59,7 +58,7 @@ export class ConnectionDB {
    */
   private findIndexOfConnection(
     conn: RenderedConnection,
-    yPos: number
+    yPos: number,
   ): number {
     if (!this.connections.length) {
       return -1;
@@ -145,7 +144,7 @@ export class ConnectionDB {
    */
   getNeighbours(
     connection: RenderedConnection,
-    maxRadius: number
+    maxRadius: number,
   ): RenderedConnection[] {
     const db = this.connections;
     const currentX = connection.x;
@@ -225,7 +224,7 @@ export class ConnectionDB {
   searchForClosest(
     conn: RenderedConnection,
     maxRadius: number,
-    dxy: Coordinate
+    dxy: Coordinate,
   ): {connection: RenderedConnection | null; radius: number} {
     if (!this.connections.length) {
       // Don't bother.

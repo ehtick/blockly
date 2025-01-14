@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.extensions');
-
+import {assert} from '../../node_modules/chai/chai.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -29,8 +28,8 @@ suite('Extensions', function () {
     this.extensionsCleanup_.push('extensions_test_before');
     this.extensionsCleanup_.push('extensions_test_after');
 
-    chai.assert.isUndefined(
-      Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test_before']
+    assert.isUndefined(
+      Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test_before'],
     );
     const beforeCallback = sinon.spy();
     // Extension defined before the block type is defined.
@@ -44,20 +43,20 @@ suite('Extensions', function () {
       },
     ]);
 
-    chai.assert.isUndefined(
-      Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test_after']
+    assert.isUndefined(
+      Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test_after'],
     );
     const afterCallback = sinon.spy();
     // Extension defined after the block type (but before instantiation).
     Blockly.Extensions.register('extensions_test_after', afterCallback);
 
-    chai.assert.typeOf(
+    assert.typeOf(
       Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test_before'],
-      'function'
+      'function',
     );
-    chai.assert.typeOf(
+    assert.typeOf(
       Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test_after'],
-      'function'
+      'function',
     );
     sinon.assert.notCalled(beforeCallback);
     sinon.assert.notCalled(afterCallback);
@@ -96,31 +95,31 @@ suite('Extensions', function () {
 
     const block = new Blockly.Block(
       this.workspace,
-      'test_parent_tooltip_when_inline'
+      'test_parent_tooltip_when_inline',
     );
 
     // Tooltip is dynamic after extension initialization.
-    chai.assert.typeOf(block.tooltip, 'function');
-    chai.assert.equal(block.tooltip(), defaultTooltip);
+    assert.typeOf(block.tooltip, 'function');
+    assert.equal(block.tooltip(), defaultTooltip);
 
     // Tooltip is normal before connected to parent.
     const parent = new Blockly.Block(this.workspace, 'test_parent');
-    chai.assert.equal(parent.tooltip, parentTooltip);
-    chai.assert.notExists(parent.inputsInline);
+    assert.equal(parent.tooltip, parentTooltip);
+    assert.notExists(parent.inputsInline);
 
     // Tooltip is normal when parent is not inline.
     parent.getInput('INPUT').connection.connect(block.outputConnection);
-    chai.assert.equal(block.getParent(), parent);
-    chai.assert.equal(block.tooltip(), defaultTooltip);
+    assert.equal(block.getParent(), parent);
+    assert.equal(block.tooltip(), defaultTooltip);
 
     // Tooltip is parent's when parent is inline.
     parent.setInputsInline(true);
-    chai.assert.equal(block.tooltip(), parentTooltip);
+    assert.equal(block.tooltip(), parentTooltip);
 
     // Tooltip revert when disconnected.
     parent.getInput('INPUT').connection.disconnect();
-    chai.assert.notExists(block.getParent());
-    chai.assert.equal(block.tooltip(), defaultTooltip);
+    assert.notExists(block.getParent());
+    assert.equal(block.tooltip(), defaultTooltip);
   });
 
   suite('Mixin', function () {
@@ -134,15 +133,15 @@ suite('Extensions', function () {
         },
       };
 
-      chai.assert.isUndefined(
-        Blockly.Extensions.TEST_ONLY.allExtensions['mixin_test']
+      assert.isUndefined(
+        Blockly.Extensions.TEST_ONLY.allExtensions['mixin_test'],
       );
       // Extension defined before the block type is defined.
       Blockly.Extensions.registerMixin('mixin_test', testMixin);
 
-      chai.assert.typeOf(
+      assert.typeOf(
         Blockly.Extensions.TEST_ONLY.allExtensions['mixin_test'],
-        'function'
+        'function',
       );
 
       Blockly.defineBlocksWithJsonArray([
@@ -155,8 +154,8 @@ suite('Extensions', function () {
 
       const block = new Blockly.Block(this.workspace, 'test_block_mixin');
 
-      chai.assert.equal(testMixin.field, block.field);
-      chai.assert.equal(testMixin.method, block.method);
+      assert.equal(testMixin.field, block.field);
+      assert.equal(testMixin.method, block.method);
     });
 
     suite('Mutator', function () {
@@ -192,10 +191,10 @@ suite('Extensions', function () {
         const block = new Blockly.Block(this.workspace, 'mutator_test_block');
 
         // Make sure all of the functions were installed correctly.
-        chai.assert.equal(block.domToMutation(), 'domToMutationFn');
-        chai.assert.equal(block.mutationToDom(), 'mutationToDomFn');
-        chai.assert.equal(block.compose(), 'composeFn');
-        chai.assert.equal(block.decompose(), 'decomposeFn');
+        assert.equal(block.domToMutation(), 'domToMutationFn');
+        assert.equal(block.mutationToDom(), 'mutationToDomFn');
+        assert.equal(block.compose(), 'composeFn');
+        assert.equal(block.decompose(), 'decomposeFn');
       });
 
       test('With helper function', function () {
@@ -212,8 +211,8 @@ suite('Extensions', function () {
         // Events code calls mutationToDom and expects it to give back a
         // meaningful value.
         Blockly.Events.disable();
-        chai.assert.isUndefined(
-          Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test']
+        assert.isUndefined(
+          Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test'],
         );
         const helperFunctionSpy = sinon.spy();
         Blockly.Extensions.registerMutator(
@@ -226,7 +225,7 @@ suite('Extensions', function () {
               return 'mutationToDomFn';
             },
           },
-          helperFunctionSpy
+          helperFunctionSpy,
         );
 
         const _ = new Blockly.Block(this.workspace, 'mutator_test_block');
@@ -248,8 +247,8 @@ suite('Extensions', function () {
         // Events code calls mutationToDom and expects it to give back a
         // meaningful value.
         Blockly.Events.disable();
-        chai.assert.isUndefined(
-          Blockly.Extensions.TEST_ONLY.allExtensions['mutator_test']
+        assert.isUndefined(
+          Blockly.Extensions.TEST_ONLY.allExtensions['mutator_test'],
         );
         Blockly.Extensions.registerMutator('mutator_test', {
           domToMutation: function () {
@@ -263,10 +262,10 @@ suite('Extensions', function () {
         const block = new Blockly.Block(this.workspace, 'mutator_test_block');
 
         // Make sure all of the functions were installed correctly.
-        chai.assert.equal(block.domToMutation(), 'domToMutationFn');
-        chai.assert.equal(block.mutationToDom(), 'mutationToDomFn');
-        chai.assert.isUndefined(block['compose']);
-        chai.assert.isUndefined(block['decompose']);
+        assert.equal(block.domToMutation(), 'domToMutationFn');
+        assert.equal(block.mutationToDom(), 'mutationToDomFn');
+        assert.isUndefined(block['compose']);
+        assert.isUndefined(block['decompose']);
       });
     });
   });
@@ -281,11 +280,11 @@ suite('Extensions', function () {
         },
       ]);
 
-      chai.assert.isUndefined(
-        Blockly.Extensions.TEST_ONLY.allExtensions['missing_extension']
+      assert.isUndefined(
+        Blockly.Extensions.TEST_ONLY.allExtensions['missing_extension'],
       );
       const workspace = this.workspace;
-      chai.assert.throws(function () {
+      assert.throws(function () {
         const _ = new Blockly.Block(workspace, 'missing_extension_block');
       });
     });
@@ -297,17 +296,17 @@ suite('Extensions', function () {
         inputList: 'bad inputList', // Defined in constructor
       };
 
-      chai.assert.isUndefined(
-        Blockly.Extensions.TEST_ONLY.allExtensions['mixin_bad_inputList']
+      assert.isUndefined(
+        Blockly.Extensions.TEST_ONLY.allExtensions['mixin_bad_inputList'],
       );
       // Extension defined before the block type is defined.
       Blockly.Extensions.registerMixin(
         'mixin_bad_inputList',
-        TEST_MIXIN_BAD_INPUTLIST
+        TEST_MIXIN_BAD_INPUTLIST,
       );
-      chai.assert.typeOf(
+      assert.typeOf(
         Blockly.Extensions.TEST_ONLY.allExtensions['mixin_bad_inputList'],
-        'function'
+        'function',
       );
 
       Blockly.defineBlocksWithJsonArray([
@@ -319,7 +318,7 @@ suite('Extensions', function () {
       ]);
 
       const workspace = this.workspace;
-      chai.assert.throws(function () {
+      assert.throws(function () {
         const _ = new Blockly.Block(workspace, 'test_block_bad_inputList');
       }, /inputList/);
     });
@@ -331,17 +330,17 @@ suite('Extensions', function () {
         colour_: 'bad colour_', // Defined on prototype
       };
 
-      chai.assert.isUndefined(
-        Blockly.Extensions.TEST_ONLY.allExtensions['mixin_bad_colour_']
+      assert.isUndefined(
+        Blockly.Extensions.TEST_ONLY.allExtensions['mixin_bad_colour_'],
       );
       // Extension defined before the block type is defined.
       Blockly.Extensions.registerMixin(
         'mixin_bad_colour_',
-        TEST_MIXIN_BAD_COLOUR
+        TEST_MIXIN_BAD_COLOUR,
       );
-      chai.assert.typeOf(
+      assert.typeOf(
         Blockly.Extensions.TEST_ONLY.allExtensions['mixin_bad_colour_'],
-        'function'
+        'function',
       );
 
       Blockly.defineBlocksWithJsonArray([
@@ -353,7 +352,7 @@ suite('Extensions', function () {
       ]);
 
       const workspace = this.workspace;
-      chai.assert.throws(function () {
+      assert.throws(function () {
         const _ = new Blockly.Block(workspace, 'test_block_bad_colour');
       }, /colour_/);
     });
@@ -372,8 +371,8 @@ suite('Extensions', function () {
       // Events code calls mutationToDom and expects it to give back a
       // meaningful value.
       Blockly.Events.disable();
-      chai.assert.isUndefined(
-        Blockly.Extensions.TEST_ONLY.allExtensions['mutator_test']
+      assert.isUndefined(
+        Blockly.Extensions.TEST_ONLY.allExtensions['mutator_test'],
       );
       Blockly.Extensions.registerMutator('mutator_test', {
         domToMutation: function () {
@@ -385,12 +384,12 @@ suite('Extensions', function () {
       });
 
       const workspace = this.workspace;
-      chai.assert.throws(function () {
+      assert.throws(function () {
         const _ = new Blockly.Block(workspace, 'mutator_test_block');
       });
       // Should have failed on apply, not on register.
-      chai.assert.isNotNull(
-        Blockly.Extensions.TEST_ONLY.allExtensions['mutator_test']
+      assert.isNotNull(
+        Blockly.Extensions.TEST_ONLY.allExtensions['mutator_test'],
       );
     });
 
@@ -408,8 +407,8 @@ suite('Extensions', function () {
       // Events code calls mutationToDom and expects it to give back a
       // meaningful value.
       Blockly.Events.disable();
-      chai.assert.isUndefined(
-        Blockly.Extensions.TEST_ONLY.allExtensions['mutator_test']
+      assert.isUndefined(
+        Blockly.Extensions.TEST_ONLY.allExtensions['mutator_test'],
       );
       Blockly.Extensions.registerMixin('mutator_test', {
         domToMutation: function () {
@@ -421,12 +420,12 @@ suite('Extensions', function () {
       });
 
       const workspace = this.workspace;
-      chai.assert.throws(function () {
+      assert.throws(function () {
         const _ = new Blockly.Block(workspace, 'mutator_test_block');
       });
       // Should have failed on apply, not on register.
-      chai.assert.isNotNull(
-        Blockly.Extensions.TEST_ONLY.allExtensions['mutator_test']
+      assert.isNotNull(
+        Blockly.Extensions.TEST_ONLY.allExtensions['mutator_test'],
       );
     });
 
@@ -444,50 +443,50 @@ suite('Extensions', function () {
       // Events code calls mutationToDom and expects it to give back a
       // meaningful value.
       Blockly.Events.disable();
-      chai.assert.isUndefined(
-        Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test']
+      assert.isUndefined(
+        Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test'],
       );
       Blockly.Extensions.register('extensions_test', function () {
         return 'extensions_test_fn';
       });
 
       const workspace = this.workspace;
-      chai.assert.throws(function () {
+      assert.throws(function () {
         const _ = new Blockly.Block(workspace, 'mutator_test_block');
       });
       // Should have failed on apply, not on register.
-      chai.assert.isNotNull(
-        Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test']
+      assert.isNotNull(
+        Blockly.Extensions.TEST_ONLY.allExtensions['extensions_test'],
       );
     });
 
     suite('register', function () {
       test('Just a string', function () {
         this.extensionsCleanup_.push('extension_just_a_string');
-        chai.assert.isUndefined(
-          Blockly.Extensions.TEST_ONLY.allExtensions['extension_just_a_string']
+        assert.isUndefined(
+          Blockly.Extensions.TEST_ONLY.allExtensions['extension_just_a_string'],
         );
-        chai.assert.throws(function () {
+        assert.throws(function () {
           Blockly.Extensions.register('extension_just_a_string', null);
         });
       });
 
       test('Null', function () {
         this.extensionsCleanup_.push('extension_is_null');
-        chai.assert.isUndefined(
-          Blockly.Extensions.TEST_ONLY.allExtensions['extension_is_null']
+        assert.isUndefined(
+          Blockly.Extensions.TEST_ONLY.allExtensions['extension_is_null'],
         );
-        chai.assert.throws(function () {
+        assert.throws(function () {
           Blockly.Extensions.register('extension_is_null', null);
         });
       });
 
       test('Undefined', function () {
         this.extensionsCleanup_.push('extension_is_undefined');
-        chai.assert.isUndefined(
-          Blockly.Extensions.TEST_ONLY.allExtensions['extension_is_undefined']
+        assert.isUndefined(
+          Blockly.Extensions.TEST_ONLY.allExtensions['extension_is_undefined'],
         );
-        chai.assert.throws(function () {
+        assert.throws(function () {
           Blockly.Extensions.register('extension_is_undefined', null);
         });
       });
@@ -496,7 +495,7 @@ suite('Extensions', function () {
     suite('registerMutator', function () {
       test('No domToMutation', function () {
         this.extensionsCleanup_.push('mutator_test');
-        chai.assert.throws(function () {
+        assert.throws(function () {
           Blockly.Extensions.registerMutator('mutator_test', {
             mutationToDom: function () {
               return 'mutationToDomFn';
@@ -513,7 +512,7 @@ suite('Extensions', function () {
 
       test('No mutationToDom', function () {
         this.extensionsCleanup_.push('mutator_test');
-        chai.assert.throws(function () {
+        assert.throws(function () {
           Blockly.Extensions.registerMutator('mutator_test', {
             domToMutation: function () {
               return 'domToMutationFn';
@@ -530,7 +529,7 @@ suite('Extensions', function () {
 
       test('No saveExtraState', function () {
         this.extensionsCleanup_.push('mutator_test');
-        chai.assert.throws(function () {
+        assert.throws(function () {
           Blockly.Extensions.registerMutator('mutator_test', {
             loadExtraState: function () {
               return 'loadExtraState';
@@ -547,7 +546,7 @@ suite('Extensions', function () {
 
       test('No loadExtraState', function () {
         this.extensionsCleanup_.push('mutator_test');
-        chai.assert.throws(function () {
+        assert.throws(function () {
           Blockly.Extensions.registerMutator('mutator_test', {
             saveExtraState: function () {
               return 'saveExtraState';
@@ -564,7 +563,7 @@ suite('Extensions', function () {
 
       test('No serialization hooks', function () {
         this.extensionsCleanup_.push('mutator_test');
-        chai.assert.throws(function () {
+        assert.throws(function () {
           Blockly.Extensions.registerMutator('mutator_test', {
             compose: function () {
               return 'composeFn';
@@ -578,7 +577,7 @@ suite('Extensions', function () {
 
       test('Has decompose but no compose', function () {
         this.extensionsCleanup_.push('mutator_test');
-        chai.assert.throws(function () {
+        assert.throws(function () {
           Blockly.Extensions.registerMutator('mutator_test', {
             domToMutation: function () {
               return 'domToMutationFn';
@@ -595,7 +594,7 @@ suite('Extensions', function () {
 
       test('Has compose but no decompose', function () {
         this.extensionsCleanup_.push('mutator_test');
-        chai.assert.throws(function () {
+        assert.throws(function () {
           Blockly.Extensions.registerMutator('mutator_test', {
             domToMutation: function () {
               return 'domToMutationFn';

@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.eventViewportChange');
-
+import {assert} from '../../node_modules/chai/chai.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -28,13 +27,13 @@ suite('Viewport Change Event', function () {
         10,
         1,
         this.workspace.id,
-        0.8
+        0.8,
       );
 
       const json = origEvent.toJson();
       const newEvent = new Blockly.Events.fromJson(json, this.workspace);
 
-      chai.assert.deepEqual(newEvent, origEvent);
+      assert.deepEqual(newEvent, origEvent);
     });
   });
 });

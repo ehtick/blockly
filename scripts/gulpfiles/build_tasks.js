@@ -15,20 +15,34 @@ gulp.sourcemaps = require('gulp-sourcemaps');
 
 const path = require('path');
 const fs = require('fs');
+const fsPromises = require('fs/promises');
 const {exec, execSync} = require('child_process');
 
+const {globSync} = require('glob');
 const closureCompiler = require('google-closure-compiler').gulp();
 const argv = require('yargs').argv;
 const {rimraf} = require('rimraf');
 
-const {BUILD_DIR, DEPS_FILE, RELEASE_DIR, TEST_DEPS_FILE, TSC_OUTPUT_DIR, TYPINGS_BUILD_DIR} = require('./config');
+const {BUILD_DIR, LANG_BUILD_DIR, RELEASE_DIR, TSC_OUTPUT_DIR, TYPINGS_BUILD_DIR} = require('./config');
 const {getPackageJson} = require('./helper_tasks');
 
-const {posixPath} = require('../helpers');
+const {posixPath, quote} = require('../helpers');
 
 ////////////////////////////////////////////////////////////
 //                        Build                           //
 ////////////////////////////////////////////////////////////
+
+/**
+ * Path to the python runtime.
+ * This will normalize the command across platforms (e.g. python3 on Linux and
+ * Mac, python on Windows).
+ */
+const PYTHON = process.platform === 'win32' ? 'python' : 'python3';
+
+/**
+ * Posix version of TSC_OUTPUT_DIR
+ */
+const TSC_OUTPUT_DIR_POSIX = posixPath(TSC_OUTPUT_DIR);
 
 /**
  * Suffix to add to compiled output files.
@@ -71,76 +85,87 @@ const NAMESPACE_PROPERTY = '__namespace__';
  * - .name: the name of the chunk.  Used to label it when describing
  *   it to Closure Compiler and forms the prefix of filename the chunk
  *   will be written to.
+ * - .files: A glob or array of globs, relative to TSC_OUTPUT_DIR,
+ *   matching the files to include in the chunk.
  * - .entry: the source .js file which is the entrypoint for the
+ *   chunk, relative to TSC_OUTPUT_DIR.
+ * - .scriptExport: When the chunk is loaded as a script (e.g., via a
+ *   <SCRIPT> tag), the chunk's exports object will be made available
+ *   at the specified location (which must be a variable name or the
+ *   name of a property on an already-existing object) in the global
+ *   namespace.
+ * - .scriptNamedExports: A map of {location: namedExport} pairs; when
+ *   loaded as a script, the specified named exports will be saved at
+ *   the specified locations (which again must be global variables or
+ *   properties on already-existing objects).  Optional.
+ * - .parent: the parent chunk of the given chunk; null for the root
  *   chunk.
- * - .exports: an expression evaluating to the exports/Module object
- *   of module that is the chunk's entrypoint / top level module.
- * - .reexport: if running in a browser, save the chunk's exports
- *   object (or a single export of it; see reexportOnly, below) at
- *   this location in the global namespace.
- * - .reexportOnly: if reexporting and this property is set,
- *   save only the correspondingly-named export.  Otherwise
- *   save the whole export object.
- *
- * The function getChunkOptions will, after running
- * closure-calculate-chunks, update each chunk to add the following
- * properties:
- *
- * - .parent: the parent chunk of the given chunk.  Typically
- *    chunks[0], except for chunk[0].parent which will be null.
- * - .wrapper: the generated chunk wrapper.
  *
  * Output files will be named <chunk.name><COMPILED_SUFFIX>.js.
  */
 const chunks = [
   {
     name: 'blockly',
-    entry: path.join(TSC_OUTPUT_DIR, 'core', 'main.js'),
-    exports: 'module$build$src$core$blockly',
-    reexport: 'Blockly',
+    files: 'core/**/*.js',
+    entry: 'core/blockly.js',
+    scriptExport: 'Blockly',
   },
   {
     name: 'blocks',
-    entry: path.join(TSC_OUTPUT_DIR, 'blocks', 'blocks.js'),
-    exports: 'module$exports$Blockly$libraryBlocks',
-    reexport: 'Blockly.libraryBlocks',
+    files: 'blocks/**/*.js',
+    entry: 'blocks/blocks.js',
+    scriptExport: 'Blockly.libraryBlocks',
   },
   {
     name: 'javascript',
-    entry: path.join(TSC_OUTPUT_DIR, 'generators', 'javascript', 'all.js'),
-    exports: 'module$exports$Blockly$JavaScript',
-    reexport: 'Blockly.JavaScript',
-    reexportOnly: 'javascriptGenerator',
+    files: ['generators/javascript.js', 'generators/javascript/**/*.js'],
+    entry: 'generators/javascript.js',
+    scriptExport: 'javascript',
+    scriptNamedExports: {'Blockly.JavaScript': 'javascriptGenerator'},
   },
   {
     name: 'python',
-    entry: path.join(TSC_OUTPUT_DIR, 'generators', 'python', 'all.js'),
-    exports: 'module$exports$Blockly$Python',
-    reexport: 'Blockly.Python',
-    reexportOnly: 'pythonGenerator',
+    files: ['generators/python.js', 'generators/python/**/*.js'],
+    entry: 'generators/python.js',
+    scriptExport: 'python',
+    scriptNamedExports: {'Blockly.Python': 'pythonGenerator'},
   },
   {
     name: 'php',
-    entry: path.join(TSC_OUTPUT_DIR, 'generators', 'php', 'all.js'),
-    exports: 'module$exports$Blockly$PHP',
-    reexport: 'Blockly.PHP',
-    reexportOnly: 'phpGenerator',
+    files: ['generators/php.js', 'generators/php/**/*.js'],
+    entry: 'generators/php.js',
+    scriptExport: 'php',
+    scriptNamedExports: {'Blockly.PHP': 'phpGenerator'},
   },
   {
     name: 'lua',
-    entry: path.join(TSC_OUTPUT_DIR, 'generators', 'lua', 'all.js'),
-    exports: 'module$exports$Blockly$Lua',
-    reexport: 'Blockly.Lua',
-    reexportOnly: 'luaGenerator',
+    files: ['generators/lua.js', 'generators/lua/**/*.js'],
+    entry: 'generators/lua.js',
+    scriptExport: 'lua',
+    scriptNamedExports: {'Blockly.Lua': 'luaGenerator'},
   },
   {
     name: 'dart',
-    entry: path.join(TSC_OUTPUT_DIR, 'generators', 'dart', 'all.js'),
-    exports: 'module$exports$Blockly$Dart',
-    reexport: 'Blockly.Dart',
-    reexportOnly: 'dartGenerator',
-  }
+    files: ['generators/dart.js', 'generators/dart/**/*.js'],
+    entry: 'generators/dart.js',
+    scriptExport: 'dart',
+    scriptNamedExports: {'Blockly.Dart': 'dartGenerator'},
+  },
 ];
+
+chunks[0].parent = null;
+for (let i = 1; i < chunks.length; i++) {
+  chunks[i].parent = chunks[0];
+}
+
+/**
+ * Return the name of the module object for the entrypoint of the given chunk,
+ * as munged by Closure Compiler.
+ */
+function modulePath(chunk) {
+  const entryPath = path.posix.join(TSC_OUTPUT_DIR_POSIX, chunk.entry);
+  return 'module$' + entryPath.replace(/\.js$/, '').replaceAll('/', '$');
+}
 
 const licenseRegex = `\\/\\*\\*
  \\* @license
@@ -183,8 +208,6 @@ const JSCOMP_ERROR = [
   'conformanceViolations',
   'const',
   'constantProperty',
-  'deprecated',
-  'deprecatedAnnotations',
   'duplicateMessage',
   'es5Strict',
   'externsValidation',
@@ -231,6 +254,8 @@ const JSCOMP_ERROR = [
  * it's generally sufficient to remove them from JSCOMP_ERROR.
  */
 const JSCOMP_WARNING = [
+  'deprecated',
+  'deprecatedAnnotations',
 ];
 
 /**
@@ -290,94 +315,12 @@ function buildJavaScript(done) {
 }
 
 /**
- * This task updates DEPS_FILE (deps.js), used by
- * bootstrap.js when loading Blockly in uncompiled mode.
- *
- * Also updates TEST_DEPS_FILE (deps.mocha.js), used by the mocha test
- * suite.
- *
- * Prerequisite: buildJavaScript.
- */
-function buildDeps() {
-  const roots = [
-    path.join(TSC_OUTPUT_DIR, 'closure', 'goog', 'base.js'),
-    TSC_OUTPUT_DIR,
-    'tests/mocha',
-  ];
-
-  /** Maximum buffer size, in bytes for child process stdout/stderr. */
-  const MAX_BUFFER_SIZE = 10 * 1024 * 1024;
-
-  /**
-   * Filter a string to extract lines containing (or not containing) the
-   * specified target string.
-   *
-   * @param {string} text Text to filter.
-   * @param {string} target String to search for.
-   * @param {boolean?} exclude If true, extract only non-matching lines.
-   * @returns {string} Filtered text.
-   */
-  function filter(text, target, exclude) {
-    return text.split('\n')
-        .filter((line) => Boolean(line.match(target)) !== Boolean(exclude))
-        .join('\n');
-  }
-
-  /**
-   * Log unexpected diagnostics, after removing expected warnings.
-   *
-   * @param {string} text Standard error output from closure-make-deps
-   */
-  function log(text) {
-    for (const line of text.split('\n')) {
-      if (line &&
-          !/^WARNING .*: Bounded generic semantics are currently/.test(line) &&
-          !/^WARNING .*: Missing type declaration/.test(line) &&
-          !/^WARNING .*: illegal use of unknown JSDoc tag/.test(line)) {
-        console.error(line);
-      }
-    }
-  }
-
-  return new Promise((resolve, reject) => {
-    const args = roots.map(root => `--root '${root}' `).join('');
-    exec(
-        `closure-make-deps ${args}`, {maxBuffer: MAX_BUFFER_SIZE},
-        (error, stdout, stderr) => {
-          if (error) {
-            // Remove warnings from stack trace to show only errors.
-            error.stack = filter(error.stack, /^WARNING/, true);
-            // Due to some race condition, the stderr parameter is
-            // often badly truncated if an error is non-null, so the
-            // error message might not actually be shown to the user.
-            // Print a helpful message to the user to help them find
-            // out what the problem is.
-            error.stack += `
-
-If you do not see an helpful diagnostic from closure-make-deps in the
-error message above, try running:
-
-    npx closure-make-deps ${args} 2>&1 |grep -v WARNING`;
-            reject(error);
-          } else {
-            log(stderr);
-            // Anything not about mocha goes in DEPS_FILE.
-            fs.writeFileSync(DEPS_FILE, filter(stdout, 'tests/mocha', true));
-            // Anything about mocha does in TEST_DEPS_FILE.
-            fs.writeFileSync(TEST_DEPS_FILE, filter(stdout, 'tests/mocha'));
-            resolve();
-          }
-        });
-  });
-}
-
-/**
  * This task regenerates msg/json/en.js and msg/json/qqq.js from
  * msg/messages.js.
  */
 function generateMessages(done) {
   // Run js_to_json.py
-  const jsToJsonCmd = `python3 scripts/i18n/js_to_json.py \
+  const jsToJsonCmd = `${PYTHON} scripts/i18n/js_to_json.py \
       --input_file ${path.join('msg', 'messages.js')} \
       --output_dir ${path.join('msg', 'json')} \
       --quiet`;
@@ -401,27 +344,43 @@ this removal!
   done();
 }
 
+var languages = null;
+
+/**
+ * Get list of languages to build langfiles and/or shims for, based on .json
+ * files in msg/json/, skipping certain entries that do not correspond to an
+ * actual language).  Results are cached as this is called from both
+ * buildLangfiles and buildLangfileShims.
+ */
+function getLanguages() {
+  if (!languages) {
+    const skip = /^(keys|synonyms|qqq|constants)\.json$/;
+    languages = fs.readdirSync(path.join('msg', 'json'))
+        .filter(file => file.endsWith('json') && !skip.test(file))
+        .map(file => file.replace(/\.json$/, ''));
+  }
+  return languages;
+}
+
 /**
  * This task builds Blockly's lang files.
  *     msg/*.js
  */
 function buildLangfiles(done) {
   // Create output directory.
-  const outputDir = path.join(BUILD_DIR, 'msg');
-  fs.mkdirSync(outputDir, {recursive: true});
+  fs.mkdirSync(LANG_BUILD_DIR, {recursive: true});
 
   // Run create_messages.py.
-  let json_files = fs.readdirSync(path.join('msg', 'json'));
-  json_files = json_files.filter(file => file.endsWith('json') &&
-      !(new RegExp(/(keys|synonyms|qqq|constants)\.json$/).test(file)));
-  json_files = json_files.map(file => path.join('msg', 'json', file));
-  const createMessagesCmd = `python3 ./scripts/i18n/create_messages.py \
+  const inputFiles = getLanguages().map(
+      lang => path.join('msg', 'json', `${lang}.json`));
+
+  const createMessagesCmd = `${PYTHON} ./scripts/i18n/create_messages.py \
   --source_lang_file ${path.join('msg', 'json', 'en.json')} \
   --source_synonym_file ${path.join('msg', 'json', 'synonyms.json')} \
   --source_constants_file ${path.join('msg', 'json', 'constants.json')} \
   --key_file ${path.join('msg', 'json', 'keys.json')} \
-  --output_dir ${outputDir} \
-  --quiet ${json_files.join(' ')}`;
+  --output_dir ${LANG_BUILD_DIR} \
+  --quiet ${inputFiles.join(' ')}`;
   execSync(createMessagesCmd, {stdio: 'inherit'});
 
   done();
@@ -441,7 +400,7 @@ function chunkWrapper(chunk) {
   // JavaScript expressions for the amd, cjs and browser dependencies.
   let amdDepsExpr = '';
   let cjsDepsExpr = '';
-  let browserDepsExpr = '';
+  let scriptDepsExpr = '';
   // Arguments for the factory function.
   let factoryArgs = '';
   // Expression to get or create the namespace object.
@@ -452,25 +411,22 @@ function chunkWrapper(chunk) {
         JSON.stringify(`./${chunk.parent.name}${COMPILED_SUFFIX}.js`);
     amdDepsExpr = parentFilename;
     cjsDepsExpr = `require(${parentFilename})`;
-    browserDepsExpr = `root.${chunk.parent.reexport}`;
+    scriptDepsExpr = `root.${chunk.parent.scriptExport}`;
     factoryArgs = '__parent__';
     namespaceExpr = `${factoryArgs}.${NAMESPACE_PROPERTY}`;
   }
 
-  // Code to assign the result of the factory function to the desired
-  // export location when running in a browser.  When
-  // chunk.reexportOnly is set, this additionally does two other
-  // things:
-  // - It ensures that only the desired property of the exports object
-  //   is assigned to the specified reexport location.
-  // - It ensures that the namesspace object is accessible via the
-  //   selected sub-object, so that any dependent modules can obtain
-  //   it.
-  const browserExportStatements = chunk.reexportOnly ?
-      `root.${chunk.reexport} = factoryExports.${chunk.reexportOnly};\n` +
-      `    root.${chunk.reexport}.${NAMESPACE_PROPERTY} = ` +
-      `factoryExports.${NAMESPACE_PROPERTY};` :
-      `root.${chunk.reexport} = factoryExports;`;
+  // Code to save the chunk's exports object at chunk.scriptExport and
+  // additionally save individual named exports as directed by
+  // chunk.scriptNamedExports.
+  const scriptExportStatements = [
+    `root.${chunk.scriptExport} = factory(${scriptDepsExpr});`,
+  ];
+  for (var location in chunk.scriptNamedExports) {
+    const namedExport = chunk.scriptNamedExports[location];
+    scriptExportStatements.push( 
+      `root.${location} = root.${chunk.scriptExport}.${namedExport};`);
+  }
 
   // Note that when loading in a browser the base of the exported path
   // (e.g. Blockly.blocks.all - see issue #5932) might not exist
@@ -485,101 +441,72 @@ function chunkWrapper(chunk) {
     define([${amdDepsExpr}], factory);
   } else if (typeof exports === 'object') { // Node.js
     module.exports = factory(${cjsDepsExpr});
-  } else { // Browser
-    var factoryExports = factory(${browserDepsExpr});
-    ${browserExportStatements}
+  } else { // Script
+    ${scriptExportStatements.join('\n    ')}
   }
 }(this, function(${factoryArgs}) {
 var ${NAMESPACE_VARIABLE}=${namespaceExpr};
 %output%
-${chunk.exports}.${NAMESPACE_PROPERTY}=${NAMESPACE_VARIABLE};
-return ${chunk.exports};
+${modulePath(chunk)}.${NAMESPACE_PROPERTY}=${NAMESPACE_VARIABLE};
+return ${modulePath(chunk)};
 }));
 `;
 }
 
 /**
- * Get chunking options to pass to Closure Compiler by using
- * closure-calculate-chunks (hereafter "ccc") to generate them based
- * on the deps.js file (which must be up to date!).
+ * Compute the chunking options to pass to Closure Compiler.  Output
+ * is in the form:
  *
- * The generated options are modified to use the original chunk names
- * given in chunks instead of the entry-point based names used by ccc.
+ * {
+ *   "chunk": [
+ *     "blockly:286",
+ *     "blocks:10:blockly",
+ *     "javascript:11:blockly",
+ *     // ... one per chunk
+ *   ],
+ *   "js": [
+ *     "build/src/core/any_aliases.js",
+ *     "build/src/core/block.js",
+ *     "build/src/core/block_animations.js",
+ *     // ... many more files, in order by chunk
+ *   ],
+ *   "chunk_wrapper": [
+ *     "blockly:// Do not edit this file...",
+ *     "blocks:// Do not edit this file...",
+ *     // ... one per chunk
+ *   ]
+ * }
  *
- * @return {{chunk: !Array<string>, js: !Array<string>}} The chunking
- *     information, in the same form as emitted by
- *     closure-calculate-chunks.
+ * This is designed to be passed directly as-is as the options object
+ * to the Closure Compiler node API, and be compatible with that
+ * emitted by closure-calculate-chunks.
+ *
+ * @return {{chunk: !Array<string>,
+ *           js: !Array<string>,
+ *           chunk_wrapper: !Array<string>}}
+ *     The chunking options, in the format described above.
  */
 function getChunkOptions() {
-  const basePath =
-      path.join(TSC_OUTPUT_DIR, 'closure', 'goog', 'base_minimal.js');
-  const cccArgs = [
-    `--closure-library-base-js-path ./${basePath}`,
-    `--deps-file './${DEPS_FILE}'`,
-    ...(chunks.map(chunk => `--entrypoint '${chunk.entry}'`)),
-  ];
-  const cccCommand = `closure-calculate-chunks ${cccArgs.join(' ')}`;
+  const chunkOptions = [];
+  const allFiles = [];
 
-  const rawOptions = JSON.parse(execSync(cccCommand));
-
-  // rawOptions should now be of the form:
-  //
-  // {
-  //   chunk: [
-  //     'blockly:258',
-  //     'all:10:blockly',
-  //     'all1:11:blockly',
-  //     'all2:11:blockly',
-  //     /* ... remaining handful of chunks */
-  //   ],
-  //   js: [
-  //     './build/ts/core/serialization/workspaces.js',
-  //     './build/ts/core/serialization/variables.js',
-  //     /* ... remaining several hundred files */
-  //   ],
-  // }
-  //
-  // This is designed to be passed directly as-is as the options
-  // object to the Closure Compiler node API, but we want to replace
-  // the unhelpful entry-point based chunk names (let's call these
-  // "nicknames") with the ones from chunks.  Unforutnately there's no
-  // guarnatee they will be in the same order that the entry points
-  // were supplied in (though it happens to work out that way if no
-  // chunk depends on any chunk but the first), so we look for
-  // one of the entrypoints amongst the files in each chunk.
-  const chunkByNickname = Object.create(null);
-  // Copy and convert to posix js file paths.
-  // Result will be modified via `.splice`!
-  const jsFiles = rawOptions.js.map(p => posixPath(p));
-  const chunkList = rawOptions.chunk.map((element) => {
-    const [nickname, numJsFiles, parentNick] = element.split(':');
-
-    // Get array of files for just this chunk.
-    const chunkFiles = jsFiles.splice(0, numJsFiles);
-
-    // Figure out which chunk this is by looking for one of the
-    // known chunk entrypoints in chunkFiles.  N.B.: O(n*m).  :-(
-    const chunk = chunks.find(
-        chunk => chunkFiles.find(f => f.endsWith('/' + chunk.entry)));
-    if (!chunk) throw new Error('Unable to identify chunk');
-
-    // Replace nicknames with the names we chose.
-    chunkByNickname[nickname] = chunk;
-    if (!parentNick) {  // Chunk has no parent.
-      chunk.parent = null;
-      return `${chunk.name}:${numJsFiles}`;
-    }
-    chunk.parent = chunkByNickname[parentNick];
-    return `${chunk.name}:${numJsFiles}:${chunk.parent.name}`;
-  });
-
-  // Generate a chunk wrapper for each chunk.
   for (const chunk of chunks) {
-    chunk.wrapper = chunkWrapper(chunk);
+    const globs = typeof chunk.files === 'string' ? [chunk.files] : chunk.files;
+    const files = globs
+      .flatMap((glob) => globSync(glob, {cwd: TSC_OUTPUT_DIR_POSIX}))
+      .map((file) => path.posix.join(TSC_OUTPUT_DIR_POSIX, file));
+    chunkOptions.push(
+      `${chunk.name}:${files.length}` +
+        (chunk.parent ? `:${chunk.parent.name}` : ''),
+    );
+    allFiles.push(...files);
   }
-  const chunkWrappers = chunks.map(chunk => `${chunk.name}:${chunk.wrapper}`);
 
-  return {chunk: chunkList, js: rawOptions.js, chunk_wrapper: chunkWrappers};
+  const chunkWrappers = chunks.map(
+    (chunk) => `${chunk.name}:${chunkWrapper(chunk)}`,
+  );
+
+  return {chunk: chunkOptions, js: allFiles, chunk_wrapper: chunkWrappers};
 }
 
 /**
@@ -601,13 +528,8 @@ function compile(options) {
     language_out: 'ECMASCRIPT_2015',
     jscomp_off: [...JSCOMP_OFF],
     rewrite_polyfills: true,
-    // N.B.: goog.js refers to lots of properties on goog that are not
-    // declared by base_minimal.js, while if you compile against
-    // base.js instead you will discover that it uses @deprecated
-    // inherits, forwardDeclare etc.
     hide_warnings_for: [
       'node_modules',
-      path.join(TSC_OUTPUT_DIR, 'closure', 'goog', 'goog.js'),
     ],
     define: ['COMPILED=true'],
   };
@@ -627,10 +549,6 @@ function compile(options) {
 /**
  * This task compiles the core library, blocks and generators, creating
  * blockly_compressed.js, blocks_compressed.js, etc.
- *
- * The deps.js file must be up-to-date.
- *
- * Prerequisite: buildDeps.
  */
 function buildCompiled() {
   // Get chunking.
@@ -644,7 +562,7 @@ function buildCompiled() {
     // declareLegacyNamespace this was very straightforward.  Without
     // it, we have to rely on implmentation details.  See
     // https://github.com/google/closure-compiler/issues/1601#issuecomment-483452226
-    define: `VERSION$$${chunks[0].exports}='${packageJson.version}'`,
+    define: `VERSION$$${modulePath(chunks[0])}='${packageJson.version}'`,
     chunk: chunkOptions.chunk,
     chunk_wrapper: chunkOptions.chunk_wrapper,
     rename_prefix_namespace: NAMESPACE_VARIABLE,
@@ -663,17 +581,125 @@ function buildCompiled() {
 }
 
 /**
+ * This task builds the ESM wrappers used by the chunk "import"
+ * entrypoints declared in package.json.
+ *
+ * Also builds the shims used by the playgrounds and tests to
+ * load Blockly in either compressed or uncompressed mode, creating
+ * build/blockly.loader.mjs, blocks.loader.mjs, javascript.loader.mjs,
+ * etc.
+ *
+ * Prerequisite: getChunkOptions (via buildCompiled, for chunks[].parent).
+ */
+async function buildShims() {
+  // Install a package.json file in BUILD_DIR to tell node.js that the
+  // .js files therein are ESM not CJS, so we can import the
+  // entrypoints to enumerate their exported names.
+  const TMP_PACKAGE_JSON = path.join(BUILD_DIR, 'package.json');
+  await fsPromises.writeFile(TMP_PACKAGE_JSON, '{"type": "module"}');
+
+  await Promise.all(chunks.map(async (chunk) => {
+    // Import chunk entrypoint to get names of exports for chunk.
+    const entryPath = path.posix.join(TSC_OUTPUT_DIR_POSIX, chunk.entry);
+    const exportedNames = Object.keys(await import(`../../${entryPath}`));
+
+    // Write an ESM wrapper that imports the CJS module and re-exports
+    // its named exports.
+    const cjsPath = `./${chunk.name}${COMPILED_SUFFIX}.js`;
+    const wrapperPath = path.join(RELEASE_DIR, `${chunk.name}.mjs`);
+    const importName = chunk.scriptExport.replace(/.*\./, '');
+
+    await fsPromises.writeFile(wrapperPath,
+        `import ${importName} from '${cjsPath}';
+export const {
+${exportedNames.map((name) => `  ${name},`).join('\n')}
+} = ${importName};
+`);
+
+    // For first chunk, write an additional ESM wrapper for 'blockly'
+    // entrypoint since it has the same exports as 'blockly/core'.
+    if (chunk.name === 'blockly') {
+      await fsPromises.writeFile(path.join(RELEASE_DIR, `index.mjs`),
+          `import Blockly from './index.js';
+export const {
+${exportedNames.map((name) => `  ${name},`).join('\n')}
+} = Blockly;
+`);
+    }
+
+    // Write a loading shim that uses loadChunk to either import the
+    // chunk's entrypoint (e.g. build/src/core/blockly.js) or load the
+    // compressed chunk (e.g. dist/blockly_compressed.js) as a script.
+    const scriptPath =
+        path.posix.join(RELEASE_DIR, `${chunk.name}${COMPILED_SUFFIX}.js`);
+    const shimPath = path.join(BUILD_DIR, `${chunk.name}.loader.mjs`);
+    const parentImport =
+        chunk.parent ?
+        `import ${quote(`./${chunk.parent.name}.loader.mjs`)};` :
+        '';
+
+    await fsPromises.writeFile(shimPath,
+        `import {loadChunk} from '../tests/scripts/load.mjs';
+${parentImport}
+
+export const {
+${exportedNames.map((name) => `  ${name},`).join('\n')}
+} = await loadChunk(
+  ${quote(entryPath)},
+  ${quote(scriptPath)},
+  ${quote(chunk.scriptExport)},
+);
+`);
+  }));
+
+  await fsPromises.rm(TMP_PACKAGE_JSON);
+}
+
+/**
+ * This task builds the ESM wrappers used by the langfiles "import"
+ * entrypoints declared in package.json.
+ */
+async function buildLangfileShims() {
+  // Create output directory.
+  fs.mkdirSync(path.join(RELEASE_DIR, 'msg'), {recursive: true});
+
+  // Get the names of the exports from the langfile by require()ing
+  // msg/messages.js and letting it mutate the (global) Blockly.Msg.
+  // (We have to do it this way because messages.js is a script and
+  // not a CJS module with exports.)
+  globalThis.Blockly = {Msg: {}};
+  require('../../msg/messages.js');
+  const exportedNames = Object.keys(globalThis.Blockly.Msg);
+  delete globalThis.Blockly;
+
+  await Promise.all(getLanguages().map(async (lang) => {
+    // Write an ESM wrapper that imports the CJS module and re-exports
+    // its named exports.
+    const cjsPath = `./${lang}.js`;
+    const wrapperPath = path.join(RELEASE_DIR, 'msg', `${lang}.mjs`);
+    const safeLang = lang.replace(/-/g, '_');
+
+    await fsPromises.writeFile(wrapperPath,
+        `import ${safeLang} from '${cjsPath}';
+export const {
+${exportedNames.map((name) => `  ${name},`).join('\n')}
+} = ${safeLang};
+`);
+  }));
+}
+
+/**
  * This task builds Blockly core, blocks and generators together and uses
  * Closure Compiler's ADVANCED_COMPILATION mode.
  *
- * Prerequisite: buildDeps.
+ * Prerequisite: buildJavaScript.
  */
 function buildAdvancedCompilationTest() {
   // If main_compressed.js exists (from a previous run) delete it so that
   // a later browser-based test won't check it should the compile fail.
   try {
     fs.unlinkSync('./tests/compile/main_compressed.js');
-  } catch (_e) {
+  } catch {
     // Probably it didn't exist.
   }
 
@@ -681,9 +707,6 @@ function buildAdvancedCompilationTest() {
     TSC_OUTPUT_DIR + '/**/*.js',
     'tests/compile/main.js',
     'tests/compile/test_blocks.js',
-  ];
-  const ignore = [
-    TSC_OUTPUT_DIR + '/closure/goog/base.js',  // Use base_minimal.js only.
   ];
 
   // Closure Compiler options.
@@ -693,7 +716,7 @@ function buildAdvancedCompilationTest() {
     entry_point: './tests/compile/main.js',
     js_output_file: 'main_compressed.js',
   };
-  return gulp.src(srcs, {base: './', ignore})
+  return gulp.src(srcs, {base: './'})
       .pipe(stripApacheLicense())
       .pipe(gulp.sourcemaps.init())
       .pipe(compile(options))
@@ -715,16 +738,15 @@ function cleanBuildDir() {
 
 // Main sequence targets.  Each should invoke any immediate prerequisite(s).
 exports.cleanBuildDir = cleanBuildDir;
-exports.langfiles = buildLangfiles;  // Build build/msg/*.js from msg/json/*.
+exports.langfiles = gulp.parallel(buildLangfiles, buildLangfileShims);
 exports.tsc = buildJavaScript;
-exports.deps = gulp.series(exports.tsc, buildDeps);
-exports.minify = gulp.series(exports.deps, buildCompiled);
+exports.minify = gulp.series(exports.tsc, buildCompiled, buildShims);
 exports.build = gulp.parallel(exports.minify, exports.langfiles);
 
 // Manually-invokable targets, with prerequisites where required.
 exports.messages = generateMessages;  // Generate msg/json/en.json et al.
 exports.buildAdvancedCompilationTest =
-    gulp.series(exports.deps, buildAdvancedCompilationTest);
+    gulp.series(exports.tsc, buildAdvancedCompilationTest);
 
 // Targets intended only for invocation by scripts; may omit prerequisites.
 exports.onlyBuildAdvancedCompilationTest = buildAdvancedCompilationTest;

@@ -11,8 +11,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.FieldDropdown');
+// Former goog.module ID: Blockly.FieldDropdown
 
 import type {BlockSvg} from './block_svg.js';
 import * as dropDownDiv from './dropdowndiv.js';
@@ -25,7 +24,6 @@ import {
 import * as fieldRegistry from './field_registry.js';
 import {Menu} from './menu.js';
 import {MenuItem} from './menuitem.js';
-import * as style from './utils/style.js';
 import * as aria from './utils/aria.js';
 import {Coordinate} from './utils/coordinate.js';
 import * as dom from './utils/dom.js';
@@ -97,6 +95,15 @@ export class FieldDropdown extends Field<string> {
   override clickTarget_: SVGElement | null = null;
 
   /**
+   * The y offset from the top of the field to the top of the image, if an image
+   * is selected.
+   */
+  protected static IMAGE_Y_OFFSET = 5;
+
+  /** The total vertical padding above and below an image. */
+  protected static IMAGE_Y_PADDING = FieldDropdown.IMAGE_Y_OFFSET * 2;
+
+  /**
    * @param menuGenerator A non-empty array of options for a dropdown list, or a
    *     function which generates these options. Also accepts Field.SKIP_SETUP
    *     if you wish to skip setup (only used by subclasses that want to handle
@@ -115,13 +122,13 @@ export class FieldDropdown extends Field<string> {
   constructor(
     menuGenerator: MenuGenerator,
     validator?: FieldDropdownValidator,
-    config?: FieldDropdownConfig
+    config?: FieldDropdownConfig,
   );
   constructor(menuGenerator: typeof Field.SKIP_SETUP);
   constructor(
     menuGenerator: MenuGenerator | typeof Field.SKIP_SETUP,
     validator?: FieldDropdownValidator,
-    config?: FieldDropdownConfig
+    config?: FieldDropdownConfig,
   ) {
     super(Field.SKIP_SETUP);
 
@@ -129,8 +136,8 @@ export class FieldDropdown extends Field<string> {
     if (menuGenerator === Field.SKIP_SETUP) return;
 
     if (Array.isArray(menuGenerator)) {
-      validateOptions(menuGenerator);
-      const trimmed = trimOptions(menuGenerator);
+      this.validateOptions(menuGenerator);
+      const trimmed = this.trimOptions(menuGenerator);
       this.menuGenerator_ = trimmed.options;
       this.prefixField = trimmed.prefix || null;
       this.suffixField = trimmed.suffix || null;
@@ -185,8 +192,6 @@ export class FieldDropdown extends Field<string> {
 
   /**
    * Create the block UI for this dropdown.
-   *
-   * @internal
    */
   override initView() {
     if (this.shouldAddBorderRect_()) {
@@ -229,9 +234,12 @@ export class FieldDropdown extends Field<string> {
       document.createTextNode(
         this.getSourceBlock()?.RTL
           ? FieldDropdown.ARROW_CHAR + ' '
-          : ' ' + FieldDropdown.ARROW_CHAR
-      )
+          : ' ' + FieldDropdown.ARROW_CHAR,
+      ),
     );
+    if (this.getConstants()!.FIELD_TEXT_BASELINE_CENTER) {
+      this.arrow.setAttribute('dominant-baseline', 'central');
+    }
     if (this.getSourceBlock()?.RTL) {
       this.getTextElement().insertBefore(this.arrow, this.textContent_);
     } else {
@@ -247,12 +255,12 @@ export class FieldDropdown extends Field<string> {
         'height': this.getConstants()!.FIELD_DROPDOWN_SVG_ARROW_SIZE + 'px',
         'width': this.getConstants()!.FIELD_DROPDOWN_SVG_ARROW_SIZE + 'px',
       },
-      this.fieldGroup_
+      this.fieldGroup_,
     );
     this.svgArrow!.setAttributeNS(
       dom.XLINK_NS,
       'xlink:href',
-      this.getConstants()!.FIELD_DROPDOWN_SVG_ARROW_DATAURI
+      this.getConstants()!.FIELD_DROPDOWN_SVG_ARROW_DATAURI,
     );
   }
 
@@ -281,12 +289,8 @@ export class FieldDropdown extends Field<string> {
     dom.addClass(menuElement, 'blocklyDropdownMenu');
 
     if (this.getConstants()!.FIELD_DROPDOWN_COLOURED_DIV) {
-      const primaryColour = block.isShadow()
-        ? block.getParent()!.getColour()
-        : block.getColour();
-      const borderColour = block.isShadow()
-        ? (block.getParent() as BlockSvg).style.colourTertiary
-        : (this.sourceBlock_ as BlockSvg).style.colourTertiary;
+      const primaryColour = block.getColour();
+      const borderColour = (this.sourceBlock_ as BlockSvg).getColourTertiary();
       dropDownDiv.setColour(primaryColour, borderColour);
     }
 
@@ -299,11 +303,6 @@ export class FieldDropdown extends Field<string> {
 
     if (this.selectedMenuItem) {
       this.menu_!.setHighlighted(this.selectedMenuItem);
-      style.scrollIntoContainerView(
-        this.selectedMenuItem.getElement()!,
-        dropDownDiv.getContentDiv(),
-        true
-      );
     }
 
     this.applyColour();
@@ -405,7 +404,7 @@ export class FieldDropdown extends Field<string> {
     if (useCache && this.generatedOptions) return this.generatedOptions;
 
     this.generatedOptions = this.menuGenerator_();
-    validateOptions(this.generatedOptions);
+    this.validateOptions(this.generatedOptions);
     return this.generatedOptions;
   }
 
@@ -415,7 +414,13 @@ export class FieldDropdown extends Field<string> {
    * @param newValue The input value.
    * @returns A valid language-neutral option, or null if invalid.
    */
-  protected override doClassValidation_(newValue?: string): string | null {
+  protected override doClassValidation_(
+    newValue: string,
+  ): string | null | undefined;
+  protected override doClassValidation_(newValue?: string): string | null;
+  protected override doClassValidation_(
+    newValue?: string,
+  ): string | null | undefined {
     const options = this.getOptions(true);
     const isValueValid = options.some((option) => option[1] === newValue);
 
@@ -428,12 +433,12 @@ export class FieldDropdown extends Field<string> {
             ', Field name: ' +
             this.name +
             ', Value: ' +
-            newValue
+            newValue,
         );
       }
       return null;
     }
-    return newValue as string;
+    return newValue;
   }
 
   /**
@@ -456,21 +461,21 @@ export class FieldDropdown extends Field<string> {
    * Updates the dropdown arrow to match the colour/style of the block.
    */
   override applyColour() {
-    const style = (this.sourceBlock_ as BlockSvg).style;
+    const sourceBlock = this.sourceBlock_ as BlockSvg;
     if (this.borderRect_) {
-      this.borderRect_.setAttribute('stroke', style.colourTertiary);
+      this.borderRect_.setAttribute('stroke', sourceBlock.getColourTertiary());
       if (this.menu_) {
-        this.borderRect_.setAttribute('fill', style.colourTertiary);
+        this.borderRect_.setAttribute('fill', sourceBlock.getColourTertiary());
       } else {
         this.borderRect_.setAttribute('fill', 'transparent');
       }
     }
     // Update arrow's colour.
-    if (this.sourceBlock_ && this.arrow) {
-      if (this.sourceBlock_.isShadow()) {
-        this.arrow.style.fill = style.colourSecondary;
+    if (sourceBlock && this.arrow) {
+      if (sourceBlock.isShadow()) {
+        this.arrow.style.fill = sourceBlock.getColourSecondary();
       } else {
-        this.arrow.style.fill = style.colourPrimary;
+        this.arrow.style.fill = sourceBlock.getColour();
       }
     }
   }
@@ -506,7 +511,7 @@ export class FieldDropdown extends Field<string> {
     this.imageElement!.setAttributeNS(
       dom.XLINK_NS,
       'xlink:href',
-      imageJson.src
+      imageJson.src,
     );
     this.imageElement!.setAttribute('height', String(imageJson.height));
     this.imageElement!.setAttribute('width', String(imageJson.width));
@@ -518,7 +523,7 @@ export class FieldDropdown extends Field<string> {
     const hasBorder = !!this.borderRect_;
     const height = Math.max(
       hasBorder ? this.getConstants()!.FIELD_DROPDOWN_BORDER_RECT_HEIGHT : 0,
-      imageHeight + IMAGE_Y_PADDING
+      imageHeight + FieldDropdown.IMAGE_Y_PADDING,
     );
     const xPadding = hasBorder
       ? this.getConstants()!.FIELD_BORDER_RECT_X_PADDING
@@ -527,14 +532,14 @@ export class FieldDropdown extends Field<string> {
     if (this.svgArrow) {
       arrowWidth = this.positionSVGArrow(
         imageWidth + xPadding,
-        height / 2 - this.getConstants()!.FIELD_DROPDOWN_SVG_ARROW_SIZE / 2
+        height / 2 - this.getConstants()!.FIELD_DROPDOWN_SVG_ARROW_SIZE / 2,
       );
     } else {
       arrowWidth = dom.getFastTextWidth(
         this.arrow as SVGTSpanElement,
         this.getConstants()!.FIELD_TEXT_FONTSIZE,
         this.getConstants()!.FIELD_TEXT_FONTWEIGHT,
-        this.getConstants()!.FIELD_TEXT_FONTFAMILY
+        this.getConstants()!.FIELD_TEXT_FONTFAMILY,
       );
     }
     this.size_.width = imageWidth + arrowWidth + xPadding * 2;
@@ -566,13 +571,13 @@ export class FieldDropdown extends Field<string> {
     const hasBorder = !!this.borderRect_;
     const height = Math.max(
       hasBorder ? this.getConstants()!.FIELD_DROPDOWN_BORDER_RECT_HEIGHT : 0,
-      this.getConstants()!.FIELD_TEXT_HEIGHT
+      this.getConstants()!.FIELD_TEXT_HEIGHT,
     );
     const textWidth = dom.getFastTextWidth(
       this.getTextElement(),
       this.getConstants()!.FIELD_TEXT_FONTSIZE,
       this.getConstants()!.FIELD_TEXT_FONTWEIGHT,
-      this.getConstants()!.FIELD_TEXT_FONTFAMILY
+      this.getConstants()!.FIELD_TEXT_FONTFAMILY,
     );
     const xPadding = hasBorder
       ? this.getConstants()!.FIELD_BORDER_RECT_X_PADDING
@@ -581,7 +586,7 @@ export class FieldDropdown extends Field<string> {
     if (this.svgArrow) {
       arrowWidth = this.positionSVGArrow(
         textWidth + xPadding,
-        height / 2 - this.getConstants()!.FIELD_DROPDOWN_SVG_ARROW_SIZE / 2
+        height / 2 - this.getConstants()!.FIELD_DROPDOWN_SVG_ARROW_SIZE / 2,
       );
     }
     this.size_.width = textWidth + arrowWidth + xPadding * 2;
@@ -614,7 +619,7 @@ export class FieldDropdown extends Field<string> {
     const arrowX = block.RTL ? xPadding : x + textPadding;
     this.svgArrow.setAttribute(
       'transform',
-      'translate(' + arrowX + ',' + y + ')'
+      'translate(' + arrowX + ',' + y + ')',
     );
     return svgArrowSize + textPadding;
   }
@@ -645,17 +650,140 @@ export class FieldDropdown extends Field<string> {
    * @nocollapse
    * @internal
    */
-  static fromJson(options: FieldDropdownFromJsonConfig): FieldDropdown {
+  static override fromJson(
+    options: FieldDropdownFromJsonConfig,
+  ): FieldDropdown {
     if (!options.options) {
       throw new Error(
         'options are required for the dropdown field. The ' +
           'options property must be assigned an array of ' +
-          '[humanReadableValue, languageNeutralValue] tuples.'
+          '[humanReadableValue, languageNeutralValue] tuples.',
       );
     }
     // `this` might be a subclass of FieldDropdown if that class doesn't
     // override the static fromJson method.
     return new this(options.options, undefined, options);
+  }
+
+  /**
+   * Factor out common words in statically defined options.
+   * Create prefix and/or suffix labels.
+   */
+  protected trimOptions(options: MenuOption[]): {
+    options: MenuOption[];
+    prefix?: string;
+    suffix?: string;
+  } {
+    let hasImages = false;
+    const trimmedOptions = options.map(([label, value]): MenuOption => {
+      if (typeof label === 'string') {
+        return [parsing.replaceMessageReferences(label), value];
+      }
+
+      hasImages = true;
+      // Copy the image properties so they're not influenced by the original.
+      // NOTE: No need to deep copy since image properties are only 1 level deep.
+      const imageLabel =
+        label.alt !== null
+          ? {...label, alt: parsing.replaceMessageReferences(label.alt)}
+          : {...label};
+      return [imageLabel, value];
+    });
+
+    if (hasImages || options.length < 2) return {options: trimmedOptions};
+
+    const stringOptions = trimmedOptions as [string, string][];
+    const stringLabels = stringOptions.map(([label]) => label);
+
+    const shortest = utilsString.shortestStringLength(stringLabels);
+    const prefixLength = utilsString.commonWordPrefix(stringLabels, shortest);
+    const suffixLength = utilsString.commonWordSuffix(stringLabels, shortest);
+
+    if (
+      (!prefixLength && !suffixLength) ||
+      shortest <= prefixLength + suffixLength
+    ) {
+      // One or more strings will entirely vanish if we proceed.  Abort.
+      return {options: stringOptions};
+    }
+
+    const prefix = prefixLength
+      ? stringLabels[0].substring(0, prefixLength - 1)
+      : undefined;
+    const suffix = suffixLength
+      ? stringLabels[0].substr(1 - suffixLength)
+      : undefined;
+    return {
+      options: this.applyTrim(stringOptions, prefixLength, suffixLength),
+      prefix,
+      suffix,
+    };
+  }
+
+  /**
+   * Use the calculated prefix and suffix lengths to trim all of the options in
+   * the given array.
+   *
+   * @param options Array of option tuples:
+   *     (human-readable text or image, language-neutral name).
+   * @param prefixLength The length of the common prefix.
+   * @param suffixLength The length of the common suffix
+   * @returns A new array with all of the option text trimmed.
+   */
+  private applyTrim(
+    options: [string, string][],
+    prefixLength: number,
+    suffixLength: number,
+  ): MenuOption[] {
+    return options.map(([text, value]) => [
+      text.substring(prefixLength, text.length - suffixLength),
+      value,
+    ]);
+  }
+
+  /**
+   * Validates the data structure to be processed as an options list.
+   *
+   * @param options The proposed dropdown options.
+   * @throws {TypeError} If proposed options are incorrectly structured.
+   */
+  protected validateOptions(options: MenuOption[]) {
+    if (!Array.isArray(options)) {
+      throw TypeError('FieldDropdown options must be an array.');
+    }
+    if (!options.length) {
+      throw TypeError('FieldDropdown options must not be an empty array.');
+    }
+    let foundError = false;
+    for (let i = 0; i < options.length; i++) {
+      const tuple = options[i];
+      if (!Array.isArray(tuple)) {
+        foundError = true;
+        console.error(
+          `Invalid option[${i}]: Each FieldDropdown option must be an array.
+          Found: ${tuple}`,
+        );
+      } else if (typeof tuple[1] !== 'string') {
+        foundError = true;
+        console.error(
+          `Invalid option[${i}]: Each FieldDropdown option id must be a string. 
+          Found ${tuple[1]} in: ${tuple}`,
+        );
+      } else if (
+        tuple[0] &&
+        typeof tuple[0] !== 'string' &&
+        typeof tuple[0].src !== 'string'
+      ) {
+        foundError = true;
+        console.error(
+          `Invalid option[${i}]: Each FieldDropdown option must have a string 
+          label or image description. Found ${tuple[0]} in: ${tuple}`,
+        );
+      }
+    }
+    if (foundError) {
+      throw TypeError('Found invalid FieldDropdown options.');
+    }
   }
 }
 
@@ -716,148 +844,5 @@ export interface FieldDropdownFromJsonConfig extends FieldDropdownConfig {
  * - `undefined` to set `newValue` as is.
  */
 export type FieldDropdownValidator = FieldValidator<string>;
-
-/**
- * The y offset from the top of the field to the top of the image, if an image
- * is selected.
- */
-const IMAGE_Y_OFFSET = 5;
-
-/** The total vertical padding above and below an image. */
-const IMAGE_Y_PADDING: number = IMAGE_Y_OFFSET * 2;
-
-/**
- * Factor out common words in statically defined options.
- * Create prefix and/or suffix labels.
- */
-function trimOptions(options: MenuOption[]): {
-  options: MenuOption[];
-  prefix?: string;
-  suffix?: string;
-} {
-  let hasImages = false;
-  const trimmedOptions = options.map(([label, value]): MenuOption => {
-    if (typeof label === 'string') {
-      return [parsing.replaceMessageReferences(label), value];
-    }
-
-    hasImages = true;
-    // Copy the image properties so they're not influenced by the original.
-    // NOTE: No need to deep copy since image properties are only 1 level deep.
-    const imageLabel =
-      label.alt !== null
-        ? {...label, alt: parsing.replaceMessageReferences(label.alt)}
-        : {...label};
-    return [imageLabel, value];
-  });
-
-  if (hasImages || options.length < 2) return {options: trimmedOptions};
-
-  const stringOptions = trimmedOptions as [string, string][];
-  const stringLabels = stringOptions.map(([label]) => label);
-
-  const shortest = utilsString.shortestStringLength(stringLabels);
-  const prefixLength = utilsString.commonWordPrefix(stringLabels, shortest);
-  const suffixLength = utilsString.commonWordSuffix(stringLabels, shortest);
-
-  if (
-    (!prefixLength && !suffixLength) ||
-    shortest <= prefixLength + suffixLength
-  ) {
-    // One or more strings will entirely vanish if we proceed.  Abort.
-    return {options: stringOptions};
-  }
-
-  const prefix = prefixLength
-    ? stringLabels[0].substring(0, prefixLength - 1)
-    : undefined;
-  const suffix = suffixLength
-    ? stringLabels[0].substr(1 - suffixLength)
-    : undefined;
-  return {
-    options: applyTrim(stringOptions, prefixLength, suffixLength),
-    prefix,
-    suffix,
-  };
-}
-
-/**
- * Use the calculated prefix and suffix lengths to trim all of the options in
- * the given array.
- *
- * @param options Array of option tuples:
- *     (human-readable text or image, language-neutral name).
- * @param prefixLength The length of the common prefix.
- * @param suffixLength The length of the common suffix
- * @returns A new array with all of the option text trimmed.
- */
-function applyTrim(
-  options: [string, string][],
-  prefixLength: number,
-  suffixLength: number
-): MenuOption[] {
-  return options.map(([text, value]) => [
-    text.substring(prefixLength, text.length - suffixLength),
-    value,
-  ]);
-}
-
-/**
- * Validates the data structure to be processed as an options list.
- *
- * @param options The proposed dropdown options.
- * @throws {TypeError} If proposed options are incorrectly structured.
- */
-function validateOptions(options: MenuOption[]) {
-  if (!Array.isArray(options)) {
-    throw TypeError('FieldDropdown options must be an array.');
-  }
-  if (!options.length) {
-    throw TypeError('FieldDropdown options must not be an empty array.');
-  }
-  let foundError = false;
-  for (let i = 0; i < options.length; i++) {
-    const tuple = options[i];
-    if (!Array.isArray(tuple)) {
-      foundError = true;
-      console.error(
-        'Invalid option[' +
-          i +
-          ']: Each FieldDropdown option must be an ' +
-          'array. Found: ',
-        tuple
-      );
-    } else if (typeof tuple[1] !== 'string') {
-      foundError = true;
-      console.error(
-        'Invalid option[' +
-          i +
-          ']: Each FieldDropdown option id must be ' +
-          'a string. Found ' +
-          tuple[1] +
-          ' in: ',
-        tuple
-      );
-    } else if (
-      tuple[0] &&
-      typeof tuple[0] !== 'string' &&
-      typeof tuple[0].src !== 'string'
-    ) {
-      foundError = true;
-      console.error(
-        'Invalid option[' +
-          i +
-          ']: Each FieldDropdown option must have a ' +
-          'string label or image description. Found' +
-          tuple[0] +
-          ' in: ',
-        tuple
-      );
-    }
-  }
-  if (foundError) {
-    throw TypeError('Found invalid FieldDropdown options.');
-  }
-}
 
 fieldRegistry.register('field_dropdown', FieldDropdown);

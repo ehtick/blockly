@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.commentDeserialization');
-
+import {assert} from '../../node_modules/chai/chai.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -50,7 +49,7 @@ suite('Comment Deserialization', function () {
     function createBlock(workspace) {
       const block = Blockly.Xml.domToBlock(
         Blockly.utils.xml.textToDom('<block type="empty_block"/>'),
-        workspace
+        workspace,
       );
       block.setCommentText('test text');
       return block;
@@ -58,30 +57,27 @@ suite('Comment Deserialization', function () {
     function assertComment(workspace, text) {
       // Show comment.
       const block = workspace.getAllBlocks()[0];
-      block.comment.setVisible(true);
+      const icon = block.getIcon(Blockly.icons.CommentIcon.TYPE);
+      icon.setBubbleVisible(true);
       // Check comment bubble size.
-      const comment = block.getCommentIcon();
-      const bubbleSize = comment.getBubbleSize();
-      chai.assert.isNotNaN(bubbleSize.width);
-      chai.assert.isNotNaN(bubbleSize.height);
-      // Check comment text.
-      chai.assert.equal(comment.textarea_.value, text);
+      const bubbleSize = icon.getBubbleSize();
+      assert.isNotNaN(bubbleSize.width);
+      assert.isNotNaN(bubbleSize.height);
+      assert.equal(icon.getText(), text);
     }
     test('Trashcan', function () {
       // Create block.
       this.block = createBlock(this.workspace);
       // Delete block.
       this.block.checkAndDelete();
-      chai.assert.equal(this.workspace.getAllBlocks().length, 0);
+      assert.equal(this.workspace.getAllBlocks().length, 0);
       // Open trashcan.
       simulateClick(this.workspace.trashcan.svgGroup);
       // Place from trashcan.
       simulateClick(
-        this.workspace.trashcan.flyout.svgGroup_.querySelector(
-          '.blocklyDraggable'
-        )
+        this.workspace.trashcan.flyout.svgGroup_.querySelector('.blocklyPath'),
       );
-      chai.assert.equal(this.workspace.getAllBlocks().length, 1);
+      assert.equal(this.workspace.getAllBlocks().length, 1);
       // Check comment.
       assertComment(this.workspace, 'test text');
     });
@@ -90,10 +86,10 @@ suite('Comment Deserialization', function () {
       this.block = createBlock(this.workspace);
       // Delete block.
       this.block.checkAndDelete();
-      chai.assert.equal(this.workspace.getAllBlocks().length, 0);
+      assert.equal(this.workspace.getAllBlocks().length, 0);
       // Undo.
       this.workspace.undo(false);
-      chai.assert.equal(this.workspace.getAllBlocks().length, 1);
+      assert.equal(this.workspace.getAllBlocks().length, 1);
       // Check comment.
       assertComment(this.workspace, 'test text');
     });
@@ -103,11 +99,11 @@ suite('Comment Deserialization', function () {
       // Undo & undo.
       this.workspace.undo(false);
       this.workspace.undo(false);
-      chai.assert.equal(this.workspace.getAllBlocks().length, 0);
+      assert.equal(this.workspace.getAllBlocks().length, 0);
       // Redo & redo.
       this.workspace.undo(true);
       this.workspace.undo(true);
-      chai.assert.equal(this.workspace.getAllBlocks().length, 1);
+      assert.equal(this.workspace.getAllBlocks().length, 1);
       // Check comment.
       assertComment(this.workspace, 'test text');
     });
@@ -116,9 +112,9 @@ suite('Comment Deserialization', function () {
       const toolbox = this.workspace.getToolbox();
       simulateClick(toolbox.HtmlDiv.querySelector('.blocklyTreeRow'));
       simulateClick(
-        toolbox.getFlyout().svgGroup_.querySelector('.blocklyDraggable')
+        toolbox.getFlyout().svgGroup_.querySelector('.blocklyPath'),
       );
-      chai.assert.equal(this.workspace.getAllBlocks().length, 1);
+      assert.equal(this.workspace.getAllBlocks().length, 1);
       // Check comment.
       assertComment(this.workspace, 'test toolbox text');
     });

@@ -9,21 +9,19 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.VarCreate');
+// Former goog.module ID: Blockly.Events.VarCreate
 
 import * as registry from '../registry.js';
 import type {VariableModel} from '../variable_model.js';
-
-import {VarBase, VarBaseJson} from './events_var_base.js';
-import * as eventUtils from './utils.js';
 import type {Workspace} from '../workspace.js';
+import {VarBase, VarBaseJson} from './events_var_base.js';
+import {EventType} from './type.js';
 
 /**
  * Notifies listeners that a variable model has been created.
  */
 export class VarCreate extends VarBase {
-  override type = eventUtils.VAR_CREATE;
+  override type = EventType.VAR_CREATE;
 
   /** The type of the variable that was created. */
   varType?: string;
@@ -54,13 +52,13 @@ export class VarCreate extends VarBase {
     if (this.varType === undefined) {
       throw new Error(
         'The var type is undefined. Either pass a variable to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (!this.varName) {
       throw new Error(
         'The var name is undefined. Either pass a variable to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     json['varType'] = this.varType;
@@ -80,12 +78,12 @@ export class VarCreate extends VarBase {
   static fromJson(
     json: VarCreateJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): VarCreate {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new VarCreate()
+      event ?? new VarCreate(),
     ) as VarCreate;
     newEvent.varType = json['varType'];
     newEvent.varName = json['varName'];
@@ -102,13 +100,13 @@ export class VarCreate extends VarBase {
     if (!this.varId) {
       throw new Error(
         'The var ID is undefined. Either pass a variable to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (!this.varName) {
       throw new Error(
         'The var name is undefined. Either pass a variable to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (forward) {
@@ -124,4 +122,4 @@ export interface VarCreateJson extends VarBaseJson {
   varName: string;
 }
 
-registry.register(registry.Type.EVENT, eventUtils.VAR_CREATE, VarCreate);
+registry.register(registry.Type.EVENT, EventType.VAR_CREATE, VarCreate);

@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.zelos.MarkerSvg');
+// Former goog.module ID: Blockly.zelos.MarkerSvg
 
 import type {BlockSvg} from '../../block_svg.js';
 import type {ASTNode} from '../../keyboard_nav/ast_node.js';
@@ -16,7 +15,6 @@ import {Svg} from '../../utils/svg.js';
 import type {WorkspaceSvg} from '../../workspace_svg.js';
 import type {ConstantProvider as BaseConstantProvider} from '../common/constants.js';
 import {MarkerSvg as BaseMarkerSvg} from '../common/marker_svg.js';
-
 import type {ConstantProvider as ZelosConstantProvider} from './constants.js';
 
 /**
@@ -36,7 +34,7 @@ export class MarkerSvg extends BaseMarkerSvg {
   constructor(
     workspace: WorkspaceSvg,
     constants: BaseConstantProvider,
-    marker: Marker
+    marker: Marker,
   ) {
     super(workspace, constants, marker);
   }
@@ -117,11 +115,11 @@ export class MarkerSvg extends BaseMarkerSvg {
       Svg.CIRCLE,
       {
         'r': this.constants_.CURSOR_RADIUS,
-        'style': 'display: none',
         'stroke-width': this.constants_.CURSOR_STROKE_WIDTH,
       },
-      this.markerSvg_
+      this.markerSvg_,
     );
+    this.hide();
 
     // Markers and stack cursors don't blink.
     if (this.isCursor()) {

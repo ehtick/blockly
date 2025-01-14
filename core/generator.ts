@@ -10,8 +10,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.CodeGenerator');
+// Former goog.module ID: Blockly.CodeGenerator
 
 import type {Block} from './block.js';
 import * as common from './common.js';
@@ -19,12 +18,47 @@ import {Names, NameType} from './names.js';
 import type {Workspace} from './workspace.js';
 
 /**
- * Class for a code generator that translates the blocks into a language.
+ * Deprecated, no-longer used type declaration for per-block-type generator
+ * functions.
  *
- * @unrestricted
+ * @deprecated
+ * @see {@link https://developers.google.com/blockly/guides/create-custom-blocks/generating-code}
+ * @param block The Block instance to generate code for.
+ * @param generator The CodeGenerator calling the function.
+ * @returns A string containing the generated code (for statement blocks),
+ *     or a [code, precedence] tuple (for value/expression blocks), or
+ *     null if no code should be emitted for block.
+ */
+export type BlockGenerator = (
+  block: Block,
+  generator: CodeGenerator,
+) => [string, number] | string | null;
+
+/**
+ * Class for a code generator that translates the blocks into a language.
  */
 export class CodeGenerator {
   name_: string;
+
+  /**
+   * A dictionary of block generator functions, keyed by block type.
+   * Each block generator function takes two parameters:
+   *
+   * - the Block to generate code for, and
+   * - the calling CodeGenerator (or subclass) instance, so the
+   *   function can call methods defined below (e.g. blockToCode) or
+   *   on the relevant subclass (e.g. JavascripGenerator),
+   *
+   * and returns:
+   *
+   * - a [code, precedence] tuple (for value/expression blocks), or
+   * - a string containing the generated code (for statement blocks), or
+   * - null if no code should be emitted for block.
+   */
+  forBlock: Record<
+    string,
+    (block: Block, generator: this) => [string, number] | string | null
+  > = Object.create(null);
 
   /**
    * This is used as a placeholder in functions defined using
@@ -32,7 +66,7 @@ export class CodeGenerator {
    * legitimately appear in a function definition (or comment), and it must
    * not confuse the regular expression parser.
    */
-  protected FUNCTION_NAME_PLACEHOLDER_ = '{leCUI8hutHZI4480Dc}';
+  FUNCTION_NAME_PLACEHOLDER_ = '{leCUI8hutHZI4480Dc}';
   FUNCTION_NAME_PLACEHOLDER_REGEXP_: RegExp;
 
   /**
@@ -92,7 +126,7 @@ export class CodeGenerator {
   protected functionNames_: {[key: string]: string} = Object.create(null);
 
   /** A database of variable and procedure names. */
-  protected nameDB_?: Names = undefined;
+  nameDB_?: Names = undefined;
 
   /** @param name Language name of this generator. */
   constructor(name: string) {
@@ -100,7 +134,7 @@ export class CodeGenerator {
 
     this.FUNCTION_NAME_PLACEHOLDER_REGEXP_ = new RegExp(
       this.FUNCTION_NAME_PLACEHOLDER_,
-      'g'
+      'g',
     );
   }
 
@@ -114,7 +148,7 @@ export class CodeGenerator {
     if (!workspace) {
       // Backwards compatibility from before there could be multiple workspaces.
       console.warn(
-        'No workspace specified in workspaceToCode call.  Guessing.'
+        'No workspace specified in workspaceToCode call.  Guessing.',
       );
       workspace = common.getMainWorkspace();
     }
@@ -152,10 +186,6 @@ export class CodeGenerator {
     codeString = codeString.replace(/[ \t]+\n/g, '\n');
     return codeString;
   }
-
-  // The following are some helpful functions which can be used by multiple
-
-  // languages.
 
   /**
    * Prepend a common prefix onto each line of code.
@@ -203,11 +233,11 @@ export class CodeGenerator {
    */
   blockToCode(
     block: Block | null,
-    opt_thisOnly?: boolean
+    opt_thisOnly?: boolean,
   ): string | [string, number] {
     if (this.isInitialized === false) {
       console.warn(
-        'CodeGenerator init was not called before blockToCode was called.'
+        'CodeGenerator init was not called before blockToCode was called.',
       );
     }
     if (!block) {
@@ -222,15 +252,13 @@ export class CodeGenerator {
       return opt_thisOnly ? '' : this.blockToCode(block.getChildren(false)[0]);
     }
 
-    const func = (this as any)[block.type];
+    // Look up block generator function in dictionary - but fall back
+    // to looking up on this if not found, for backwards compatibility.
+    const func = this.forBlock[block.type];
     if (typeof func !== 'function') {
       throw Error(
-        'Language "' +
-          this.name_ +
-          '" does not know how to generate ' +
-          'code for block type "' +
-          block.type +
-          '".'
+        `${this.name_} generator does not know how to generate code ` +
+          `for block type "${block.type}".`,
       );
     }
     // First argument to func.call is the value of 'this' in the generator.
@@ -238,7 +266,7 @@ export class CodeGenerator {
     // The current preferred method of accessing the block is through the second
     // argument to func.call, which becomes the first parameter to the
     // generator.
-    let code = func.call(block, block);
+    let code = func.call(block, block, this);
     if (Array.isArray(code)) {
       // Value blocks return tuples of code and operator order.
       if (!block.outputConnection) {
@@ -267,14 +295,17 @@ export class CodeGenerator {
    * @param name The name of the input.
    * @param outerOrder The maximum binding strength (minimum order value) of any
    *     operators adjacent to "block".
-   * @returns Generated code or '' if no blocks are connected or the specified
-   *     input does not exist.
+   * @returns Generated code or '' if no blocks are connected.
+   * @throws ReferenceError if the specified input does not exist.
    */
   valueToCode(block: Block, name: string, outerOrder: number): string {
     if (isNaN(outerOrder)) {
       throw TypeError('Expecting valid order from block: ' + block.type);
     }
     const targetBlock = block.getInputTargetBlock(name);
+    if (!targetBlock && !block.getInput(name)) {
+      throw ReferenceError(`Input "${name}" doesn't exist on "${block.type}"`);
+    }
     if (!targetBlock) {
       return '';
     }
@@ -289,14 +320,14 @@ export class CodeGenerator {
       throw TypeError(
         `Expecting tuple from value block: ${targetBlock.type} See ` +
           `developers.google.com/blockly/guides/create-custom-blocks/generating-code ` +
-          `for more information`
+          `for more information`,
       );
     }
     let code = tuple[0];
     const innerOrder = tuple[1];
     if (isNaN(innerOrder)) {
       throw TypeError(
-        'Expecting valid order from value block: ' + targetBlock.type
+        'Expecting valid order from value block: ' + targetBlock.type,
       );
     }
     if (!code) {
@@ -350,16 +381,20 @@ export class CodeGenerator {
    * @param block The block containing the input.
    * @param name The name of the input.
    * @returns Generated code or '' if no blocks are connected.
+   * @throws ReferenceError if the specified input does not exist.
    */
   statementToCode(block: Block, name: string): string {
     const targetBlock = block.getInputTargetBlock(name);
+    if (!targetBlock && !block.getInput(name)) {
+      throw ReferenceError(`Input "${name}" doesn't exist on "${block.type}"`);
+    }
     let code = this.blockToCode(targetBlock);
     // Value blocks must return code and order of operations info.
     // Statement blocks must only return code.
     if (typeof code !== 'string') {
       throw TypeError(
         'Expecting code from statement block: ' +
-          (targetBlock && targetBlock.type)
+          (targetBlock && targetBlock.type),
       );
     }
     if (code) {
@@ -383,14 +418,14 @@ export class CodeGenerator {
       branch =
         this.prefixLines(
           this.injectId(this.INFINITE_LOOP_TRAP, block),
-          this.INDENT
+          this.INDENT,
         ) + branch;
     }
     if (this.STATEMENT_SUFFIX && !block.suppressPrefixSuffix) {
       branch =
         this.prefixLines(
           this.injectId(this.STATEMENT_SUFFIX, block),
-          this.INDENT
+          this.INDENT,
         ) + branch;
     }
     if (this.STATEMENT_PREFIX && !block.suppressPrefixSuffix) {
@@ -398,7 +433,7 @@ export class CodeGenerator {
         branch +
         this.prefixLines(
           this.injectId(this.STATEMENT_PREFIX, block),
-          this.INDENT
+          this.INDENT,
         );
     }
     return branch;
@@ -447,14 +482,11 @@ export class CodeGenerator {
    * @returns The actual name of the new function.  This may differ from
    *     desiredName if the former has already been taken by the user.
    */
-  protected provideFunction_(
-    desiredName: string,
-    code: string[] | string
-  ): string {
+  provideFunction_(desiredName: string, code: string[] | string): string {
     if (!this.definitions_[desiredName]) {
       const functionName = this.nameDB_!.getDistinctName(
         desiredName,
-        NameType.PROCEDURE
+        NameType.PROCEDURE,
       );
       this.functionNames_[desiredName] = functionName;
       if (Array.isArray(code)) {
@@ -476,6 +508,42 @@ export class CodeGenerator {
       this.definitions_[desiredName] = codeText;
     }
     return this.functionNames_[desiredName];
+  }
+
+  /**
+   * Gets a unique, legal name for a user-defined variable.
+   * Before calling this method, the `nameDB_` property of the class
+   * must have been initialized already. This is typically done in
+   * the `init` function of the code generator class.
+   *
+   * @param nameOrId The ID of the variable to get a name for,
+   *    or the proposed name for a variable not associated with an id.
+   * @returns A unique, legal name for the variable.
+   */
+  getVariableName(nameOrId: string): string {
+    return this.getName(nameOrId, NameType.VARIABLE);
+  }
+
+  /**
+   * Gets a unique, legal name for a user-defined procedure.
+   * Before calling this method, the `nameDB_` property of the class
+   * must have been initialized already. This is typically done in
+   * the `init` function of the code generator class.
+   *
+   * @param name The proposed name for a procedure.
+   * @returns A unique, legal name for the procedure.
+   */
+  getProcedureName(name: string): string {
+    return this.getName(name, NameType.PROCEDURE);
+  }
+
+  private getName(nameOrId: string, type: NameType): string {
+    if (!this.nameDB_) {
+      throw new Error(
+        'Name database is not defined. You must initialize `nameDB_` in your generator class and call `init` first.',
+      );
+    }
+    return this.nameDB_.getName(nameOrId, type);
   }
 
   /**
@@ -507,11 +575,7 @@ export class CodeGenerator {
    * @param _opt_thisOnly True to generate code for only this statement.
    * @returns Code with comments and subsequent blocks added.
    */
-  protected scrub_(
-    _block: Block,
-    code: string,
-    _opt_thisOnly?: boolean
-  ): string {
+  scrub_(_block: Block, code: string, _opt_thisOnly?: boolean): string {
     // Optionally override
     return code;
   }

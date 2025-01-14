@@ -4,21 +4,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.zelos.Renderer');
+// Former goog.module ID: Blockly.zelos.Renderer
 
 import type {BlockSvg} from '../../block_svg.js';
-import type {Connection} from '../../connection.js';
 import {ConnectionType} from '../../connection_type.js';
 import {InsertionMarkerManager} from '../../insertion_marker_manager.js';
 import type {Marker} from '../../keyboard_nav/marker.js';
 import type {RenderedConnection} from '../../rendered_connection.js';
 import type {BlockStyle} from '../../theme.js';
+import * as deprecation from '../../utils/deprecation.js';
 import type {WorkspaceSvg} from '../../workspace_svg.js';
 import * as blockRendering from '../common/block_rendering.js';
 import type {RenderInfo as BaseRenderInfo} from '../common/info.js';
 import {Renderer as BaseRenderer} from '../common/renderer.js';
-
 import {ConstantProvider} from './constants.js';
 import {Drawer} from './drawer.js';
 import {RenderInfo} from './info.js';
@@ -70,7 +68,7 @@ export class Renderer extends BaseRenderer {
    */
   protected override makeDrawer_(
     block: BlockSvg,
-    info: BaseRenderInfo
+    info: BaseRenderInfo,
   ): Drawer {
     return new Drawer(block, info as RenderInfo);
   }
@@ -84,7 +82,7 @@ export class Renderer extends BaseRenderer {
    */
   override makeMarkerDrawer(
     workspace: WorkspaceSvg,
-    marker: Marker
+    marker: Marker,
   ): MarkerSvg {
     return new MarkerSvg(workspace, this.getConstants(), marker);
   }
@@ -110,18 +108,21 @@ export class Renderer extends BaseRenderer {
     return this.constants_;
   }
 
-  override shouldHighlightConnection(conn: Connection) {
-    return (
-      conn.type !== ConnectionType.INPUT_VALUE &&
-      conn.type !== ConnectionType.OUTPUT_VALUE
-    );
-  }
-
+  /**
+   * @deprecated v10 - This function is no longer respected. A custom
+   *    IConnectionPreviewer may be able to fulfill the functionality.
+   */
   override getConnectionPreviewMethod(
     closest: RenderedConnection,
     local: RenderedConnection,
-    topBlock: BlockSvg
+    topBlock: BlockSvg,
   ) {
+    deprecation.warn(
+      'getConnectionPreviewMethod',
+      'v10',
+      'v12',
+      'an IConnectionPreviewer, if it fulfills your use case.',
+    );
     if (local.type === ConnectionType.OUTPUT_VALUE) {
       if (!closest.isConnected()) {
         return InsertionMarkerManager.PREVIEW_TYPE.INPUT_OUTLINE;

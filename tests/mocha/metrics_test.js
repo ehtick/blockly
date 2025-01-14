@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.metrics');
-
+import {assert} from '../../node_modules/chai/chai.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -15,10 +14,10 @@ suite('Metrics', function () {
   const SCROLL_X = 10;
   const SCROLL_Y = 10;
   function assertDimensionsMatch(toCheck, left, top, width, height) {
-    chai.assert.equal(top, toCheck.top, 'Top did not match.');
-    chai.assert.equal(left, toCheck.left, 'Left did not match.');
-    chai.assert.equal(width, toCheck.width, 'Width did not match.');
-    chai.assert.equal(height, toCheck.height, 'Height did not match.');
+    assert.equal(top, toCheck.top, 'Top did not match.');
+    assert.equal(left, toCheck.left, 'Left did not match.');
+    assert.equal(width, toCheck.width, 'Width did not match.');
+    assert.equal(height, toCheck.height, 'Height did not match.');
   }
 
   // Make a mock workspace object with two properties:
@@ -55,60 +54,108 @@ suite('Metrics', function () {
       this.metricsManager = new Blockly.MetricsManager(this.ws);
       this.toolboxMetricsStub = sinon.stub(
         this.metricsManager,
-        'getToolboxMetrics'
+        'getToolboxMetrics',
       );
       this.flyoutMetricsStub = sinon.stub(
         this.metricsManager,
-        'getFlyoutMetrics'
+        'getFlyoutMetrics',
       );
       this.getToolboxStub = sinon.stub(
         this.metricsManager.workspace_,
-        'getToolbox'
+        'getToolbox',
       );
       this.getFlyoutStub = sinon.stub(
         this.metricsManager.workspace_,
-        'getFlyout'
+        'getFlyout',
       );
     });
-    test('Toolbox at left', function () {
-      this.toolboxMetricsStub.returns({width: 107, height: 0, position: 2});
-      this.flyoutMetricsStub.returns({});
+
+    test('left toolboxes with always open flyouts have both offsets', function () {
+      this.toolboxMetricsStub.returns({width: 50, height: 0, position: 2});
+      this.flyoutMetricsStub.returns({width: 100, height: 0, position: 2});
       this.getToolboxStub.returns(true);
-      this.getFlyoutStub.returns(false);
+      this.getFlyoutStub.returns({autoClose: false});
 
       const absoluteMetrics = this.metricsManager.getAbsoluteMetrics();
 
-      assertDimensionsMatch(absoluteMetrics, 107, 0);
+      assertDimensionsMatch(absoluteMetrics, 150, 0);
     });
-    test('Toolbox at top', function () {
-      this.toolboxMetricsStub.returns({width: 0, height: 107, position: 0});
-      this.flyoutMetricsStub.returns({});
+
+    test('top toolboxes with always open flyouts have both offsets', function () {
+      this.toolboxMetricsStub.returns({width: 0, height: 50, position: 0});
+      this.flyoutMetricsStub.returns({width: 0, height: 100, position: 0});
       this.getToolboxStub.returns(true);
-      this.getFlyoutStub.returns(false);
+      this.getFlyoutStub.returns({autoClose: false});
 
       const absoluteMetrics = this.metricsManager.getAbsoluteMetrics();
 
-      assertDimensionsMatch(absoluteMetrics, 0, 107);
+      assertDimensionsMatch(absoluteMetrics, 0, 150);
     });
-    test('Flyout at left', function () {
-      this.toolboxMetricsStub.returns({});
-      this.flyoutMetricsStub.returns({width: 107, height: 0, position: 2});
-      this.getToolboxStub.returns(false);
-      this.getFlyoutStub.returns(true);
+
+    test('left toolboxes with autoclosing flyouts only have a toolbox offset', function () {
+      this.toolboxMetricsStub.returns({width: 50, height: 0, position: 2});
+      this.flyoutMetricsStub.returns({width: 100, height: 0, position: 2});
+      this.getToolboxStub.returns(true);
+      this.getFlyoutStub.returns({autoClose: true});
 
       const absoluteMetrics = this.metricsManager.getAbsoluteMetrics();
 
-      assertDimensionsMatch(absoluteMetrics, 107, 0);
+      assertDimensionsMatch(absoluteMetrics, 50, 0);
     });
-    test('Flyout at top', function () {
-      this.toolboxMetricsStub.returns({});
-      this.flyoutMetricsStub.returns({width: 0, height: 107, position: 0});
-      this.getToolboxStub.returns(false);
-      this.getFlyoutStub.returns(true);
+
+    test('top toolboxes with autoclosing flyouts only have a toolbox offset', function () {
+      this.toolboxMetricsStub.returns({width: 0, height: 50, position: 0});
+      this.flyoutMetricsStub.returns({width: 0, height: 100, position: 0});
+      this.getToolboxStub.returns(true);
+      this.getFlyoutStub.returns({autoClose: true});
 
       const absoluteMetrics = this.metricsManager.getAbsoluteMetrics();
 
-      assertDimensionsMatch(absoluteMetrics, 0, 107);
+      assertDimensionsMatch(absoluteMetrics, 0, 50);
+    });
+
+    test('left always open flyouts have a flyout offset', function () {
+      this.toolboxMetricsStub.returns({width: 50, height: 0, position: 2});
+      this.flyoutMetricsStub.returns({width: 100, height: 0, position: 2});
+      this.getToolboxStub.returns(false);
+      this.getFlyoutStub.returns({autoClose: false});
+
+      const absoluteMetrics = this.metricsManager.getAbsoluteMetrics();
+
+      assertDimensionsMatch(absoluteMetrics, 100, 0);
+    });
+
+    test('top always open flyouts have a flyout offset', function () {
+      this.toolboxMetricsStub.returns({width: 0, height: 50, position: 0});
+      this.flyoutMetricsStub.returns({width: 0, height: 100, position: 0});
+      this.getToolboxStub.returns(false);
+      this.getFlyoutStub.returns({autoClose: false});
+
+      const absoluteMetrics = this.metricsManager.getAbsoluteMetrics();
+
+      assertDimensionsMatch(absoluteMetrics, 0, 100);
+    });
+
+    test('left autoclosing flyouts have no offset', function () {
+      this.toolboxMetricsStub.returns({width: 50, height: 0, position: 2});
+      this.flyoutMetricsStub.returns({width: 100, height: 0, position: 2});
+      this.getToolboxStub.returns(false);
+      this.getFlyoutStub.returns({autoClose: true});
+
+      const absoluteMetrics = this.metricsManager.getAbsoluteMetrics();
+
+      assertDimensionsMatch(absoluteMetrics, 0, 0);
+    });
+
+    test('top autoclosing flyouts have no offset', function () {
+      this.toolboxMetricsStub.returns({width: 0, height: 50, position: 0});
+      this.flyoutMetricsStub.returns({width: 0, height: 100, position: 0});
+      this.getToolboxStub.returns(false);
+      this.getFlyoutStub.returns({autoClose: true});
+
+      const absoluteMetrics = this.metricsManager.getAbsoluteMetrics();
+
+      assertDimensionsMatch(absoluteMetrics, 0, 0);
     });
   });
 
@@ -118,66 +165,119 @@ suite('Metrics', function () {
       this.metricsManager = new Blockly.MetricsManager(this.ws);
       this.toolboxMetricsStub = sinon.stub(
         this.metricsManager,
-        'getToolboxMetrics'
+        'getToolboxMetrics',
       );
       this.flyoutMetricsStub = sinon.stub(
         this.metricsManager,
-        'getFlyoutMetrics'
+        'getFlyoutMetrics',
       );
       this.getToolboxStub = sinon.stub(
         this.metricsManager.workspace_,
-        'getToolbox'
+        'getToolbox',
       );
       this.getFlyoutStub = sinon.stub(
         this.metricsManager.workspace_,
-        'getFlyout'
+        'getFlyout',
       );
       this.svgMetricsStub = sinon.stub(this.metricsManager, 'getSvgMetrics');
     });
-    test('Toolbox at left', function () {
-      this.toolboxMetricsStub.returns({width: 107, height: 0, position: 2});
-      this.flyoutMetricsStub.returns({});
+
+    test('left toolboxes with always open flyouts have both offsets', function () {
+      this.toolboxMetricsStub.returns({width: 50, height: 0, position: 2});
+      this.flyoutMetricsStub.returns({width: 100, height: 0, position: 2});
       this.svgMetricsStub.returns({width: 500, height: 500});
       this.getToolboxStub.returns(true);
-      this.getFlyoutStub.returns(false);
+      this.getFlyoutStub.returns({autoClose: false});
 
       const viewMetrics = this.metricsManager.getViewMetrics();
 
-      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 393, 500);
+      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 350, 500);
     });
-    test('Toolbox at top', function () {
-      this.toolboxMetricsStub.returns({width: 0, height: 107, position: 0});
-      this.flyoutMetricsStub.returns({});
+
+    test('top toolboxes with always open flyouts have both offsets', function () {
+      this.toolboxMetricsStub.returns({width: 0, height: 50, position: 0});
+      this.flyoutMetricsStub.returns({width: 0, height: 100, position: 0});
       this.svgMetricsStub.returns({width: 500, height: 500});
       this.getToolboxStub.returns(true);
-      this.getFlyoutStub.returns(false);
+      this.getFlyoutStub.returns({autoClose: false});
 
       const viewMetrics = this.metricsManager.getViewMetrics();
 
-      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 500, 393);
+      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 500, 350);
     });
-    test('Flyout at left', function () {
-      this.toolboxMetricsStub.returns({});
-      this.flyoutMetricsStub.returns({width: 107, height: 0, position: 2});
+
+    test('left toolboxes with autoclosing flyouts only have a toolbox offset', function () {
+      this.toolboxMetricsStub.returns({width: 50, height: 0, position: 2});
+      this.flyoutMetricsStub.returns({width: 100, height: 0, position: 2});
+      this.svgMetricsStub.returns({width: 500, height: 500});
+      this.getToolboxStub.returns(true);
+      this.getFlyoutStub.returns({autoClose: true});
+
+      const viewMetrics = this.metricsManager.getViewMetrics();
+
+      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 450, 500);
+    });
+
+    test('top toolboxes with autoclosing flyouts only have a toolbox offset', function () {
+      this.toolboxMetricsStub.returns({width: 0, height: 50, position: 0});
+      this.flyoutMetricsStub.returns({width: 0, height: 100, position: 0});
+      this.svgMetricsStub.returns({width: 500, height: 500});
+      this.getToolboxStub.returns(true);
+      this.getFlyoutStub.returns({autoClose: true});
+
+      const viewMetrics = this.metricsManager.getViewMetrics();
+
+      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 500, 450);
+    });
+
+    test('left always open flyouts have a flyout offset', function () {
+      this.toolboxMetricsStub.returns({width: 50, height: 0, position: 2});
+      this.flyoutMetricsStub.returns({width: 100, height: 0, position: 2});
       this.svgMetricsStub.returns({width: 500, height: 500});
       this.getToolboxStub.returns(false);
-      this.getFlyoutStub.returns(true);
+      this.getFlyoutStub.returns({autoClose: false});
 
       const viewMetrics = this.metricsManager.getViewMetrics();
 
-      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 393, 500);
+      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 400, 500);
     });
-    test('Flyout at top', function () {
-      this.toolboxMetricsStub.returns({});
-      this.flyoutMetricsStub.returns({width: 0, height: 107, position: 0});
+
+    test('top always open flyouts have a flyout offset', function () {
+      this.toolboxMetricsStub.returns({width: 0, height: 50, position: 0});
+      this.flyoutMetricsStub.returns({width: 0, height: 100, position: 0});
       this.svgMetricsStub.returns({width: 500, height: 500});
       this.getToolboxStub.returns(false);
-      this.getFlyoutStub.returns(true);
+      this.getFlyoutStub.returns({autoClose: false});
 
       const viewMetrics = this.metricsManager.getViewMetrics();
 
-      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 500, 393);
+      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 500, 400);
     });
+
+    test('left autoclosing flyouts have no offset', function () {
+      this.toolboxMetricsStub.returns({width: 50, height: 0, position: 2});
+      this.flyoutMetricsStub.returns({width: 100, height: 0, position: 2});
+      this.svgMetricsStub.returns({width: 500, height: 500});
+      this.getToolboxStub.returns(false);
+      this.getFlyoutStub.returns({autoClose: true});
+
+      const viewMetrics = this.metricsManager.getViewMetrics();
+
+      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 500, 500);
+    });
+
+    test('top autoclosing flyouts have no offset', function () {
+      this.toolboxMetricsStub.returns({width: 0, height: 50, position: 0});
+      this.flyoutMetricsStub.returns({width: 0, height: 100, position: 0});
+      this.svgMetricsStub.returns({width: 500, height: 500});
+      this.getToolboxStub.returns(false);
+      this.getFlyoutStub.returns({autoClose: true});
+
+      const viewMetrics = this.metricsManager.getViewMetrics();
+
+      assertDimensionsMatch(viewMetrics, -SCROLL_X, -SCROLL_Y, 500, 500);
+    });
+
     test('Get view metrics in workspace coordinates ', function () {
       const scale = 2;
       const getWorkspaceCoordinates = true;
@@ -190,7 +290,7 @@ suite('Metrics', function () {
       this.getFlyoutStub.returns(true);
 
       const viewMetrics = this.metricsManager.getViewMetrics(
-        getWorkspaceCoordinates
+        getWorkspaceCoordinates,
       );
 
       assertDimensionsMatch(
@@ -198,7 +298,7 @@ suite('Metrics', function () {
         -SCROLL_X / scale,
         -SCROLL_Y / scale,
         500 / scale,
-        393 / scale
+        393 / scale,
       );
     });
   });
@@ -374,7 +474,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         true,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half the view width to all sides.
@@ -391,7 +491,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         true,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half the view width to all sides.
@@ -408,7 +508,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         true,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half the view width to all sides.
@@ -425,7 +525,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         true,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half of the view width to all sides.
@@ -442,7 +542,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         true,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half of the view width to all sides.
@@ -459,7 +559,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         true,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half of the view width to all sides.
@@ -476,7 +576,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         false,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half the view width to all sides.
@@ -493,7 +593,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         false,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half the view width to all sides.
@@ -510,7 +610,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         false,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half the view width to all sides.
@@ -527,7 +627,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         false,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half of the view width to all sides.
@@ -544,7 +644,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         false,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half of the view width to all sides.
@@ -561,7 +661,7 @@ suite('Metrics', function () {
       const contentMetrics = metricsManager.getScrollMetrics(
         false,
         mockViewMetrics,
-        mockContentMetrics
+        mockContentMetrics,
       );
 
       // Should add half of the view width to all sides.

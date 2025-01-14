@@ -4,29 +4,27 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.ContextMenu');
+// Former goog.module ID: Blockly.ContextMenu
 
 import type {Block} from './block.js';
 import type {BlockSvg} from './block_svg.js';
 import * as browserEvents from './browser_events.js';
-import * as clipboard from './clipboard.js';
+import * as common from './common.js';
 import {config} from './config.js';
-import * as dom from './utils/dom.js';
 import type {
   ContextMenuOption,
   LegacyContextMenuOption,
 } from './contextmenu_registry.js';
+import {EventType} from './events/type.js';
 import * as eventUtils from './events/utils.js';
 import {Menu} from './menu.js';
 import {MenuItem} from './menuitem.js';
-import {Msg} from './msg.js';
+import * as serializationBlocks from './serialization/blocks.js';
 import * as aria from './utils/aria.js';
-import {Coordinate} from './utils/coordinate.js';
+import * as dom from './utils/dom.js';
 import {Rect} from './utils/rect.js';
 import * as svgMath from './utils/svg_math.js';
 import * as WidgetDiv from './widgetdiv.js';
-import {WorkspaceCommentSvg} from './workspace_comment_svg.js';
 import type {WorkspaceSvg} from './workspace_svg.js';
 import * as Xml from './xml.js';
 
@@ -66,18 +64,20 @@ let menu_: Menu | null = null;
  * @param e Mouse event.
  * @param options Array of menu options.
  * @param rtl True if RTL, false if LTR.
+ * @param workspace The workspace associated with the context menu, if any.
  */
 export function show(
-  e: Event,
+  e: PointerEvent,
   options: (ContextMenuOption | LegacyContextMenuOption)[],
-  rtl: boolean
+  rtl: boolean,
+  workspace?: WorkspaceSvg,
 ) {
-  WidgetDiv.show(dummyOwner, rtl, dispose);
+  WidgetDiv.show(dummyOwner, rtl, dispose, workspace);
   if (!options.length) {
     hide();
     return;
   }
-  const menu = populate_(options, rtl);
+  const menu = populate_(options, rtl, e);
   menu_ = menu;
 
   position_(menu, e, rtl);
@@ -94,11 +94,13 @@ export function show(
  *
  * @param options Array of menu options.
  * @param rtl True if RTL, false if LTR.
+ * @param e The event that triggered the context menu to open.
  * @returns The menu that will be shown on right click.
  */
 function populate_(
   options: (ContextMenuOption | LegacyContextMenuOption)[],
-  rtl: boolean
+  rtl: boolean,
+  e: PointerEvent,
 ): Menu {
   /* Here's what one option object looks like:
       {text: 'Make It So',
@@ -123,7 +125,7 @@ function populate_(
             // will not be expecting a scope parameter, so there should be
             // no problems. Just assume it is a ContextMenuOption and we'll
             // pass undefined if it's not.
-            option.callback((option as ContextMenuOption).scope);
+            option.callback((option as ContextMenuOption).scope, e);
           }, 0);
         });
       };
@@ -151,7 +153,7 @@ function position_(menu: Menu, e: Event, rtl: boolean) {
     mouseEvent.clientY + viewportBBox.top,
     mouseEvent.clientY + viewportBBox.top,
     mouseEvent.clientX + viewportBBox.left,
-    mouseEvent.clientX + viewportBBox.left
+    mouseEvent.clientX + viewportBBox.left,
   );
 
   createWidget_(menu);
@@ -188,7 +190,7 @@ function createWidget_(menu: Menu) {
     menuDom as EventTarget,
     'contextmenu',
     null,
-    haltPropagation
+    haltPropagation,
   );
   // Focus only after the initial render to avoid issue #1329.
   menu.focus();
@@ -224,18 +226,28 @@ export function dispose() {
 
 /**
  * Create a callback function that creates and configures a block,
- *   then places the new block next to the original.
+ *   then places the new block next to the original and returns it.
  *
  * @param block Original block.
- * @param xml XML representation of new block.
+ * @param state XML or JSON object representation of the new block.
  * @returns Function that creates a block.
  */
-export function callbackFactory(block: Block, xml: Element): () => void {
+export function callbackFactory(
+  block: Block,
+  state: Element | serializationBlocks.State,
+): () => BlockSvg {
   return () => {
     eventUtils.disable();
-    let newBlock;
+    let newBlock: BlockSvg;
     try {
-      newBlock = Xml.domToBlock(xml, block.workspace!) as BlockSvg;
+      if (state instanceof Element) {
+        newBlock = Xml.domToBlockInternal(state, block.workspace!) as BlockSvg;
+      } else {
+        newBlock = serializationBlocks.appendInternal(
+          state,
+          block.workspace,
+        ) as BlockSvg;
+      }
       // Move the new block next to the old block.
       const xy = block.getRelativeToSurfaceXY();
       if (block.RTL) {
@@ -249,129 +261,9 @@ export function callbackFactory(block: Block, xml: Element): () => void {
       eventUtils.enable();
     }
     if (eventUtils.isEnabled() && !newBlock.isShadow()) {
-      eventUtils.fire(new (eventUtils.get(eventUtils.BLOCK_CREATE))(newBlock));
+      eventUtils.fire(new (eventUtils.get(EventType.BLOCK_CREATE))(newBlock));
     }
-    newBlock.select();
+    common.setSelected(newBlock);
+    return newBlock;
   };
-}
-
-// Helper functions for creating context menu options.
-
-/**
- * Make a context menu option for deleting the current workspace comment.
- *
- * @param comment The workspace comment where the
- *     right-click originated.
- * @returns A menu option,
- *     containing text, enabled, and a callback.
- * @internal
- */
-export function commentDeleteOption(
-  comment: WorkspaceCommentSvg
-): LegacyContextMenuOption {
-  const deleteOption = {
-    text: Msg['REMOVE_COMMENT'],
-    enabled: true,
-    callback: function () {
-      eventUtils.setGroup(true);
-      comment.dispose();
-      eventUtils.setGroup(false);
-    },
-  };
-  return deleteOption;
-}
-
-/**
- * Make a context menu option for duplicating the current workspace comment.
- *
- * @param comment The workspace comment where the
- *     right-click originated.
- * @returns A menu option,
- *     containing text, enabled, and a callback.
- * @internal
- */
-export function commentDuplicateOption(
-  comment: WorkspaceCommentSvg
-): LegacyContextMenuOption {
-  const duplicateOption = {
-    text: Msg['DUPLICATE_COMMENT'],
-    enabled: true,
-    callback: function () {
-      clipboard.duplicate(comment);
-    },
-  };
-  return duplicateOption;
-}
-
-/**
- * Make a context menu option for adding a comment on the workspace.
- *
- * @param ws The workspace where the right-click
- *     originated.
- * @param e The right-click mouse event.
- * @returns A menu option, containing text, enabled, and a callback.
- * @suppress {strictModuleDepCheck,checkTypes} Suppress checks while workspace
- *     comments are not bundled in.
- * @internal
- */
-export function workspaceCommentOption(
-  ws: WorkspaceSvg,
-  e: Event
-): ContextMenuOption {
-  /**
-   * Helper function to create and position a comment correctly based on the
-   * location of the mouse event.
-   */
-  function addWsComment() {
-    const comment = new WorkspaceCommentSvg(
-      ws,
-      Msg['WORKSPACE_COMMENT_DEFAULT_TEXT'],
-      WorkspaceCommentSvg.DEFAULT_SIZE,
-      WorkspaceCommentSvg.DEFAULT_SIZE
-    );
-
-    const injectionDiv = ws.getInjectionDiv();
-    // Bounding rect coordinates are in client coordinates, meaning that they
-    // are in pixels relative to the upper left corner of the visible browser
-    // window.  These coordinates change when you scroll the browser window.
-    const boundingRect = injectionDiv.getBoundingClientRect();
-
-    // The client coordinates offset by the injection div's upper left corner.
-    const mouseEvent = e as MouseEvent;
-    const clientOffsetPixels = new Coordinate(
-      mouseEvent.clientX - boundingRect.left,
-      mouseEvent.clientY - boundingRect.top
-    );
-
-    // The offset in pixels between the main workspace's origin and the upper
-    // left corner of the injection div.
-    const mainOffsetPixels = ws.getOriginOffsetInPixels();
-
-    // The position of the new comment in pixels relative to the origin of the
-    // main workspace.
-    const finalOffset = Coordinate.difference(
-      clientOffsetPixels,
-      mainOffsetPixels
-    );
-    // The position of the new comment in main workspace coordinates.
-    finalOffset.scale(1 / ws.scale);
-
-    const commentX = finalOffset.x;
-    const commentY = finalOffset.y;
-    comment.moveBy(commentX, commentY);
-    if (ws.rendered) {
-      comment.initSvg();
-      comment.render();
-      comment.select();
-    }
-  }
-
-  const wsCommentOption = {
-    enabled: true,
-  } as ContextMenuOption;
-  wsCommentOption.text = Msg['ADD_COMMENT'];
-  wsCommentOption.callback = function () {
-    addWsComment();
-  };
-  return wsCommentOption;
 }

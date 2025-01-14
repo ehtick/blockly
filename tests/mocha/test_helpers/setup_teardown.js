@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.helpers.setupTeardown');
-
 import * as eventUtils from '../../../build/src/core/events/utils.js';
 
 /**
@@ -76,7 +74,7 @@ export function addBlockTypeToCleanup(sharedCleanupObj, blockType) {
 function wrapDefineBlocksWithJsonArrayWithCleanup_(sharedCleanupObj) {
   const stub = sinon.stub(
     Blockly.common.TEST_ONLY,
-    'defineBlocksWithJsonArrayInternal'
+    'defineBlocksWithJsonArrayInternal',
   );
   stub.callsFake(function (jsonArray) {
     if (jsonArray) {
@@ -168,7 +166,7 @@ export function sharedTestTeardown() {
         '"' +
           testRef.fullTitle() +
           '" needed cleanup of Blockly.Events.TEST_ONLY.FIRE_QUEUE. This may ' +
-          'indicate leakage from an earlier test'
+          'indicate leakage from an earlier test',
       );
     }
 

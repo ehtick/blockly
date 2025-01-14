@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.Drawer');
+// Former goog.module ID: Blockly.blockRendering.Drawer
 
 import type {BlockSvg} from '../../block_svg.js';
+import {ConnectionType} from '../../connection_type.js';
 import {Coordinate} from '../../utils.js';
 import * as svgPaths from '../../utils/svg_paths.js';
 import {Connection} from '../measurables/connection.js';
@@ -18,9 +18,8 @@ import type {InlineInput} from '../measurables/inline_input.js';
 import type {PreviousConnection} from '../measurables/previous_connection.js';
 import type {Row} from '../measurables/row.js';
 import {Types} from '../measurables/types.js';
-
-import {isDynamicShape} from './constants.js';
 import type {ConstantProvider, Notch, PuzzleTab} from './constants.js';
+import {isDynamicShape, isNotch, isPuzzleTab} from './constants.js';
 import type {RenderInfo} from './info.js';
 
 /**
@@ -58,9 +57,9 @@ export class Drawer {
    * required.
    */
   draw() {
-    this.hideHiddenIcons_();
     this.drawOutline_();
     this.drawInternals_();
+    this.updateConnectionHighlights();
 
     this.block_.pathObject.setPath(this.outlinePath_ + '\n' + this.inlinePath_);
     if (this.info_.RTL) {
@@ -80,13 +79,7 @@ export class Drawer {
     // The dark path adds to the size of the block in both X and Y.
     this.block_.height = this.info_.height;
     this.block_.width = this.info_.widthWithChildren;
-  }
-
-  /** Hide icons that were marked as hidden. */
-  protected hideHiddenIcons_() {
-    for (let i = 0, iconInfo; (iconInfo = this.info_.hiddenIcons[i]); i++) {
-      iconInfo.icon.iconGroup_?.setAttribute('display', 'none');
-    }
+    this.block_.childlessWidth = this.info_.width;
   }
 
   /** Create the outline of the block.  This is a single continuous path. */
@@ -186,7 +179,7 @@ export class Drawer {
       (input.shape as Notch).pathRight +
       svgPaths.lineOnAxis(
         'h',
-        -(input.notchOffset - this.constants_.INSIDE_CORNERS.width)
+        -(input.notchOffset - this.constants_.INSIDE_CORNERS.width),
       ) +
       this.constants_.INSIDE_CORNERS.pathTop;
 
@@ -240,7 +233,7 @@ export class Drawer {
 
     this.outlinePath_ += svgPaths.lineOnAxis(
       'V',
-      bottomRow.baseline - rightCornerYOffset
+      bottomRow.baseline - rightCornerYOffset,
     );
     this.outlinePath_ += outlinePath;
   }
@@ -290,10 +283,6 @@ export class Drawer {
    * @param fieldInfo The rendering information for the field or icon.
    */
   protected layoutField_(fieldInfo: Icon | Field) {
-    const svgGroup = Types.isField(fieldInfo)
-      ? (fieldInfo as Field).field.getSvgRoot()!
-      : (fieldInfo as Icon).icon.iconGroup_!; // Never null in rendered case.
-
     const yPos = fieldInfo.centerline - fieldInfo.height / 2;
     let xPos = fieldInfo.xPos;
     let scale = '';
@@ -304,24 +293,22 @@ export class Drawer {
         scale = 'scale(-1 1)';
       }
     }
-    if (Types.isIcon(fieldInfo)) {
-      svgGroup.setAttribute('display', 'block');
-      svgGroup.setAttribute(
-        'transform',
-        'translate(' + xPos + ',' + yPos + ')'
-      );
-      (fieldInfo as Icon).icon.computeIconLocation();
-    } else {
-      svgGroup.setAttribute(
-        'transform',
-        'translate(' + xPos + ',' + yPos + ')' + scale
-      );
-    }
 
-    if (this.info_.isInsertionMarker) {
-      // Fields and icons are invisible on insertion marker.  They still have to
-      // be rendered so that the block can be sized correctly.
-      svgGroup.setAttribute('display', 'none');
+    if (Types.isIcon(fieldInfo)) {
+      const icon = (fieldInfo as Icon).icon;
+      icon.setOffsetInBlock(new Coordinate(xPos, yPos));
+      if (this.info_.isInsertionMarker) {
+        icon.hideForInsertionMarker();
+      }
+    } else {
+      const svgGroup = (fieldInfo as Field).field.getSvgRoot()!;
+      svgGroup.setAttribute(
+        'transform',
+        'translate(' + xPos + ',' + yPos + ')' + scale,
+      );
+      if (this.info_.isInsertionMarker) {
+        svgGroup.setAttribute('display', 'none');
+      }
     }
   }
 
@@ -369,7 +356,7 @@ export class Drawer {
       }
       input.connectionModel.setOffsetInBlock(
         connX,
-        yPos + input.connectionOffsetY
+        yPos + input.connectionOffsetY,
       );
     }
   }
@@ -440,8 +427,91 @@ export class Drawer {
       const connX = this.info_.RTL ? -x : x;
       this.block_.outputConnection.setOffsetInBlock(
         connX,
-        this.info_.outputConnection.connectionOffsetY
+        this.info_.outputConnection.connectionOffsetY,
       );
     }
+  }
+
+  /**
+   * Updates the path object to reflect which connections on the block are
+   * highlighted.
+   */
+  protected updateConnectionHighlights() {
+    for (const row of this.info_.rows) {
+      for (const elem of row.elements) {
+        if (!(elem instanceof Connection)) continue;
+
+        if (elem.highlighted) {
+          this.drawConnectionHighlightPath(elem);
+        } else {
+          this.block_.pathObject.removeConnectionHighlight?.(
+            elem.connectionModel,
+          );
+        }
+      }
+    }
+  }
+
+  /** Returns a path to highlight the given connection. */
+  drawConnectionHighlightPath(measurable: Connection) {
+    const conn = measurable.connectionModel;
+    let path = '';
+    if (
+      conn.type === ConnectionType.INPUT_VALUE ||
+      conn.type === ConnectionType.OUTPUT_VALUE
+    ) {
+      path = this.getExpressionConnectionHighlightPath(measurable);
+    } else {
+      path = this.getStatementConnectionHighlightPath(measurable);
+    }
+    const block = conn.getSourceBlock();
+    block.pathObject.addConnectionHighlight?.(
+      conn,
+      path,
+      conn.getOffsetInBlock(),
+      block.RTL,
+    );
+  }
+
+  /**
+   * Returns a path to highlight the given conneciton, assuming it is an
+   * input or output connection.
+   */
+  private getExpressionConnectionHighlightPath(connection: Connection): string {
+    let connPath = '';
+    if (isDynamicShape(connection.shape)) {
+      connPath = connection.shape.pathDown(connection.height);
+    } else if (isPuzzleTab(connection.shape)) {
+      connPath = connection.shape.pathDown;
+    }
+
+    // We are assuming that there is room for the tab offset above and below
+    // the tab.
+    const yLen = this.constants_.TAB_OFFSET_FROM_TOP;
+    return (
+      svgPaths.moveBy(0, -yLen) +
+      svgPaths.lineOnAxis('v', yLen) +
+      connPath +
+      svgPaths.lineOnAxis('v', yLen)
+    );
+  }
+
+  /**
+   * Returns a path to highlight the given conneciton, assuming it is a
+   * next or previous connection.
+   */
+  private getStatementConnectionHighlightPath(connection: Connection): string {
+    if (!isNotch(connection.shape)) {
+      throw new Error('Statement connections should have notch shapes');
+    }
+
+    const xLen =
+      this.constants_.NOTCH_OFFSET_LEFT - this.constants_.CORNER_RADIUS;
+    return (
+      svgPaths.moveBy(-xLen, 0) +
+      svgPaths.lineOnAxis('h', xLen) +
+      connection.shape.pathLeft +
+      svgPaths.lineOnAxis('h', xLen)
+    );
   }
 }

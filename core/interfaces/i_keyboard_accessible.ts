@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
+// Former goog.module ID: Blockly.IKeyboardAccessible
+
 import {KeyboardShortcut} from '../shortcut_registry.js';
-goog.declareModuleId('Blockly.IKeyboardAccessible');
 
 /**
  * An interface for an object that handles keyboard shortcuts.

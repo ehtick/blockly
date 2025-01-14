@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.BottomRow');
+// Former goog.module ID: Blockly.blockRendering.BottomRow
 
 import type {BlockSvg} from '../../block_svg.js';
 import type {ConstantProvider} from '../common/constants.js';
-
 import type {NextConnection} from './next_connection.js';
 import {Row} from './row.js';
 import {Types} from './types.js';

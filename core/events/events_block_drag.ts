@@ -9,15 +9,14 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.BlockDrag');
+// Former goog.module ID: Blockly.Events.BlockDrag
 
 import type {Block} from '../block.js';
 import * as registry from '../registry.js';
+import {Workspace} from '../workspace.js';
 import {AbstractEventJson} from './events_abstract.js';
 import {UiBase} from './events_ui_base.js';
-import * as eventUtils from './utils.js';
-import {Workspace} from '../workspace.js';
+import {EventType} from './type.js';
 
 /**
  * Notifies listeners when a block is being manually dragged/dropped.
@@ -35,7 +34,7 @@ export class BlockDrag extends UiBase {
    */
   blocks?: Block[];
 
-  override type = eventUtils.BLOCK_DRAG;
+  override type = EventType.BLOCK_DRAG;
 
   /**
    * @param opt_block The top block in the stack that is being dragged.
@@ -65,13 +64,13 @@ export class BlockDrag extends UiBase {
     if (this.isStart === undefined) {
       throw new Error(
         'Whether this event is the start of a drag is undefined. ' +
-          'Either pass the value to the constructor, or call fromJson'
+          'Either pass the value to the constructor, or call fromJson',
       );
     }
     if (this.blockId === undefined) {
       throw new Error(
         'The block ID is undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     json['isStart'] = this.isStart;
@@ -94,12 +93,12 @@ export class BlockDrag extends UiBase {
   static fromJson(
     json: BlockDragJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): BlockDrag {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new BlockDrag()
+      event ?? new BlockDrag(),
     ) as BlockDrag;
     newEvent.isStart = json['isStart'];
     newEvent.blockId = json['blockId'];
@@ -114,4 +113,4 @@ export interface BlockDragJson extends AbstractEventJson {
   blocks?: Block[];
 }
 
-registry.register(registry.Type.EVENT, eventUtils.BLOCK_DRAG, BlockDrag);
+registry.register(registry.Type.EVENT, EventType.BLOCK_DRAG, BlockDrag);

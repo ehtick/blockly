@@ -9,17 +9,15 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.BlockMove');
+// Former goog.module ID: Blockly.Events.BlockMove
 
 import type {Block} from '../block.js';
 import {ConnectionType} from '../connection_type.js';
 import * as registry from '../registry.js';
 import {Coordinate} from '../utils/coordinate.js';
-
-import {BlockBase, BlockBaseJson} from './events_block_base.js';
-import * as eventUtils from './utils.js';
 import type {Workspace} from '../workspace.js';
+import {BlockBase, BlockBaseJson} from './events_block_base.js';
+import {EventType} from './type.js';
 
 interface BlockLocation {
   parentId?: string;
@@ -32,7 +30,7 @@ interface BlockLocation {
  * connection to another, or from one location on the workspace to another.
  */
 export class BlockMove extends BlockBase {
-  override type = eventUtils.BLOCK_MOVE;
+  override type = EventType.BLOCK_MOVE;
 
   /** The ID of the old parent block. Undefined if it was a top-level block. */
   oldParentId?: string;
@@ -91,7 +89,7 @@ export class BlockMove extends BlockBase {
       this.recordUndo = false;
     }
 
-    const location = this.currentLocation_();
+    const location = this.currentLocation();
     this.oldParentId = location.parentId;
     this.oldInputName = location.inputName;
     this.oldCoordinate = location.coordinate;
@@ -139,12 +137,12 @@ export class BlockMove extends BlockBase {
   static fromJson(
     json: BlockMoveJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): BlockMove {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new BlockMove()
+      event ?? new BlockMove(),
     ) as BlockMove;
     newEvent.oldParentId = json['oldParentId'];
     newEvent.oldInputName = json['oldInputName'];
@@ -169,7 +167,7 @@ export class BlockMove extends BlockBase {
 
   /** Record the block's new location.  Called after the move. */
   recordNew() {
-    const location = this.currentLocation_();
+    const location = this.currentLocation();
     this.newParentId = location.parentId;
     this.newInputName = location.inputName;
     this.newCoordinate = location.coordinate;
@@ -190,18 +188,19 @@ export class BlockMove extends BlockBase {
    *
    * @returns Collection of location info.
    */
-  private currentLocation_(): BlockLocation {
+  private currentLocation(): BlockLocation {
     const workspace = this.getEventWorkspace_();
     if (!this.blockId) {
       throw new Error(
         'The block ID is undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     const block = workspace.getBlockById(this.blockId);
     if (!block) {
       throw new Error(
-        'The block associated with the block move event ' + 'could not be found'
+        'The block associated with the block move event ' +
+          'could not be found',
       );
     }
     const location = {} as BlockLocation;
@@ -241,7 +240,7 @@ export class BlockMove extends BlockBase {
     if (!this.blockId) {
       throw new Error(
         'The block ID is undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     const block = workspace.getBlockById(this.blockId);
@@ -304,4 +303,4 @@ export interface BlockMoveJson extends BlockBaseJson {
   recordUndo?: boolean;
 }
 
-registry.register(registry.Type.EVENT, eventUtils.MOVE, BlockMove);
+registry.register(registry.Type.EVENT, EventType.BLOCK_MOVE, BlockMove);

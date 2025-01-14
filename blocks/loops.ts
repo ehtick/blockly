@@ -4,35 +4,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @fileoverview Loop blocks for Blockly.
- */
+// Former goog.module ID: Blockly.libraryBlocks.loops
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.libraryBlocks.loops');
-
-import type {Abstract as AbstractEvent} from '../core/events/events_abstract.js';
 import type {Block} from '../core/block.js';
+import {
+  createBlockDefinitionsFromJsonArray,
+  defineBlocks,
+} from '../core/common.js';
 import * as ContextMenu from '../core/contextmenu.js';
 import type {
   ContextMenuOption,
   LegacyContextMenuOption,
 } from '../core/contextmenu_registry.js';
 import * as Events from '../core/events/events.js';
+import type {Abstract as AbstractEvent} from '../core/events/events_abstract.js';
+import * as eventUtils from '../core/events/utils.js';
 import * as Extensions from '../core/extensions.js';
-import * as Variables from '../core/variables.js';
-import * as xmlUtils from '../core/utils/xml.js';
-import {Msg} from '../core/msg.js';
-import {
-  createBlockDefinitionsFromJsonArray,
-  defineBlocks,
-} from '../core/common.js';
 import '../core/field_dropdown.js';
 import '../core/field_label.js';
 import '../core/field_number.js';
 import '../core/field_variable.js';
-import '../core/warning.js';
 import {FieldVariable} from '../core/field_variable.js';
+import '../core/icons/warning_icon.js';
+import {Msg} from '../core/msg.js';
 import {WorkspaceSvg} from '../core/workspace_svg.js';
 
 /**
@@ -231,7 +225,7 @@ const WHILE_UNTIL_TOOLTIPS = {
 
 Extensions.register(
   'controls_whileUntil_tooltip',
-  Extensions.buildTooltipForDropdown('MODE', WHILE_UNTIL_TOOLTIPS)
+  Extensions.buildTooltipForDropdown('MODE', WHILE_UNTIL_TOOLTIPS),
 );
 
 /**
@@ -246,7 +240,7 @@ const BREAK_CONTINUE_TOOLTIPS = {
 
 Extensions.register(
   'controls_flow_tooltip',
-  Extensions.buildTooltipForDropdown('FLOW', BREAK_CONTINUE_TOOLTIPS)
+  Extensions.buildTooltipForDropdown('FLOW', BREAK_CONTINUE_TOOLTIPS),
 );
 
 /** Type of a block that has CUSTOM_CONTEXT_MENU_CREATE_VARIABLES_GET_MIXIN */
@@ -268,7 +262,7 @@ const CUSTOM_CONTEXT_MENU_CREATE_VARIABLES_GET_MIXIN = {
    */
   customContextMenu: function (
     this: CustomContextMenuBlock,
-    options: Array<ContextMenuOption | LegacyContextMenuOption>
+    options: Array<ContextMenuOption | LegacyContextMenuOption>,
   ) {
     if (this.isInFlyout) {
       return;
@@ -277,15 +271,15 @@ const CUSTOM_CONTEXT_MENU_CREATE_VARIABLES_GET_MIXIN = {
     const variable = varField.getVariable()!;
     const varName = variable.name;
     if (!this.isCollapsed() && varName !== null) {
-      const xmlField = Variables.generateVariableFieldDom(variable);
-      const xmlBlock = xmlUtils.createElement('block');
-      xmlBlock.setAttribute('type', 'variables_get');
-      xmlBlock.appendChild(xmlField);
+      const getVarBlockState = {
+        type: 'variables_get',
+        fields: {VAR: varField.saveState(true)},
+      };
 
       options.push({
         enabled: true,
         text: Msg['VARIABLES_SET_CREATE_GET'].replace('%1', varName),
-        callback: ContextMenu.callbackFactory(this, xmlBlock),
+        callback: ContextMenu.callbackFactory(this, getVarBlockState),
       });
     }
   },
@@ -293,17 +287,20 @@ const CUSTOM_CONTEXT_MENU_CREATE_VARIABLES_GET_MIXIN = {
 
 Extensions.registerMixin(
   'contextMenu_newGetVariableBlock',
-  CUSTOM_CONTEXT_MENU_CREATE_VARIABLES_GET_MIXIN
+  CUSTOM_CONTEXT_MENU_CREATE_VARIABLES_GET_MIXIN,
 );
 
 Extensions.register(
   'controls_for_tooltip',
-  Extensions.buildTooltipWithFieldText('%{BKY_CONTROLS_FOR_TOOLTIP}', 'VAR')
+  Extensions.buildTooltipWithFieldText('%{BKY_CONTROLS_FOR_TOOLTIP}', 'VAR'),
 );
 
 Extensions.register(
   'controls_forEach_tooltip',
-  Extensions.buildTooltipWithFieldText('%{BKY_CONTROLS_FOREACH_TOOLTIP}', 'VAR')
+  Extensions.buildTooltipWithFieldText(
+    '%{BKY_CONTROLS_FOREACH_TOOLTIP}',
+    'VAR',
+  ),
 );
 
 /**
@@ -329,11 +326,20 @@ export const loopTypes: Set<string> = new Set([
   'controls_whileUntil',
 ]);
 
-/** Type of a block that has CONTROL_FLOW_IN_LOOP_CHECK_MIXIN */
-type ControlFlowInLoopBlock = Block & ControlFlowInLoopMixin;
+/**
+ * Type of a block that has CONTROL_FLOW_IN_LOOP_CHECK_MIXIN
+ *
+ * @internal
+ */
+export type ControlFlowInLoopBlock = Block & ControlFlowInLoopMixin;
 interface ControlFlowInLoopMixin extends ControlFlowInLoopMixinType {}
 type ControlFlowInLoopMixinType = typeof CONTROL_FLOW_IN_LOOP_CHECK_MIXIN;
 
+/**
+ * The language-neutral ID for when the reason why a block is disabled is
+ * because the block is only valid inside of a loop.
+ */
+const CONTROL_FLOW_NOT_IN_LOOP_DISABLED_REASON = 'CONTROL_FLOW_NOT_IN_LOOP';
 /**
  * This mixin adds a check to make sure the 'controls_flow_statements' block
  * is contained in a loop. Otherwise a warning is added to the block.
@@ -365,26 +371,37 @@ const CONTROL_FLOW_IN_LOOP_CHECK_MIXIN = {
     // Don't change state if:
     //   * It's at the start of a drag.
     //   * It's not a move event.
-    if (!ws.isDragging || ws.isDragging() || e.type !== Events.BLOCK_MOVE) {
+    if (
+      !ws.isDragging ||
+      ws.isDragging() ||
+      (e.type !== Events.BLOCK_MOVE && e.type !== Events.BLOCK_CREATE)
+    ) {
       return;
     }
     const enabled = !!this.getSurroundLoop();
     this.setWarningText(
-      enabled ? null : Msg['CONTROLS_FLOW_STATEMENTS_WARNING']
+      enabled ? null : Msg['CONTROLS_FLOW_STATEMENTS_WARNING'],
     );
+
     if (!this.isInFlyout) {
-      const group = Events.getGroup();
-      // Makes it so the move and the disable event get undone together.
-      Events.setGroup(e.group);
-      this.setEnabled(enabled);
-      Events.setGroup(group);
+      try {
+        // There is no need to record the enable/disable change on the undo/redo
+        // list since the change will be automatically recreated when replayed.
+        eventUtils.setRecordUndo(false);
+        this.setDisabledReason(
+          !enabled,
+          CONTROL_FLOW_NOT_IN_LOOP_DISABLED_REASON,
+        );
+      } finally {
+        eventUtils.setRecordUndo(true);
+      }
     }
   },
 };
 
 Extensions.registerMixin(
   'controls_flow_in_loop_check',
-  CONTROL_FLOW_IN_LOOP_CHECK_MIXIN
+  CONTROL_FLOW_IN_LOOP_CHECK_MIXIN,
 );
 
 // Register provided blocks.

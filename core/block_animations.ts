@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockAnimations');
+// Former goog.module ID: Blockly.blockAnimations
 
 import type {BlockSvg} from './block_svg.js';
 import * as dom from './utils/dom.js';
@@ -39,18 +38,22 @@ export function disposeUiEffect(block: BlockSvg) {
   const svgGroup = block.getSvgRoot();
   workspace.getAudioManager().play('delete');
 
-  const xy = workspace.getSvgXY(svgGroup);
+  const xy = block.getRelativeToSurfaceXY();
   // Deeply clone the current block.
   const clone: SVGGElement = svgGroup.cloneNode(true) as SVGGElement;
   clone.setAttribute('transform', 'translate(' + xy.x + ',' + xy.y + ')');
-  workspace.getParentSvg().appendChild(clone);
+  workspace.getLayerManager()?.appendToAnimationLayer({
+    getSvgRoot: () => {
+      return clone;
+    },
+  });
   const cloneRect = {
     'x': xy.x,
     'y': xy.y,
     'width': block.width,
     'height': block.height,
   };
-  disposeUiStep(clone, cloneRect, workspace.RTL, new Date(), workspace.scale);
+  disposeUiStep(clone, cloneRect, workspace.RTL, new Date());
 }
 /**
  * Animate a cloned block and eventually dispose of it.
@@ -61,29 +64,26 @@ export function disposeUiEffect(block: BlockSvg) {
  * @param rect Starting rect of the clone.
  * @param rtl True if RTL, false if LTR.
  * @param start Date of animation's start.
- * @param workspaceScale Scale of workspace.
  */
 function disposeUiStep(
   clone: Element,
   rect: CloneRect,
   rtl: boolean,
   start: Date,
-  workspaceScale: number
 ) {
   const ms = new Date().getTime() - start.getTime();
   const percent = ms / 150;
   if (percent > 1) {
     dom.removeNode(clone);
   } else {
-    const x =
-      rect.x + (((rtl ? -1 : 1) * rect.width * workspaceScale) / 2) * percent;
-    const y = rect.y + rect.height * workspaceScale * percent;
-    const scale = (1 - percent) * workspaceScale;
+    const x = rect.x + (((rtl ? -1 : 1) * rect.width) / 2) * percent;
+    const y = rect.y + (rect.height / 2) * percent;
+    const scale = 1 - percent;
     clone.setAttribute(
       'transform',
-      'translate(' + x + ',' + y + ')' + ' scale(' + scale + ')'
+      'translate(' + x + ',' + y + ')' + ' scale(' + scale + ')',
     );
-    setTimeout(disposeUiStep, 10, clone, rect, rtl, start, workspaceScale);
+    setTimeout(disposeUiStep, 10, clone, rect, rtl, start);
   }
 }
 
@@ -120,29 +120,38 @@ export function connectionUiEffect(block: BlockSvg) {
       'stroke': '#888',
       'stroke-width': 10,
     },
-    workspace.getParentSvg()
+    workspace.getParentSvg(),
   );
-  // Start the animation.
-  connectionUiStep(ripple, new Date(), scale);
-}
 
-/**
- * Expand a ripple around a connection.
- *
- * @param ripple Element to animate.
- * @param start Date of animation's start.
- * @param scale Scale of workspace.
- */
-function connectionUiStep(ripple: SVGElement, start: Date, scale: number) {
-  const ms = new Date().getTime() - start.getTime();
-  const percent = ms / 150;
-  if (percent > 1) {
-    dom.removeNode(ripple);
-  } else {
-    ripple.setAttribute('r', String(percent * 25 * scale));
-    ripple.style.opacity = String(1 - percent);
-    disconnectPid = setTimeout(connectionUiStep, 10, ripple, start, scale);
-  }
+  const scaleAnimation = dom.createSvgElement(
+    Svg.ANIMATE,
+    {
+      'id': 'animationCircle',
+      'begin': 'indefinite',
+      'attributeName': 'r',
+      'dur': '150ms',
+      'from': 0,
+      'to': 25 * scale,
+    },
+    ripple,
+  );
+  const opacityAnimation = dom.createSvgElement(
+    Svg.ANIMATE,
+    {
+      'id': 'animationOpacity',
+      'begin': 'indefinite',
+      'attributeName': 'opacity',
+      'dur': '150ms',
+      'from': 1,
+      'to': 0,
+    },
+    ripple,
+  );
+
+  scaleAnimation.beginElement();
+  opacityAnimation.beginElement();
+
+  setTimeout(() => void dom.removeNode(ripple), 150);
 }
 
 /**
@@ -187,7 +196,7 @@ function disconnectUiStep(block: BlockSvg, magnitude: number, start: Date) {
   let skew = '';
   if (percent <= 1) {
     const val = Math.round(
-      Math.sin(percent * Math.PI * WIGGLES) * (1 - percent) * magnitude
+      Math.sin(percent * Math.PI * WIGGLES) * (1 - percent) * magnitude,
     );
     skew = `skewX(${val})`;
     disconnectPid = setTimeout(disconnectUiStep, 10, block, magnitude, start);

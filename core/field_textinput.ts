@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.FieldTextInput');
+// Former goog.module ID: Blockly.FieldTextInput
 
 // Unused import preserved for side-effects. Remove if unneeded.
 import './events/events_block_change.js';
@@ -45,7 +44,7 @@ export class FieldTextInput extends FieldInput<string> {
   constructor(
     value?: string | typeof Field.SKIP_SETUP,
     validator?: FieldTextInputValidator | null,
-    config?: FieldTextInputConfig
+    config?: FieldTextInputConfig,
   ) {
     super(value, validator, config);
   }
@@ -57,7 +56,7 @@ export class FieldTextInput extends FieldInput<string> {
    * @returns A valid string, or null if invalid.
    */
   protected override doClassValidation_(
-    newValue?: AnyDuringMigration
+    newValue?: AnyDuringMigration,
   ): string | null {
     if (newValue === undefined) {
       return null;
@@ -74,7 +73,9 @@ export class FieldTextInput extends FieldInput<string> {
    * @nocollapse
    * @internal
    */
-  static fromJson(options: FieldTextInputFromJsonConfig): FieldTextInput {
+  static override fromJson(
+    options: FieldTextInputFromJsonConfig,
+  ): FieldTextInput {
     const text = parsing.replaceMessageReferences(options.text);
     // `this` might be a subclass of FieldTextInput if that class doesn't
     // override the static fromJson method.

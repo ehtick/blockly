@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Css');
+// Former goog.module ID: Blockly.Css
 
 /** Has CSS already been injected? */
 let injected = false;
@@ -80,6 +79,8 @@ let content = `
   position: relative;
   overflow: hidden;  /* So blocks in drag surface disappear at edges */
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .blocklyNonSelectable {
@@ -207,6 +208,9 @@ let content = `
 .blocklyDragging {
   cursor: grabbing;
   cursor: -webkit-grabbing;
+  /* Drag surface disables events to not block the toolbox, so we have to
+   * reenable them here for the cursor values to work. */
+  pointer-events: auto;
 }
 
   /* Changes cursor on mouse down. Not effective in Firefox because of
@@ -247,10 +251,6 @@ let content = `
   stroke: none;
 }
 
-.blocklyMultilineText {
-  font-family: monospace;
-}
-
 .blocklyNonEditableText>text {
   pointer-events: none;
 }
@@ -262,17 +262,6 @@ let content = `
 
 .blocklyText text {
   cursor: default;
-}
-
-/*
-  Don't allow users to select text.  It gets annoying when trying to
-  drag a block and selected text moves instead.
-*/
-.blocklySvg text {
-  user-select: none;
-  -ms-user-select: none;
-  -webkit-user-select: none;
-  cursor: inherit;
 }
 
 .blocklyHidden {
@@ -305,6 +294,7 @@ let content = `
 .blocklyMinimalBody {
   margin: 0;
   padding: 0;
+  height: 100%;
 }
 
 .blocklyHtmlInput {
@@ -496,5 +486,16 @@ input[type=number] {
 .blocklyMenuItemRtl .blocklyMenuItemCheckbox {
   float: right;
   margin-right: -24px;
+}
+
+.blocklyBlockDragSurface, .blocklyAnimationLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: visible !important;
+  z-index: 80;
+  pointer-events: none;
 }
 `;

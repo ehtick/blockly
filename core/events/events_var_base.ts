@@ -9,16 +9,14 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.VarBase');
+// Former goog.module ID: Blockly.Events.VarBase
 
 import type {VariableModel} from '../variable_model.js';
-
+import type {Workspace} from '../workspace.js';
 import {
   Abstract as AbstractEvent,
   AbstractEventJson,
 } from './events_abstract.js';
-import type {Workspace} from '../workspace.js';
 
 /**
  * Abstract class for a variable event.
@@ -51,7 +49,7 @@ export class VarBase extends AbstractEvent {
     if (!this.varId) {
       throw new Error(
         'The var ID is undefined. Either pass a variable to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     json['varId'] = this.varId;
@@ -70,12 +68,12 @@ export class VarBase extends AbstractEvent {
   static fromJson(
     json: VarBaseJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): VarBase {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new VarBase()
+      event ?? new VarBase(),
     ) as VarBase;
     newEvent.varId = json['varId'];
     return newEvent;

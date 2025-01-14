@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.utils.math');
+// Former goog.module ID: Blockly.utils.math
 
 /**
  * Converts degrees to radians.
@@ -40,7 +39,7 @@ export function toDegrees(angleRadians: number): number {
 export function clamp(
   lowerBound: number,
   number: number,
-  upperBound: number
+  upperBound: number,
 ): number {
   if (upperBound < lowerBound) {
     const temp = upperBound;

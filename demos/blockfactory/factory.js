@@ -187,8 +187,9 @@ BlockFactory.updatePreview = function() {
   // Don't let the user create a block type that already exists,
   // because it doesn't work.
   var warnExistingBlock = function(blockType) {
-    if (blockType in Blockly.Blocks) {
-      var text = `You can't make a block called ${blockType} in this tool because that name already exists.`;
+    if (reservedBlockFactoryBlocks.has(blockType)) {
+      var text = `You can't make a block called ${blockType} in this tool ` +
+          `because that name is reserved.`;
       FactoryUtils.getRootBlock(BlockFactory.mainWorkspace).setWarningText(text);
       console.error(text);
       return true;
@@ -238,7 +239,7 @@ BlockFactory.updatePreview = function() {
     // Warn user only if their block type is already exists in Blockly's
     // standard library.
     var rootBlock = FactoryUtils.getRootBlock(BlockFactory.mainWorkspace);
-    if (StandardCategories.coreBlockTypes.indexOf(blockType) !== -1) {
+    if (StandardCategories.coreBlockTypes.includes(blockType)) {
       rootBlock.setWarningText('A core Blockly block already exists ' +
           'under this name.');
 

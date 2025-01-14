@@ -34,13 +34,13 @@ function svgToPng_(data, width, height, callback) {
       0,
       0,
       canvas.width,
-      canvas.height
+      canvas.height,
     );
     try {
       const dataUri = canvas.toDataURL('image/png');
       callback(dataUri);
     } catch (err) {
-      console.warn('Error converting the workspace svg to a png');
+      console.warn('Error converting the workspace svg to a png: ' + err);
       callback('');
     }
   };
@@ -80,17 +80,16 @@ function workspaceToSvg_(workspace, callback, customCss) {
     'blocklySvg ' +
       (workspace.options.renderer || 'geras') +
       '-renderer ' +
-      (workspace.getTheme ? workspace.getTheme().name + '-theme' : '')
+      (workspace.getTheme ? workspace.getTheme().name + '-theme' : ''),
   );
   svg.setAttribute('width', width);
   svg.setAttribute('height', height);
-  svg.setAttribute('style', 'background-color: transparent');
+  svg.style.backgroundColor = 'transparent';
 
   const css = [].slice
     .call(document.head.querySelectorAll('style'))
     .filter(
-      (el) =>
-        /\.blocklySvg/.test(el.innerText) || el.id.indexOf('blockly-') === 0
+      (el) => /\.blocklySvg/.test(el.innerText) || el.id.startsWith('blockly-'),
     )
     .map((el) => el.innerText)
     .join('\n');

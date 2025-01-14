@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.helpers.toolboxDefinitions');
-
 /**
  * Get JSON for a toolbox that contains categories.
  * @return {Blockly.utils.toolbox.ToolboxJson} The array holding information
@@ -206,11 +204,11 @@ export function getXmlArray() {
             <field name="NUM">2</field>
           </block>
         </value>
-      </block>`
+      </block>`,
   );
   const separator = Blockly.utils.xml.textToDom('<sep gap="20"></sep>');
   const button = Blockly.utils.xml.textToDom(
-    '<button text="insert" callbackkey="insertConnectionRows"></button>'
+    '<button text="insert" callbackkey="insertConnectionRows"></button>',
   );
   const label = Blockly.utils.xml.textToDom('<label text="tooltips"></label>');
   return [block, separator, button, label];
@@ -240,7 +238,7 @@ export function getBasicToolbox() {
   const workspace = new Blockly.WorkspaceSvg(new Blockly.Options({}));
   const toolbox = new Blockly.Toolbox(workspace);
   toolbox.HtmlDiv = document.createElement('div');
-  toolbox.flyout_ = sinon.createStubInstance(Blockly.VerticalFlyout);
+  toolbox.flyout = sinon.createStubInstance(Blockly.VerticalFlyout);
   return toolbox;
 }
 

@@ -4,14 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Variables');
+// Former goog.module ID: Blockly.Variables
 
 import {Blocks} from './blocks.js';
 import * as dialog from './dialog.js';
+import {isLegacyProcedureDefBlock} from './interfaces/i_legacy_procedure_blocks.js';
 import {isVariableBackedParameterModel} from './interfaces/i_variable_backed_parameter_model.js';
 import {Msg} from './msg.js';
-import {isLegacyProcedureDefBlock} from './interfaces/i_legacy_procedure_blocks.js';
 import * as utilsXml from './utils/xml.js';
 import {VariableModel} from './variable_model.js';
 import type {Workspace} from './workspace.js';
@@ -136,7 +135,7 @@ export function flyoutCategoryBlocks(workspace: Workspace): Element[] {
           '<shadow type="math_number">' +
           '<field name="NUM">1</field>' +
           '</shadow>' +
-          '</value>'
+          '</value>',
       );
       block.appendChild(value);
       xmlList.push(block);
@@ -177,7 +176,7 @@ export function generateUniqueName(workspace: Workspace): string {
 function generateUniqueNameInternal(workspace: Workspace): string {
   return generateUniqueNameFromOptions(
     VAR_LETTER_OPTIONS.charAt(0),
-    workspace.getAllVariableNames()
+    workspace.getAllVariableNames(),
   );
 }
 
@@ -192,7 +191,7 @@ function generateUniqueNameInternal(workspace: Workspace): string {
  */
 export function generateUniqueNameFromOptions(
   startChar: string,
-  usedNames: string[]
+  usedNames: string[],
 ): string {
   if (!usedNames.length) {
     return startChar;
@@ -203,7 +202,6 @@ export function generateUniqueNameFromOptions(
   let letterIndex = letters.indexOf(startChar);
   let potName = startChar;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     let inUse = false;
     for (let i = 0; i < usedNames.length; i++) {
@@ -246,7 +244,7 @@ export function generateUniqueNameFromOptions(
 export function createVariableButtonHandler(
   workspace: Workspace,
   opt_callback?: (p1?: string | null) => void,
-  opt_type?: string
+  opt_type?: string,
 ) {
   const type = opt_type || '';
   // This function needs to be named so it can be called recursively.
@@ -295,13 +293,13 @@ export function createVariableButtonHandler(
 export function renameVariable(
   workspace: Workspace,
   variable: VariableModel,
-  opt_callback?: (p1?: string | null) => void
+  opt_callback?: (p1?: string | null) => void,
 ) {
   // This function needs to be named so it can be called recursively.
   function promptAndCheckWithAlert(defaultName: string) {
     const promptText = Msg['RENAME_VARIABLE_TITLE'].replace(
       '%1',
-      variable.name
+      variable.name,
     );
     promptName(promptText, defaultName, function (newName) {
       if (!newName) {
@@ -314,7 +312,7 @@ export function renameVariable(
       const procedure = nameUsedWithConflictingParam(
         variable.name,
         newName,
-        workspace
+        workspace,
       );
       if (!existing && !procedure) {
         // No conflict.
@@ -352,7 +350,7 @@ export function renameVariable(
 export function promptName(
   promptText: string,
   defaultText: string,
-  callback: (p1: string | null) => void
+  callback: (p1: string | null) => void,
 ) {
   dialog.prompt(promptText, defaultText, function (newVar) {
     // Merge runs of whitespace.  Strip leading and trailing whitespace.
@@ -380,7 +378,7 @@ export function promptName(
 function nameUsedWithOtherType(
   name: string,
   type: string,
-  workspace: Workspace
+  workspace: Workspace,
 ): VariableModel | null {
   const allVariables = workspace.getVariableMap().getAllVariables();
 
@@ -402,7 +400,7 @@ function nameUsedWithOtherType(
  */
 export function nameUsedWithAnyType(
   name: string,
-  workspace: Workspace
+  workspace: Workspace,
 ): VariableModel | null {
   const allVariables = workspace.getVariableMap().getAllVariables();
 
@@ -430,7 +428,7 @@ export function nameUsedWithAnyType(
 export function nameUsedWithConflictingParam(
   oldName: string,
   newName: string,
-  workspace: Workspace
+  workspace: Workspace,
 ): string | null {
   return workspace.getProcedureMap().getProcedures().length
     ? checkForConflictingParamWithProcedureModels(oldName, newName, workspace)
@@ -444,7 +442,7 @@ export function nameUsedWithConflictingParam(
 function checkForConflictingParamWithProcedureModels(
   oldName: string,
   newName: string,
-  workspace: Workspace
+  workspace: Workspace,
 ): string | null {
   oldName = oldName.toLowerCase();
   newName = newName.toLowerCase();
@@ -470,7 +468,7 @@ function checkForConflictingParamWithProcedureModels(
 function checkForConflictingParamWithLegacyProcedures(
   oldName: string,
   newName: string,
-  workspace: Workspace
+  workspace: Workspace,
 ): string | null {
   oldName = oldName.toLowerCase();
   newName = newName.toLowerCase();
@@ -494,7 +492,7 @@ function checkForConflictingParamWithLegacyProcedures(
  * @returns The generated DOM.
  */
 export function generateVariableFieldDom(
-  variableModel: VariableModel
+  variableModel: VariableModel,
 ): Element {
   /* Generates the following XML:
    * <field name="VAR" id="goKTKmYJ8DhVHpruv" variabletype="int">foo</field>
@@ -524,7 +522,7 @@ export function getOrCreateVariablePackage(
   workspace: Workspace,
   id: string | null,
   opt_name?: string,
-  opt_type?: string
+  opt_type?: string,
 ): VariableModel {
   let variable = getVariable(workspace, id, opt_name, opt_type);
   if (!variable) {
@@ -552,7 +550,7 @@ export function getVariable(
   workspace: Workspace,
   id: string | null,
   opt_name?: string,
-  opt_type?: string
+  opt_type?: string,
 ): VariableModel | null {
   const potentialVariableMap = workspace.getPotentialVariableMap();
   let variable = null;
@@ -597,7 +595,7 @@ function createVariable(
   workspace: Workspace,
   id: string | null,
   opt_name?: string,
-  opt_type?: string
+  opt_type?: string,
 ): VariableModel {
   const potentialVariableMap = workspace.getPotentialVariableMap();
   // Variables without names get uniquely named for this workspace.
@@ -634,7 +632,7 @@ function createVariable(
  */
 export function getAddedVariables(
   workspace: Workspace,
-  originalVariables: VariableModel[]
+  originalVariables: VariableModel[],
 ): VariableModel[] {
   const allCurrentVariables = workspace.getAllVariables();
   const addedVariables = [];
@@ -643,7 +641,7 @@ export function getAddedVariables(
       const variable = allCurrentVariables[i];
       // For any variable that is present in allCurrentVariables but not
       // present in originalVariables, add the variable to addedVariables.
-      if (originalVariables.indexOf(variable) === -1) {
+      if (!originalVariables.includes(variable)) {
         addedVariables.push(variable);
       }
     }

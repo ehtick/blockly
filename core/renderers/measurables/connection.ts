@@ -4,13 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.Connection');
+// Former goog.module ID: Blockly.blockRendering.Connection
 
-/* eslint-disable-next-line no-unused-vars */
 import type {RenderedConnection} from '../../rendered_connection.js';
 import type {ConstantProvider, Shape} from '../common/constants.js';
-
 import {Measurable} from './base.js';
 import {Types} from './types.js';
 
@@ -21,6 +18,7 @@ import {Types} from './types.js';
 export class Connection extends Measurable {
   shape: Shape;
   isDynamicShape: boolean;
+  highlighted: boolean;
 
   /**
    * @param constants The rendering constants provider.
@@ -29,13 +27,15 @@ export class Connection extends Measurable {
    */
   constructor(
     constants: ConstantProvider,
-    public connectionModel: RenderedConnection
+    public connectionModel: RenderedConnection,
   ) {
     super(constants);
 
-    this.shape = this.constants_.shapeFor(connectionModel);
-
-    this.isDynamicShape = 'isDynamic' in this.shape && this.shape.isDynamic;
     this.type |= Types.CONNECTION;
+
+    this.shape = this.constants_.shapeFor(connectionModel);
+    this.isDynamicShape = 'isDynamic' in this.shape && this.shape.isDynamic;
+
+    this.highlighted = connectionModel.isHighlighted();
   }
 }

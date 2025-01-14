@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.helpers.warnings');
+import {assert} from '../../../node_modules/chai/chai.js';
 
 /**
  * Captures the strings sent to console.warn() when calling a function.
@@ -37,9 +37,9 @@ export function assertWarnings(innerFunc, messages) {
     messages = [messages];
   }
   const warnings = captureWarnings(innerFunc);
-  chai.assert.lengthOf(warnings, messages.length);
+  assert.lengthOf(warnings, messages.length);
   messages.forEach((message, i) => {
-    chai.assert.match(warnings[i], message);
+    assert.match(warnings[i], message);
   });
 }
 

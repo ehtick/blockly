@@ -9,18 +9,17 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.BlockDelete');
+// Former goog.module ID: Blockly.Events.BlockDelete
 
 import type {Block} from '../block.js';
 import * as registry from '../registry.js';
 import * as blocks from '../serialization/blocks.js';
 import * as utilsXml from '../utils/xml.js';
-import * as Xml from '../xml.js';
-
-import {BlockBase, BlockBaseJson} from './events_block_base.js';
-import * as eventUtils from './utils.js';
 import {Workspace} from '../workspace.js';
+import * as Xml from '../xml.js';
+import {BlockBase, BlockBaseJson} from './events_block_base.js';
+import {EventType} from './type.js';
+import * as eventUtils from './utils.js';
 
 /**
  * Notifies listeners when a block (or connected stack of blocks) is
@@ -39,7 +38,7 @@ export class BlockDelete extends BlockBase {
   /** True if the deleted block was a shadow block, false otherwise. */
   wasShadow?: boolean;
 
-  override type = eventUtils.BLOCK_DELETE;
+  override type = EventType.BLOCK_DELETE;
 
   /** @param opt_block The deleted block.  Undefined for a blank event. */
   constructor(opt_block?: Block) {
@@ -75,25 +74,25 @@ export class BlockDelete extends BlockBase {
     if (!this.oldXml) {
       throw new Error(
         'The old block XML is undefined. Either pass a block ' +
-          'to the constructor, or call fromJson'
+          'to the constructor, or call fromJson',
       );
     }
     if (!this.ids) {
       throw new Error(
         'The block IDs are undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (this.wasShadow === undefined) {
       throw new Error(
         'Whether the block was a shadow is undefined. Either ' +
-          'pass a block to the constructor, or call fromJson'
+          'pass a block to the constructor, or call fromJson',
       );
     }
     if (!this.oldJson) {
       throw new Error(
         'The old block JSON is undefined. Either pass a block ' +
-          'to the constructor, or call fromJson'
+          'to the constructor, or call fromJson',
       );
     }
     json['oldXml'] = Xml.domToText(this.oldXml);
@@ -118,12 +117,12 @@ export class BlockDelete extends BlockBase {
   static fromJson(
     json: BlockDeleteJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): BlockDelete {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new BlockDelete()
+      event ?? new BlockDelete(),
     ) as BlockDelete;
     newEvent.oldXml = utilsXml.textToDom(json['oldXml']);
     newEvent.ids = json['ids'];
@@ -146,13 +145,13 @@ export class BlockDelete extends BlockBase {
     if (!this.ids) {
       throw new Error(
         'The block IDs are undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (!this.oldJson) {
       throw new Error(
         'The old block JSON is undefined. Either pass a block ' +
-          'to the constructor, or call fromJson'
+          'to the constructor, or call fromJson',
       );
     }
     if (forward) {
@@ -180,4 +179,4 @@ export interface BlockDeleteJson extends BlockBaseJson {
   recordUndo?: boolean;
 }
 
-registry.register(registry.Type.EVENT, eventUtils.DELETE, BlockDelete);
+registry.register(registry.Type.EVENT, EventType.BLOCK_DELETE, BlockDelete);

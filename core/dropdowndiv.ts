@@ -10,13 +10,12 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.dropDownDiv');
+// Former goog.module ID: Blockly.dropDownDiv
 
 import type {BlockSvg} from './block_svg.js';
 import * as common from './common.js';
-import * as dom from './utils/dom.js';
 import type {Field} from './field.js';
+import * as dom from './utils/dom.js';
 import * as math from './utils/math.js';
 import {Rect} from './utils/rect.js';
 import type {Size} from './utils/size.js';
@@ -54,7 +53,7 @@ export const ANIMATION_TIME = 0.25;
 let animateOutTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Callback for when the drop-down is hidden. */
-let onHide: Function | null = null;
+let onHide: (() => void) | null = null;
 
 /** A class name representing the current owner's workspace renderer. */
 let renderedClassName = '';
@@ -114,7 +113,7 @@ export interface PositionMetrics {
  * @internal
  */
 export function createDom() {
-  if (div) {
+  if (document.querySelector('.blocklyDropDownDiv')) {
     return; // Already created.
   }
   div = document.createElement('div');
@@ -203,14 +202,14 @@ export function setColour(backgroundColour: string, borderColour: string) {
 export function showPositionedByBlock<T>(
   field: Field<T>,
   block: BlockSvg,
-  opt_onHide?: Function,
-  opt_secondaryYOffset?: number
+  opt_onHide?: () => void,
+  opt_secondaryYOffset?: number,
 ): boolean {
   return showPositionedByRect(
     getScaledBboxOfBlock(block),
     field as Field,
     opt_onHide,
-    opt_secondaryYOffset
+    opt_secondaryYOffset,
   );
 }
 
@@ -227,15 +226,15 @@ export function showPositionedByBlock<T>(
  */
 export function showPositionedByField<T>(
   field: Field<T>,
-  opt_onHide?: Function,
-  opt_secondaryYOffset?: number
+  opt_onHide?: () => void,
+  opt_secondaryYOffset?: number,
 ): boolean {
   positionToField = true;
   return showPositionedByRect(
     getScaledBboxOfField(field as Field),
     field as Field,
     opt_onHide,
-    opt_secondaryYOffset
+    opt_secondaryYOffset,
   );
 }
 /**
@@ -279,8 +278,8 @@ function getScaledBboxOfField(field: Field): Rect {
 function showPositionedByRect(
   bBox: Rect,
   field: Field,
-  opt_onHide?: Function,
-  opt_secondaryYOffset?: number
+  opt_onHide?: () => void,
+  opt_secondaryYOffset?: number,
 ): boolean {
   // If we can fit it, render below the block.
   const primaryX = bBox.left + (bBox.right - bBox.left) / 2;
@@ -305,7 +304,7 @@ function showPositionedByRect(
     primaryY,
     secondaryX,
     secondaryY,
-    opt_onHide
+    opt_onHide,
   );
 }
 
@@ -335,7 +334,7 @@ export function show<T>(
   primaryY: number,
   secondaryX: number,
   secondaryY: number,
-  opt_onHide?: Function
+  opt_onHide?: () => void,
 ): boolean {
   owner = newOwner as Field;
   onHide = opt_onHide || null;
@@ -399,7 +398,7 @@ const internal = {
     primaryX: number,
     primaryY: number,
     secondaryX: number,
-    secondaryY: number
+    secondaryY: number,
   ): PositionMetrics {
     const boundsInfo = internal.getBoundsInfo();
     const divSize = style.getSize(div as Element);
@@ -414,7 +413,7 @@ const internal = {
         secondaryX,
         secondaryY,
         boundsInfo,
-        divSize
+        divSize,
       );
     }
     // Can we fit outside the workspace bounds (but inside the window)
@@ -429,7 +428,7 @@ const internal = {
         secondaryX,
         secondaryY,
         boundsInfo,
-        divSize
+        divSize,
       );
     }
 
@@ -454,13 +453,13 @@ function getPositionBelowMetrics(
   primaryX: number,
   primaryY: number,
   boundsInfo: BoundsInfo,
-  divSize: Size
+  divSize: Size,
 ): PositionMetrics {
   const xCoords = getPositionX(
     primaryX,
     boundsInfo.left,
     boundsInfo.right,
-    divSize.width
+    divSize.width,
   );
 
   const arrowY = -(ARROW_SIZE / 2 + BORDER_SIZE);
@@ -494,13 +493,13 @@ function getPositionAboveMetrics(
   secondaryX: number,
   secondaryY: number,
   boundsInfo: BoundsInfo,
-  divSize: Size
+  divSize: Size,
 ): PositionMetrics {
   const xCoords = getPositionX(
     secondaryX,
     boundsInfo.left,
     boundsInfo.right,
-    divSize.width
+    divSize.width,
   );
 
   const arrowY = divSize.height - BORDER_SIZE * 2 - ARROW_SIZE / 2;
@@ -533,13 +532,13 @@ function getPositionAboveMetrics(
 function getPositionTopOfPageMetrics(
   sourceX: number,
   boundsInfo: BoundsInfo,
-  divSize: Size
+  divSize: Size,
 ): PositionMetrics {
   const xCoords = getPositionX(
     sourceX,
     boundsInfo.left,
     boundsInfo.right,
-    divSize.width
+    divSize.width,
   );
 
   // No need to provide arrow-specific information because it won't be visible.
@@ -571,7 +570,7 @@ export function getPositionX(
   sourceX: number,
   boundsLeft: number,
   boundsRight: number,
-  divWidth: number
+  divWidth: number,
 ): {divX: number; arrowX: number} {
   let divX = sourceX;
   // Offset the topLeft coord so that the dropdowndiv is centered.
@@ -589,7 +588,7 @@ export function getPositionX(
   relativeArrowX = math.clamp(
     horizPadding,
     relativeArrowX,
-    divWidth - horizPadding - ARROW_SIZE
+    divWidth - horizPadding - ARROW_SIZE,
   );
 
   return {arrowX: relativeArrowX, divX};
@@ -614,7 +613,7 @@ export function isVisible(): boolean {
  */
 export function hideIfOwner<T>(
   divOwner: Field<T>,
-  opt_withoutAnimation?: boolean
+  opt_withoutAnimation?: boolean,
 ): boolean {
   if (owner === divOwner) {
     if (opt_withoutAnimation) {
@@ -693,13 +692,13 @@ function positionInternal(
   primaryX: number,
   primaryY: number,
   secondaryX: number,
-  secondaryY: number
+  secondaryY: number,
 ): boolean {
   const metrics = internal.getPositionMetrics(
     primaryX,
     primaryY,
     secondaryX,
-    secondaryY
+    secondaryY,
   );
 
   // Update arrow CSS.
@@ -715,7 +714,7 @@ function positionInternal(
       'class',
       metrics.arrowAtTop
         ? 'blocklyDropDownArrow blocklyArrowTop'
-        : 'blocklyDropDownArrow blocklyArrowBottom'
+        : 'blocklyDropDownArrow blocklyArrowBottom',
     );
   } else {
     arrow.style.display = 'none';

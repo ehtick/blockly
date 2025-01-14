@@ -11,8 +11,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.FieldLabelSerializable');
+// Former goog.module ID: Blockly.FieldLabelSerializable
 
 import {
   FieldLabel,
@@ -62,7 +61,7 @@ export class FieldLabelSerializable extends FieldLabel {
    * @internal
    */
   static override fromJson(
-    options: FieldLabelFromJsonConfig
+    options: FieldLabelFromJsonConfig,
   ): FieldLabelSerializable {
     const text = parsing.replaceMessageReferences(options.text);
     // `this` might be a subclass of FieldLabelSerializable if that class

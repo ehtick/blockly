@@ -4,10 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.geras.StatementInput');
+// Former goog.module ID: Blockly.geras.StatementInput
 
-/* eslint-disable-next-line no-unused-vars */
 import type {Input} from '../../../inputs/input.js';
 import type {ConstantProvider as BaseConstantProvider} from '../../../renderers/common/constants.js';
 import {StatementInput as BaseStatementInput} from '../../../renderers/measurables/statement_input.js';

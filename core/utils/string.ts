@@ -4,29 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.utils.string');
-
-import * as deprecation from './deprecation.js';
-
-/**
- * Fast prefix-checker.
- * Copied from Closure's goog.string.startsWith.
- *
- * @param str The string to check.
- * @param prefix A string to look for at the start of `str`.
- * @returns True if `str` begins with `prefix`.
- * @deprecated Use built-in **string.startsWith** instead.
- */
-export function startsWith(str: string, prefix: string): boolean {
-  deprecation.warn(
-    'Blockly.utils.string.startsWith()',
-    'April 2022',
-    'April 2023',
-    'Use built-in string.startsWith'
-  );
-  return str.startsWith(prefix);
-}
+// Former goog.module ID: Blockly.utils.string
 
 /**
  * Given an array of strings, return the length of the shortest one.
@@ -53,7 +31,7 @@ export function shortestStringLength(array: string[]): number {
  */
 export function commonWordPrefix(
   array: string[],
-  opt_shortest?: number
+  opt_shortest?: number,
 ): number {
   if (!array.length) {
     return 0;
@@ -93,7 +71,7 @@ export function commonWordPrefix(
  */
 export function commonWordSuffix(
   array: string[],
-  opt_shortest?: number
+  opt_shortest?: number,
 ): number {
   if (!array.length) {
     return 0;
@@ -199,7 +177,7 @@ function wrapLine(text: string, limit: number): string {
 function wrapScore(
   words: string[],
   wordBreaks: boolean[],
-  limit: number
+  limit: number,
 ): number {
   // If this function becomes a performance liability, add caching.
   // Compute the length of each line.
@@ -226,9 +204,9 @@ function wrapScore(
     score -= Math.pow(maxLength - lineLengths[i], 1.5);
     // Optimize for structure.
     // Add score to line endings after punctuation.
-    if ('.?!'.indexOf(linePunctuation[i]) !== -1) {
+    if ('.?!'.includes(linePunctuation[i])) {
       score += limit / 3;
-    } else if (',;)]}'.indexOf(linePunctuation[i]) !== -1) {
+    } else if (',;)]}'.includes(linePunctuation[i])) {
       score += limit / 4;
     }
   }
@@ -256,7 +234,7 @@ function wrapScore(
 function wrapMutate(
   words: string[],
   wordBreaks: boolean[],
-  limit: number
+  limit: number,
 ): boolean[] {
   let bestScore = wrapScore(words, wordBreaks, limit);
   let bestBreaks;

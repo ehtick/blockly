@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.zelos.PathObject');
+// Former goog.module ID: Blockly.zelos.PathObject
 
 import type {BlockSvg} from '../../block_svg.js';
 import type {Connection} from '../../connection.js';
@@ -13,7 +12,6 @@ import type {BlockStyle} from '../../theme.js';
 import * as dom from '../../utils/dom.js';
 import {Svg} from '../../utils/svg.js';
 import {PathObject as BasePathObject} from '../common/path_object.js';
-
 import type {ConstantProvider} from './constants.js';
 
 /**
@@ -51,7 +49,7 @@ export class PathObject extends BasePathObject {
   constructor(
     root: SVGElement,
     style: BlockStyle,
-    constants: ConstantProvider
+    constants: ConstantProvider,
   ) {
     super(root, style, constants);
 
@@ -70,7 +68,7 @@ export class PathObject extends BasePathObject {
     // Set shadow stroke colour.
     const parent = block.getParent();
     if (block.isShadow() && parent) {
-      this.svgPath.setAttribute('stroke', parent.style.colourTertiary);
+      this.svgPath.setAttribute('stroke', parent.getColourTertiary());
     }
 
     // Apply colour to outlines.
@@ -95,7 +93,7 @@ export class PathObject extends BasePathObject {
         this.svgPathSelected.setAttribute('fill', 'none');
         this.svgPathSelected.setAttribute(
           'filter',
-          'url(#' + this.constants.selectedGlowFilterId + ')'
+          'url(#' + this.constants.selectedGlowFilterId + ')',
         );
         this.svgRoot.appendChild(this.svgPathSelected);
       }
@@ -112,7 +110,7 @@ export class PathObject extends BasePathObject {
     if (enable) {
       this.svgPath.setAttribute(
         'filter',
-        'url(#' + this.constants.replacementGlowFilterId + ')'
+        'url(#' + this.constants.replacementGlowFilterId + ')',
       );
     } else {
       this.svgPath.removeAttribute('filter');
@@ -128,7 +126,7 @@ export class PathObject extends BasePathObject {
     if (enable) {
       outlinePath.setAttribute(
         'filter',
-        'url(#' + this.constants.replacementGlowFilterId + ')'
+        'url(#' + this.constants.replacementGlowFilterId + ')',
       );
     } else {
       outlinePath.removeAttribute('filter');
@@ -190,8 +188,8 @@ export class PathObject extends BasePathObject {
             // default
             'd': '',
           },
-          this.svgRoot
-        )
+          this.svgRoot,
+        ),
       );
     }
     this.remainingOutlines.delete(name);

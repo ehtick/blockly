@@ -10,22 +10,23 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Grid');
+// Former goog.module ID: Blockly.Grid
 
+import {GridOptions} from './options.js';
+import {Coordinate} from './utils/coordinate.js';
 import * as dom from './utils/dom.js';
 import {Svg} from './utils/svg.js';
-import {GridOptions} from './options.js';
 
 /**
  * Class for a workspace's grid.
  */
 export class Grid {
-  private readonly spacing: number;
-  private readonly length: number;
+  private spacing: number;
+  private length: number;
+  private scale: number = 1;
   private readonly line1: SVGElement;
   private readonly line2: SVGElement;
-  private readonly snapToGrid: boolean;
+  private snapToGrid: boolean;
 
   /**
    * @param pattern The grid's SVG pattern, created during injection.
@@ -33,7 +34,10 @@ export class Grid {
    *     See grid documentation:
    *     https://developers.google.com/blockly/guides/configure/web/grid
    */
-  constructor(private pattern: SVGElement, options: GridOptions) {
+  constructor(
+    private pattern: SVGElement,
+    options: GridOptions,
+  ) {
     /** The spacing of the grid lines (in px). */
     this.spacing = options['spacing'] ?? 0;
 
@@ -51,23 +55,57 @@ export class Grid {
   }
 
   /**
-   * Whether blocks should snap to the grid, based on the initial configuration.
+   * Sets the spacing between the centers of the grid lines.
    *
-   * @returns True if blocks should snap, false otherwise.
-   * @internal
+   * This does not trigger snapping to the newly spaced grid. If you want to
+   * snap blocks to the grid programmatically that needs to be triggered
+   * on individual top-level blocks. The next time a block is dragged and
+   * dropped it will snap to the grid if snapping to the grid is enabled.
    */
-  shouldSnap(): boolean {
-    return this.snapToGrid;
+  setSpacing(spacing: number) {
+    this.spacing = spacing;
+    this.update(this.scale);
   }
 
   /**
    * Get the spacing of the grid points (in px).
    *
    * @returns The spacing of the grid points.
-   * @internal
    */
   getSpacing(): number {
     return this.spacing;
+  }
+
+  /** Sets the length of the grid lines. */
+  setLength(length: number) {
+    this.length = length;
+    this.update(this.scale);
+  }
+
+  /** Get the length of the grid lines (in px). */
+  getLength(): number {
+    return this.length;
+  }
+
+  /**
+   * Sets whether blocks should snap to the grid or not.
+   *
+   * Setting this to true does not trigger snapping. If you want to snap blocks
+   * to the grid programmatically that needs to be triggered on individual
+   * top-level blocks. The next time a block is dragged and dropped it will
+   * snap to the grid.
+   */
+  setSnapToGrid(snap: boolean) {
+    this.snapToGrid = snap;
+  }
+
+  /**
+   * Whether blocks should snap to the grid.
+   *
+   * @returns True if blocks should snap, false otherwise.
+   */
+  shouldSnap(): boolean {
+    return this.snapToGrid;
   }
 
   /**
@@ -88,6 +126,7 @@ export class Grid {
    * @internal
    */
   update(scale: number) {
+    this.scale = scale;
     const safeSpacing = this.spacing * scale;
 
     this.pattern.setAttribute('width', `${safeSpacing}`);
@@ -122,7 +161,7 @@ export class Grid {
     x1: number,
     x2: number,
     y1: number,
-    y2: number
+    y2: number,
   ) {
     if (line) {
       line.setAttribute('stroke-width', `${width}`);
@@ -147,6 +186,25 @@ export class Grid {
   }
 
   /**
+   * Given a coordinate, return the nearest coordinate aligned to the grid.
+   *
+   * @param xy A workspace coordinate.
+   * @returns Workspace coordinate of nearest grid point.
+   *   If there's no change, return the same coordinate object.
+   */
+  alignXY(xy: Coordinate): Coordinate {
+    const spacing = this.getSpacing();
+    const half = spacing / 2;
+    const x = Math.round(Math.round((xy.x - half) / spacing) * spacing + half);
+    const y = Math.round(Math.round((xy.y - half) / spacing) * spacing + half);
+    if (x === xy.x && y === xy.y) {
+      // No change.
+      return xy;
+    }
+    return new Coordinate(x, y);
+  }
+
+  /**
    * Create the DOM for the grid described by options.
    *
    * @param rnd A random ID to append to the pattern's ID.
@@ -158,7 +216,7 @@ export class Grid {
   static createDom(
     rnd: string,
     gridOptions: GridOptions,
-    defs: SVGElement
+    defs: SVGElement,
   ): SVGElement {
     /*
           <pattern id="blocklyGridPattern837493" patternUnits="userSpaceOnUse">
@@ -169,20 +227,20 @@ export class Grid {
     const gridPattern = dom.createSvgElement(
       Svg.PATTERN,
       {'id': 'blocklyGridPattern' + rnd, 'patternUnits': 'userSpaceOnUse'},
-      defs
+      defs,
     );
     // x1, y1, x1, x2 properties will be set later in update.
     if ((gridOptions['length'] ?? 1) > 0 && (gridOptions['spacing'] ?? 0) > 0) {
       dom.createSvgElement(
         Svg.LINE,
         {'stroke': gridOptions['colour']},
-        gridPattern
+        gridPattern,
       );
       if (gridOptions['length'] ?? 1 > 1) {
         dom.createSvgElement(
           Svg.LINE,
           {'stroke': gridOptions['colour']},
-          gridPattern
+          gridPattern,
         );
       }
     } else {

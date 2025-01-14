@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-import type {Coordinate} from '../utils/coordinate.js';
-goog.declareModuleId('Blockly.IBubble');
+// Former goog.module ID: Blockly.IBubble
 
+import type {Coordinate} from '../utils/coordinate.js';
 import type {IContextMenu} from './i_contextmenu.js';
 import type {IDraggable} from './i_draggable.js';
 
@@ -29,15 +28,6 @@ export interface IBubble extends IDraggable, IContextMenu {
    * @returns The root SVG node of the bubble's group.
    */
   getSvgRoot(): SVGElement;
-
-  /**
-   * Set whether auto-layout of this bubble is enabled.  The first time a bubble
-   * is shown it positions itself to not cover any blocks.  Once a user has
-   * dragged it to reposition, it renders where the user put it.
-   *
-   * @param enable True if auto-layout should be enabled, false otherwise.
-   */
-  setAutoLayout(enable: boolean): void;
 
   /**
    * Sets whether or not this bubble is being dragged.

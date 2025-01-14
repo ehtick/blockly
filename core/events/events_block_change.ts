@@ -9,17 +9,19 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.BlockChange');
+// Former goog.module ID: Blockly.Events.BlockChange
 
 import type {Block} from '../block.js';
 import type {BlockSvg} from '../block_svg.js';
+import {MANUALLY_DISABLED} from '../constants.js';
+import {IconType} from '../icons/icon_types.js';
+import {hasBubble} from '../interfaces/i_has_bubble.js';
 import * as registry from '../registry.js';
 import * as utilsXml from '../utils/xml.js';
 import {Workspace} from '../workspace.js';
 import * as Xml from '../xml.js';
-
 import {BlockBase, BlockBaseJson} from './events_block_base.js';
+import {EventType} from './type.js';
 import * as eventUtils from './utils.js';
 
 /**
@@ -27,7 +29,7 @@ import * as eventUtils from './utils.js';
  * field values, comments, etc).
  */
 export class BlockChange extends BlockBase {
-  override type = eventUtils.BLOCK_CHANGE;
+  override type = EventType.BLOCK_CHANGE;
   /**
    * The element that changed; one of 'field', 'comment', 'collapsed',
    * 'disabled', 'inline', or 'mutation'
@@ -44,6 +46,12 @@ export class BlockChange extends BlockBase {
   newValue: unknown;
 
   /**
+   * If element is 'disabled', this is the language-neutral identifier of the
+   * reason why the block was or was not disabled.
+   */
+  private disabledReason?: string;
+
+  /**
    * @param opt_block The changed block.  Undefined for a blank event.
    * @param opt_element One of 'field', 'comment', 'disabled', etc.
    * @param opt_name Name of input or field affected, or null.
@@ -55,7 +63,7 @@ export class BlockChange extends BlockBase {
     opt_element?: string,
     opt_name?: string | null,
     opt_oldValue?: unknown,
-    opt_newValue?: unknown
+    opt_newValue?: unknown,
   ) {
     super(opt_block);
 
@@ -78,13 +86,16 @@ export class BlockChange extends BlockBase {
     if (!this.element) {
       throw new Error(
         'The changed element is undefined. Either pass an ' +
-          'element to the constructor, or call fromJson'
+          'element to the constructor, or call fromJson',
       );
     }
     json['element'] = this.element;
     json['name'] = this.name;
     json['oldValue'] = this.oldValue;
     json['newValue'] = this.newValue;
+    if (this.disabledReason) {
+      json['disabledReason'] = this.disabledReason;
+    }
     return json;
   }
 
@@ -100,18 +111,39 @@ export class BlockChange extends BlockBase {
   static fromJson(
     json: BlockChangeJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): BlockChange {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new BlockChange()
+      event ?? new BlockChange(),
     ) as BlockChange;
     newEvent.element = json['element'];
     newEvent.name = json['name'];
     newEvent.oldValue = json['oldValue'];
     newEvent.newValue = json['newValue'];
+    if (json['disabledReason'] !== undefined) {
+      newEvent.disabledReason = json['disabledReason'];
+    }
     return newEvent;
+  }
+
+  /**
+   * Set the language-neutral identifier for the reason why the block was or was
+   * not disabled. This is only valid for events where element is 'disabled'.
+   * Defaults to 'MANUALLY_DISABLED'.
+   *
+   * @param disabledReason The identifier of the reason why the block was or was
+   *     not disabled.
+   */
+  setDisabledReason(disabledReason: string) {
+    if (this.element !== 'disabled') {
+      throw new Error(
+        'Cannot set the disabled reason for a BlockChange event if the ' +
+          'element is not "disabled".',
+      );
+    }
+    this.disabledReason = disabledReason;
   }
 
   /**
@@ -133,21 +165,21 @@ export class BlockChange extends BlockBase {
     if (!this.blockId) {
       throw new Error(
         'The block ID is undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     const block = workspace.getBlockById(this.blockId);
     if (!block) {
       throw new Error(
         'The associated block is undefined. Either pass a ' +
-          'block to the constructor, or call fromJson'
+          'block to the constructor, or call fromJson',
       );
     }
     // Assume the block is rendered so that then we can check.
-    const blockSvg = block as BlockSvg;
-    if (blockSvg.mutator) {
+    const icon = block.getIcon(IconType.MUTATOR);
+    if (icon && hasBubble(icon) && icon.bubbleIsVisible()) {
       // Close the mutator (if open) since we don't want to update it.
-      blockSvg.mutator.setVisible(false);
+      icon.setBubbleVisible(false);
     }
     const value = forward ? this.newValue : this.oldValue;
     switch (this.element) {
@@ -167,7 +199,10 @@ export class BlockChange extends BlockBase {
         block.setCollapsed(!!value);
         break;
       case 'disabled':
-        block.setEnabled(!value);
+        block.setDisabledReason(
+          !!value,
+          this.disabledReason ?? MANUALLY_DISABLED,
+        );
         break;
       case 'inline':
         block.setInputsInline(!!value);
@@ -178,11 +213,11 @@ export class BlockChange extends BlockBase {
           block.loadExtraState(JSON.parse((value as string) || '{}'));
         } else if (block.domToMutation) {
           block.domToMutation(
-            utilsXml.textToDom((value as string) || '<mutation/>')
+            utilsXml.textToDom((value as string) || '<mutation/>'),
           );
         }
         eventUtils.fire(
-          new BlockChange(block, 'mutation', null, oldState, value)
+          new BlockChange(block, 'mutation', null, oldState, value),
         );
         break;
       }
@@ -203,7 +238,7 @@ export class BlockChange extends BlockBase {
    */
   static getExtraBlockState_(block: BlockSvg): string {
     if (block.saveExtraState) {
-      const state = block.saveExtraState();
+      const state = block.saveExtraState(true);
       return state ? JSON.stringify(state) : '';
     } else if (block.mutationToDom) {
       const state = block.mutationToDom();
@@ -218,6 +253,7 @@ export interface BlockChangeJson extends BlockBaseJson {
   name?: string;
   newValue: unknown;
   oldValue: unknown;
+  disabledReason?: string;
 }
 
-registry.register(registry.Type.EVENT, eventUtils.CHANGE, BlockChange);
+registry.register(registry.Type.EVENT, EventType.BLOCK_CHANGE, BlockChange);

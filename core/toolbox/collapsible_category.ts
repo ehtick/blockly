@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.CollapsibleToolboxCategory');
+// Former goog.module ID: Blockly.CollapsibleToolboxCategory
 
 import type {ICollapsibleToolboxItem} from '../interfaces/i_collapsible_toolbox_item.js';
 import type {IToolbox} from '../interfaces/i_toolbox.js';
@@ -19,7 +18,6 @@ import * as registry from '../registry.js';
 import * as aria from '../utils/aria.js';
 import * as dom from '../utils/dom.js';
 import * as toolbox from '../utils/toolbox.js';
-
 import {ToolboxCategory} from './category.js';
 import {ToolboxSeparator} from './separator.js';
 
@@ -52,7 +50,7 @@ export class CollapsibleToolboxCategory
   constructor(
     categoryDef: toolbox.CategoryInfo,
     toolbox: IToolbox,
-    opt_parent?: ICollapsibleToolboxItem
+    opt_parent?: ICollapsibleToolboxItem,
   ) {
     super(categoryDef, toolbox, opt_parent);
   }
@@ -85,7 +83,7 @@ export class CollapsibleToolboxCategory
           this.flyoutItems_.push(flyoutItem);
           prevIsFlyoutItem = true;
         } else {
-          this.createToolboxItem_(itemDef);
+          this.createToolboxItem(itemDef);
           prevIsFlyoutItem = false;
         }
       }
@@ -97,7 +95,7 @@ export class CollapsibleToolboxCategory
    *
    * @param itemDef The information needed to create a toolbox item.
    */
-  private createToolboxItem_(itemDef: toolbox.ToolboxItemInfo) {
+  private createToolboxItem(itemDef: toolbox.ToolboxItemInfo) {
     let registryName = itemDef['kind'];
     const categoryDef = itemDef as toolbox.CategoryInfo;
     // Categories that are collapsible are created using a class registered
@@ -110,12 +108,12 @@ export class CollapsibleToolboxCategory
     }
     const ToolboxItemClass = registry.getClass(
       registry.Type.TOOLBOX_ITEM,
-      registryName
+      registryName,
     );
     const toolboxItem = new ToolboxItemClass!(
       itemDef,
       this.parentToolbox_,
-      this
+      this,
     );
     this.toolboxItems_.push(toolboxItem);
   }
@@ -125,7 +123,7 @@ export class CollapsibleToolboxCategory
 
     this.setExpanded(
       this.toolboxItemDef_['expanded'] === 'true' ||
-        this.toolboxItemDef_['expanded'] === true
+        this.toolboxItemDef_['expanded'] === true,
     );
   }
 
@@ -163,7 +161,7 @@ export class CollapsibleToolboxCategory
    * @returns The div holding all the subcategories.
    */
   protected createSubCategoriesDom_(
-    subcategories: IToolboxItem[]
+    subcategories: IToolboxItem[],
   ): HTMLDivElement {
     const contentsContainer = document.createElement('div');
     contentsContainer.style.display = 'none';
@@ -185,7 +183,7 @@ export class CollapsibleToolboxCategory
   }
 
   /**
-   * Opens or closes the current category.
+   * Opens or closes the current category and the associated flyout.
    *
    * @param isExpanded True to expand the category, false to close.
    */
@@ -197,13 +195,14 @@ export class CollapsibleToolboxCategory
       this.subcategoriesDiv_!.style.display = 'block';
       this.openIcon_(this.iconDom_);
     } else {
+      this.parentToolbox_.getFlyout()?.setVisible(false);
       this.subcategoriesDiv_!.style.display = 'none';
       this.closeIcon_(this.iconDom_);
     }
     aria.setState(
       this.htmlDiv_ as HTMLDivElement,
       aria.State.EXPANDED,
-      isExpanded
+      isExpanded,
     );
 
     this.parentToolbox_.handleToolboxItemResize();
@@ -284,5 +283,5 @@ export type CssConfig = CollapsibleToolboxCategory.CssConfig;
 registry.register(
   registry.Type.TOOLBOX_ITEM,
   CollapsibleToolboxCategory.registrationName,
-  CollapsibleToolboxCategory
+  CollapsibleToolboxCategory,
 );

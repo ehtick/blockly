@@ -9,20 +9,22 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Workspace');
+// Former goog.module ID: Blockly.Workspace
 
 // Unused import preserved for side-effects. Remove if unneeded.
 import './connection_checker.js';
 
 import type {Block} from './block.js';
 import type {BlocklyOptions} from './blockly_options.js';
+import {WorkspaceComment} from './comments/workspace_comment.js';
+import * as common from './common.js';
 import type {ConnectionDB} from './connection_db.js';
 import type {Abstract} from './events/events_abstract.js';
-import * as common from './common.js';
 import * as eventUtils from './events/utils.js';
 import type {IASTNodeLocation} from './interfaces/i_ast_node_location.js';
 import type {IConnectionChecker} from './interfaces/i_connection_checker.js';
+import {IProcedureMap} from './interfaces/i_procedure_map.js';
+import {ObservableProcedureMap} from './observable_procedure_map.js';
 import {Options} from './options.js';
 import * as registry from './registry.js';
 import * as arrayUtils from './utils/array.js';
@@ -31,9 +33,6 @@ import * as math from './utils/math.js';
 import type * as toolbox from './utils/toolbox.js';
 import {VariableMap} from './variable_map.js';
 import type {VariableModel} from './variable_model.js';
-import type {WorkspaceComment} from './workspace_comment.js';
-import {IProcedureMap} from './interfaces/i_procedure_map.js';
-import {ObservableProcedureMap} from './observable_procedure_map.js';
 
 /**
  * Class for a workspace.  This is a data structure that contains blocks.
@@ -103,7 +102,7 @@ export class Workspace implements IASTNodeLocation {
   private readonly topBlocks: Block[] = [];
   private readonly topComments: WorkspaceComment[] = [];
   private readonly commentDB = new Map<string, WorkspaceComment>();
-  private readonly listeners: Function[] = [];
+  private readonly listeners: ((e: Abstract) => void)[] = [];
   protected undoStack_: Abstract[] = [];
   protected redoStack_: Abstract[] = [];
   private readonly blockDB = new Map<string, Block>();
@@ -133,7 +132,7 @@ export class Workspace implements IASTNodeLocation {
     const connectionCheckerClass = registry.getClassFromOptions(
       registry.Type.CONNECTION_CHECKER,
       this.options,
-      true
+      true,
     );
     /**
      * An object that encapsulates logic for safety, type, and dragging checks.
@@ -151,8 +150,6 @@ export class Workspace implements IASTNodeLocation {
   /**
    * Dispose of this workspace.
    * Unlink from all DOM elements to prevent memory leaks.
-   *
-   * @suppress {checkTypes}
    */
   dispose() {
     this.listeners.length = 0;
@@ -170,9 +167,9 @@ export class Workspace implements IASTNodeLocation {
    * @returns The comparison value. This tells Array.sort() how to change object
    *     a's index.
    */
-  private sortObjects_(
+  private sortObjects(
     a: Block | WorkspaceComment,
-    b: Block | WorkspaceComment
+    b: Block | WorkspaceComment,
   ): number {
     const offset =
       Math.sin(math.toRadians(Workspace.SCAN_ANGLE)) * (this.RTL ? -1 : 1);
@@ -208,11 +205,11 @@ export class Workspace implements IASTNodeLocation {
    * @param ordered Sort the list if true.
    * @returns The top-level block objects.
    */
-  getTopBlocks(ordered: boolean): Block[] {
+  getTopBlocks(ordered = false): Block[] {
     // Copy the topBlocks list.
     const blocks = new Array<Block>().concat(this.topBlocks);
     if (ordered && blocks.length > 1) {
-      blocks.sort(this.sortObjects_.bind(this));
+      blocks.sort(this.sortObjects.bind(this));
     }
     return blocks;
   }
@@ -249,18 +246,16 @@ export class Workspace implements IASTNodeLocation {
    * @param ordered Sort the list if true.
    * @returns The blocks of the given type.
    */
-  getBlocksByType(type: string, ordered: boolean): Block[] {
+  getBlocksByType(type: string, ordered = false): Block[] {
     if (!this.typedBlocksDB.has(type)) {
       return [];
     }
     const blocks = this.typedBlocksDB.get(type)!.slice(0);
     if (ordered && blocks && blocks.length > 1) {
-      blocks.sort(this.sortObjects_.bind(this));
+      blocks.sort(this.sortObjects.bind(this));
     }
 
-    return blocks.filter(function (block: Block) {
-      return !block.isInsertionMarker();
-    });
+    return blocks.filter((block) => !block.isInsertionMarker());
   }
 
   /**
@@ -278,7 +273,7 @@ export class Workspace implements IASTNodeLocation {
       console.warn(
         'Overriding an existing comment on this workspace, with id "' +
           comment.id +
-          '"'
+          '"',
       );
     }
     this.commentDB.set(comment.id, comment);
@@ -293,7 +288,7 @@ export class Workspace implements IASTNodeLocation {
   removeTopComment(comment: WorkspaceComment) {
     if (!arrayUtils.removeElem(this.topComments, comment)) {
       throw Error(
-        "Comment not present in workspace's list of top-most " + 'comments.'
+        "Comment not present in workspace's list of top-most " + 'comments.',
       );
     }
     // Note: If the comment database starts to hold block comments, this may
@@ -309,11 +304,11 @@ export class Workspace implements IASTNodeLocation {
    * @returns The top-level comment objects.
    * @internal
    */
-  getTopComments(ordered: boolean): WorkspaceComment[] {
+  getTopComments(ordered = false): WorkspaceComment[] {
     // Copy the topComments list.
     const comments = new Array<WorkspaceComment>().concat(this.topComments);
     if (ordered && comments.length > 1) {
-      comments.sort(this.sortObjects_.bind(this));
+      comments.sort(this.sortObjects.bind(this));
     }
     return comments;
   }
@@ -325,7 +320,7 @@ export class Workspace implements IASTNodeLocation {
    * @param ordered Sort the list if true.
    * @returns Array of blocks.
    */
-  getAllBlocks(ordered: boolean): Block[] {
+  getAllBlocks(ordered = false): Block[] {
     let blocks: Block[];
     if (ordered) {
       // Slow, but ordered.
@@ -344,11 +339,7 @@ export class Workspace implements IASTNodeLocation {
 
     // Insertion markers exist on the workspace for rendering reasons, but
     // aren't "real" blocks from a developer perspective.
-    const filtered = blocks.filter(function (block) {
-      return !block.isInsertionMarker();
-    });
-
-    return filtered;
+    return blocks.filter((block) => !block.isInsertionMarker());
   }
 
   /** Dispose of all blocks and comments in workspace. */
@@ -401,7 +392,7 @@ export class Workspace implements IASTNodeLocation {
   createVariable(
     name: string,
     opt_type?: string | null,
-    opt_id?: string | null
+    opt_id?: string | null,
   ): VariableModel {
     return this.variableMap.createVariable(name, opt_type, opt_id);
   }
@@ -515,7 +506,21 @@ export class Workspace implements IASTNodeLocation {
   newBlock(prototypeName: string, opt_id?: string): Block {
     throw new Error(
       'The implementation of newBlock should be ' +
-        'monkey-patched in by blockly.ts'
+        'monkey-patched in by blockly.ts',
+    );
+  }
+
+  /**
+   * Obtain a newly created comment.
+   *
+   * @param id Optional ID.  Use this ID if provided, otherwise create a new
+   *     ID.
+   * @returns The created comment.
+   */
+  newComment(id?: string): WorkspaceComment {
+    throw new Error(
+      'The implementation of newComment should be ' +
+        'monkey-patched in by blockly.ts',
     );
   }
   /* eslint-enable */
@@ -623,7 +628,7 @@ export class Workspace implements IASTNodeLocation {
     if (!inputEvent) {
       return;
     }
-    let events = [inputEvent];
+    const events = [inputEvent];
     // Do another undo/redo if the next one is of the same group.
     while (
       inputStack.length &&
@@ -639,7 +644,6 @@ export class Workspace implements IASTNodeLocation {
       const event = events[i];
       outputStack.push(event);
     }
-    events = eventUtils.filter(events, redo);
     eventUtils.setRecordUndo(false);
     try {
       for (let i = 0; i < events.length; i++) {
@@ -668,7 +672,7 @@ export class Workspace implements IASTNodeLocation {
    * @param func Function to call.
    * @returns Obsolete return value, ignore.
    */
-  addChangeListener(func: Function): Function {
+  addChangeListener(func: (e: Abstract) => void): (e: Abstract) => void {
     this.listeners.push(func);
     return func;
   }
@@ -678,7 +682,7 @@ export class Workspace implements IASTNodeLocation {
    *
    * @param func Function to stop calling.
    */
-  removeChangeListener(func: Function) {
+  removeChangeListener(func: (e: Abstract) => void) {
     arrayUtils.removeElem(this.listeners, func);
   }
 
@@ -737,7 +741,6 @@ export class Workspace implements IASTNodeLocation {
    *
    * @param id ID of comment to find.
    * @returns The sought after comment, or null if not found.
-   * @internal
    */
   getCommentById(id: string): WorkspaceComment | null {
     return this.commentDB.get(id) ?? null;
@@ -804,6 +807,28 @@ export class Workspace implements IASTNodeLocation {
   /** Returns the map of all procedures on the workpace. */
   getProcedureMap(): IProcedureMap {
     return this.procedureMap;
+  }
+
+  /**
+   * Returns the root workspace of this workspace if the workspace has
+   * parent(s).
+   *
+   * E.g. workspaces in flyouts and mini workspace bubbles have parent
+   * workspaces.
+   */
+  getRootWorkspace(): Workspace | null {
+    let outerWs = null;
+    const parent = this.options.parentWorkspace;
+    // If we were in a flyout in a mutator, need to go up two levels to find
+    // the actual parent.
+    if (this.isFlyout) {
+      if (parent && parent.options) {
+        outerWs = parent.options.parentWorkspace;
+      }
+    } else if (parent) {
+      outerWs = parent;
+    }
+    return outerWs;
   }
 
   /**

@@ -4,16 +4,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.registry');
+// Former goog.module ID: Blockly.registry
 
 import type {Abstract} from './events/events_abstract.js';
 import type {Field} from './field.js';
-import type {IBlockDragger} from './interfaces/i_block_dragger.js';
-import type {IConnectionChecker} from './interfaces/i_connection_checker.js';
-import type {IFlyout} from './interfaces/i_flyout.js';
-import type {IMetricsManager} from './interfaces/i_metrics_manager.js';
 import type {Input} from './inputs/input.js';
+import type {IConnectionChecker} from './interfaces/i_connection_checker.js';
+import type {IConnectionPreviewer} from './interfaces/i_connection_previewer.js';
+import type {ICopyData, ICopyable} from './interfaces/i_copyable.js';
+import type {IDragger} from './interfaces/i_dragger.js';
+import type {IFlyout} from './interfaces/i_flyout.js';
+import type {IIcon} from './interfaces/i_icon.js';
+import type {IMetricsManager} from './interfaces/i_metrics_manager.js';
+import type {IPaster} from './interfaces/i_paster.js';
 import type {ISerializer} from './interfaces/i_serializer.js';
 import type {IToolbox} from './interfaces/i_toolbox.js';
 import type {Cursor} from './keyboard_nav/cursor.js';
@@ -64,6 +67,10 @@ export class Type<_T> {
 
   static CONNECTION_CHECKER = new Type<IConnectionChecker>('connectionChecker');
 
+  static CONNECTION_PREVIEWER = new Type<IConnectionPreviewer>(
+    'connectionPreviewer',
+  );
+
   static CURSOR = new Type<Cursor>('cursor');
 
   static EVENT = new Type<Abstract>('event');
@@ -83,15 +90,25 @@ export class Type<_T> {
   static FLYOUTS_VERTICAL_TOOLBOX = new Type<IFlyout>('flyoutsVerticalToolbox');
 
   static FLYOUTS_HORIZONTAL_TOOLBOX = new Type<IFlyout>(
-    'flyoutsHorizontalToolbox'
+    'flyoutsHorizontalToolbox',
   );
 
   static METRICS_MANAGER = new Type<IMetricsManager>('metricsManager');
 
-  static BLOCK_DRAGGER = new Type<IBlockDragger>('blockDragger');
+  /**
+   * Type for an IDragger. Formerly behavior was mostly covered by
+   * BlockDraggeers, which is why the name is inaccurate.
+   */
+  static BLOCK_DRAGGER = new Type<IDragger>('blockDragger');
 
   /** @internal */
   static SERIALIZER = new Type<ISerializer>('serializer');
+
+  /** @internal */
+  static ICON = new Type<IIcon>('icon');
+
+  /** @internal */
+  static PASTER = new Type<IPaster<ICopyData, ICopyable<ICopyData>>>('paster');
 }
 
 /**
@@ -114,7 +131,7 @@ export function register<T>(
     | (new (...p1: AnyDuringMigration[]) => T)
     | null
     | AnyDuringMigration,
-  opt_allowOverrides?: boolean
+  opt_allowOverrides?: boolean,
 ): void {
   if (
     (!(type instanceof Type) && typeof type !== 'string') ||
@@ -124,14 +141,14 @@ export function register<T>(
       'Invalid type "' +
         type +
         '". The type must be a' +
-        ' non-empty string or a Blockly.registry.Type.'
+        ' non-empty string or a Blockly.registry.Type.',
     );
   }
   type = `${type}`.toLowerCase();
 
   if (typeof name !== 'string' || name.trim() === '') {
     throw Error(
-      'Invalid name "' + name + '". The name must be a' + ' non-empty string.'
+      'Invalid name "' + name + '". The name must be a' + ' non-empty string.',
     );
   }
   const caselessName = name.toLowerCase();
@@ -149,10 +166,19 @@ export function register<T>(
   // Validate that the given class has all the required properties.
   validate(type, registryItem);
 
-  // Don't throw an error if opt_allowOverrides is true.
-  if (!opt_allowOverrides && typeRegistry[caselessName]) {
+  // Don't throw an error if opt_allowOverrides is true,
+  // or if we're trying to register the same item.
+  if (
+    !opt_allowOverrides &&
+    typeRegistry[caselessName] &&
+    typeRegistry[caselessName] !== registryItem
+  ) {
     throw Error(
-      'Name "' + caselessName + '" with type "' + type + '" already registered.'
+      'Name "' +
+        caselessName +
+        '" with type "' +
+        type +
+        '" already registered.',
     );
   }
   typeRegistry[caselessName] = registryItem;
@@ -167,7 +193,7 @@ export function register<T>(
  * @param registryItem A class or object that we are checking for the required
  *     properties.
  */
-function validate(type: string, registryItem: Function | AnyDuringMigration) {
+function validate(type: string, registryItem: AnyDuringMigration) {
   switch (type) {
     case String(Type.FIELD):
       if (typeof registryItem.fromJson !== 'function') {
@@ -195,7 +221,7 @@ export function unregister<T>(type: string | Type<T>, name: string) {
         '][' +
         type +
         '] from the ' +
-        'registry.'
+        'registry.',
     );
     return;
   }
@@ -218,7 +244,7 @@ export function unregister<T>(type: string | Type<T>, name: string) {
 function getItem<T>(
   type: string | Type<T>,
   name: string,
-  opt_throwIfMissing?: boolean
+  opt_throwIfMissing?: boolean,
 ): (new (...p1: AnyDuringMigration[]) => T) | null | AnyDuringMigration {
   type = `${type}`.toLowerCase();
   name = name.toLowerCase();
@@ -227,7 +253,7 @@ function getItem<T>(
     const msg = 'Unable to find [' + name + '][' + type + '] in the registry.';
     if (opt_throwIfMissing) {
       throw new Error(
-        msg + ' You must require or register a ' + type + ' plugin.'
+        msg + ' You must require or register a ' + type + ' plugin.',
       );
     } else {
       console.warn(msg);
@@ -270,7 +296,7 @@ export function hasItem<T>(type: string | Type<T>, name: string): boolean {
 export function getClass<T>(
   type: string | Type<T>,
   name: string,
-  opt_throwIfMissing?: boolean
+  opt_throwIfMissing?: boolean,
 ): (new (...p1: AnyDuringMigration[]) => T) | null {
   return getItem(type, name, opt_throwIfMissing) as
     | (new (...p1: AnyDuringMigration[]) => T)
@@ -290,7 +316,7 @@ export function getClass<T>(
 export function getObject<T>(
   type: string | Type<T>,
   name: string,
-  opt_throwIfMissing?: boolean
+  opt_throwIfMissing?: boolean,
 ): T | null {
   return getItem(type, name, opt_throwIfMissing) as T;
 }
@@ -308,7 +334,7 @@ export function getObject<T>(
 export function getAllItems<T>(
   type: string | Type<T>,
   opt_cased?: boolean,
-  opt_throwIfMissing?: boolean
+  opt_throwIfMissing?: boolean,
 ): {[key: string]: T | null | (new (...p1: AnyDuringMigration[]) => T)} | null {
   type = `${type}`.toLowerCase();
   const typeRegistry = typeMap[type];
@@ -345,7 +371,7 @@ export function getAllItems<T>(
 export function getClassFromOptions<T>(
   type: Type<T>,
   options: Options,
-  opt_throwIfMissing?: boolean
+  opt_throwIfMissing?: boolean,
 ): (new (...p1: AnyDuringMigration[]) => T) | null {
   const plugin = options.plugins[String(type)] || DEFAULT;
 

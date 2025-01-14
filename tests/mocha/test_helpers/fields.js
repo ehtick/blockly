@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.helpers.fields');
-
+import {assert} from '../../../node_modules/chai/chai.js';
 import {runTestCases, TestCase} from './common.js';
 
 /**
@@ -69,15 +68,15 @@ export class FieldCreationTestCase {
 export function assertFieldValue(
   field,
   expectedValue,
-  expectedText = undefined
+  expectedText = undefined,
 ) {
   const actualValue = field.getValue();
   const actualText = field.getText();
   if (expectedText === undefined) {
     expectedText = String(expectedValue);
   }
-  chai.assert.deepEqual(actualValue, expectedValue);
-  chai.assert.deepEqual(actualText, expectedText);
+  assert.deepEqual(actualValue, expectedValue);
+  assert.deepEqual(actualText, expectedText);
 }
 
 /**
@@ -121,7 +120,7 @@ function runCreationTestsAssertThrows_(testCases, creation) {
    */
   const createTestFn = (testCase) => {
     return function () {
-      chai.assert.throws(function () {
+      assert.throws(function () {
         creation.call(this, testCase);
       }, testCase.errMsgMatcher);
     };
@@ -151,7 +150,7 @@ export function runConstructorSuiteTests(
   invalidValueTestCases,
   validRunAssertField,
   assertFieldDefault,
-  customCreateWithJs
+  customCreateWithJs,
 ) {
   suite('Constructor', function () {
     if (assertFieldDefault) {
@@ -163,7 +162,7 @@ export function runConstructorSuiteTests(
       });
     } else {
       test('Empty', function () {
-        chai.assert.throws(function () {
+        assert.throws(function () {
           customCreateWithJs
             ? customCreateWithJs.call(this)
             : new TestedField();
@@ -185,7 +184,7 @@ export function runConstructorSuiteTests(
       runCreationTests_(
         invalidValueTestCases,
         assertFieldDefault,
-        createWithJs
+        createWithJs,
       );
     } else {
       runCreationTestsAssertThrows_(invalidValueTestCases, createWithJs);
@@ -216,7 +215,7 @@ export function runFromJsonSuiteTests(
   invalidValueTestCases,
   validRunAssertField,
   assertFieldDefault,
-  customCreateWithJson
+  customCreateWithJson,
 ) {
   suite('fromJson', function () {
     if (assertFieldDefault) {
@@ -228,7 +227,7 @@ export function runFromJsonSuiteTests(
       });
     } else {
       test('Empty', function () {
-        chai.assert.throws(function () {
+        assert.throws(function () {
           customCreateWithJson
             ? customCreateWithJson.call(this)
             : TestedField.fromJson({});
@@ -250,7 +249,7 @@ export function runFromJsonSuiteTests(
       runCreationTests_(
         invalidValueTestCases,
         assertFieldDefault,
-        createWithJson
+        createWithJson,
       );
     } else {
       runCreationTestsAssertThrows_(invalidValueTestCases, createWithJson);
@@ -274,7 +273,7 @@ export function runSetValueTests(
   validValueTestCases,
   invalidValueTestCases,
   invalidRunExpectedValue,
-  invalidRunExpectedText
+  invalidRunExpectedText,
 ) {
   /**
    * Creates test callback for invalid setValue test.
@@ -287,7 +286,7 @@ export function runSetValueTests(
       assertFieldValue(
         this.field,
         invalidRunExpectedValue,
-        invalidRunExpectedText
+        invalidRunExpectedText,
       );
     };
   };
@@ -302,7 +301,7 @@ export function runSetValueTests(
       assertFieldValue(
         this.field,
         testCase.expectedValue,
-        testCase.expectedText
+        testCase.expectedText,
       );
     };
   };

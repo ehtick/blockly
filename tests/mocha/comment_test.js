@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.comments');
-
+import {EventType} from '../../build/src/core/events/type.js';
+import {assert} from '../../node_modules/chai/chai.js';
 import {assertEventFired} from './test_helpers/events.js';
-import * as eventUtils from '../../build/src/core/events/utils.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -29,10 +28,9 @@ suite('Comments', function () {
     });
     this.block = Blockly.Xml.domToBlock(
       Blockly.utils.xml.textToDom('<block type="empty_block"/>'),
-      this.workspace
+      this.workspace,
     );
-    this.comment = new Blockly.Comment(this.block);
-    this.comment.computeIconLocation();
+    this.comment = new Blockly.icons.CommentIcon(this.block);
   });
   teardown(function () {
     sharedTestTeardown.call(this);
@@ -43,77 +41,72 @@ suite('Comments', function () {
     });
 
     function assertEditable(comment) {
-      chai.assert.isNotOk(comment.paragraphElement_);
-      chai.assert.isOk(comment.textarea_);
-      chai.assert.equal(comment.textarea_.value, 'test text');
+      assert.isOk(comment.textInputBubble);
+      assert.isTrue(comment.textInputBubble.isEditable());
     }
     function assertNotEditable(comment) {
-      chai.assert.isNotOk(comment.textarea_);
-      chai.assert.isOk(comment.paragraphElement_);
-      chai.assert.equal(
-        comment.paragraphElement_.firstChild.textContent,
-        'test text'
-      );
+      assert.isOk(comment.textInputBubble);
+      assert.isFalse(comment.textInputBubble.isEditable());
     }
-    test('Editable', function () {
-      this.comment.setVisible(true);
-      chai.assert.isTrue(this.comment.isVisible());
+    test('Editable', async function () {
+      await this.comment.setBubbleVisible(true);
+      assert.isTrue(this.comment.bubbleIsVisible());
       assertEditable(this.comment);
       assertEventFired(
         this.eventsFireStub,
         Blockly.Events.BubbleOpen,
-        {bubbleType: 'comment', isOpen: true, type: eventUtils.BUBBLE_OPEN},
+        {bubbleType: 'comment', isOpen: true, type: EventType.BUBBLE_OPEN},
         this.workspace.id,
-        this.block.id
+        this.block.id,
       );
     });
-    test('Not Editable', function () {
+    test('Not Editable', async function () {
       sinon.stub(this.block, 'isEditable').returns(false);
 
-      this.comment.setVisible(true);
+      await this.comment.setBubbleVisible(true);
 
-      chai.assert.isTrue(this.comment.isVisible());
+      assert.isTrue(this.comment.bubbleIsVisible());
       assertNotEditable(this.comment);
       assertEventFired(
         this.eventsFireStub,
         Blockly.Events.BubbleOpen,
-        {bubbleType: 'comment', isOpen: true, type: eventUtils.BUBBLE_OPEN},
+        {bubbleType: 'comment', isOpen: true, type: EventType.BUBBLE_OPEN},
         this.workspace.id,
-        this.block.id
+        this.block.id,
       );
     });
-    test('Editable -> Not Editable', function () {
-      this.comment.setVisible(true);
+    test('Editable -> Not Editable', async function () {
+      await this.comment.setBubbleVisible(true);
       sinon.stub(this.block, 'isEditable').returns(false);
 
-      this.comment.updateEditable();
+      await this.comment.updateEditable();
 
-      chai.assert.isTrue(this.comment.isVisible());
+      assert.isTrue(this.comment.bubbleIsVisible());
       assertNotEditable(this.comment);
       assertEventFired(
         this.eventsFireStub,
         Blockly.Events.BubbleOpen,
-        {bubbleType: 'comment', isOpen: true, type: eventUtils.BUBBLE_OPEN},
+        {bubbleType: 'comment', isOpen: true, type: EventType.BUBBLE_OPEN},
         this.workspace.id,
-        this.block.id
+        this.block.id,
       );
     });
-    test('Not Editable -> Editable', function () {
+    test('Not Editable -> Editable', async function () {
       const editableStub = sinon.stub(this.block, 'isEditable').returns(false);
 
-      this.comment.setVisible(true);
+      await this.comment.setBubbleVisible(true);
 
       editableStub.returns(true);
 
-      this.comment.updateEditable();
-      chai.assert.isTrue(this.comment.isVisible());
+      await this.comment.updateEditable();
+      assert.isTrue(this.comment.bubbleIsVisible());
       assertEditable(this.comment);
       assertEventFired(
         this.eventsFireStub,
         Blockly.Events.BubbleOpen,
-        {bubbleType: 'comment', isOpen: true, type: eventUtils.BUBBLE_OPEN},
+        {bubbleType: 'comment', isOpen: true, type: EventType.BUBBLE_OPEN},
         this.workspace.id,
-        this.block.id
+        this.block.id,
       );
     });
   });
@@ -123,30 +116,28 @@ suite('Comments', function () {
     });
     function assertBubbleSize(comment, height, width) {
       const size = comment.getBubbleSize();
-      chai.assert.equal(size.height, height);
-      chai.assert.equal(size.width, width);
+      assert.equal(size.height, height);
+      assert.equal(size.width, width);
     }
     function assertBubbleSizeDefault(comment) {
       assertBubbleSize(comment, 80, 160);
     }
     test('Set Size While Visible', function () {
-      this.comment.setVisible(true);
-      const bubbleSizeSpy = sinon.spy(this.comment.bubble_, 'setBubbleSize');
+      this.comment.setBubbleVisible(true);
 
       assertBubbleSizeDefault(this.comment);
-      this.comment.setBubbleSize(100, 100);
+      this.comment.setBubbleSize(new Blockly.utils.Size(100, 100));
       assertBubbleSize(this.comment, 100, 100);
-      sinon.assert.calledOnce(bubbleSizeSpy);
 
-      this.comment.setVisible(false);
+      this.comment.setBubbleVisible(false);
       assertBubbleSize(this.comment, 100, 100);
     });
     test('Set Size While Invisible', function () {
       assertBubbleSizeDefault(this.comment);
-      this.comment.setBubbleSize(100, 100);
+      this.comment.setBubbleSize(new Blockly.utils.Size(100, 100));
       assertBubbleSize(this.comment, 100, 100);
 
-      this.comment.setVisible(true);
+      this.comment.setBubbleVisible(true);
       assertBubbleSize(this.comment, 100, 100);
     });
   });

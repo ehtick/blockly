@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.serialization.variables');
+// Former goog.module ID: Blockly.serialization.variables
 
 import type {ISerializer} from '../interfaces/i_serializer.js';
 import type {Workspace} from '../workspace.js';
-
 import * as priorities from './priorities.js';
 import * as serializationRegistry from './registry.js';
 
@@ -28,7 +26,6 @@ export interface State {
 export class VariableSerializer implements ISerializer {
   priority: number;
 
-  /* eslint-disable-next-line require-jsdoc */
   constructor() {
     /** The priority for deserializing variables. */
     this.priority = priorities.VARIABLES;
@@ -72,7 +69,7 @@ export class VariableSerializer implements ISerializer {
       workspace.createVariable(
         varState['name'],
         varState['type'],
-        varState['id']
+        varState['id'],
       );
     }
   }

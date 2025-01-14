@@ -9,12 +9,12 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Connection');
+// Former goog.module ID: Blockly.Connection
 
 import type {Block} from './block.js';
 import {ConnectionType} from './connection_type.js';
 import type {BlockMove} from './events/events_block_move.js';
+import {EventType} from './events/type.js';
 import * as eventUtils from './events/utils.js';
 import type {Input} from './inputs/input.js';
 import type {IASTNodeLocationWithBlock} from './interfaces/i_ast_node_location_with_block.js';
@@ -75,7 +75,10 @@ export class Connection implements IASTNodeLocationWithBlock {
    * @param source The block establishing this connection.
    * @param type The type of the connection.
    */
-  constructor(source: Block, public type: number) {
+  constructor(
+    source: Block,
+    public type: number,
+  ) {
     this.sourceBlock_ = source;
   }
 
@@ -112,8 +115,8 @@ export class Connection implements IASTNodeLocationWithBlock {
     // Connect the new connection to the parent.
     let event;
     if (eventUtils.isEnabled()) {
-      event = new (eventUtils.get(eventUtils.BLOCK_MOVE))(
-        childBlock
+      event = new (eventUtils.get(EventType.BLOCK_MOVE))(
+        childBlock,
       ) as BlockMove;
       event.setReason(['connect']);
     }
@@ -133,7 +136,7 @@ export class Connection implements IASTNodeLocationWithBlock {
       if (!orphanConnection) return;
       const connection = Connection.getConnectionForOrphanedConnection(
         childBlock,
-        orphanConnection
+        orphanConnection,
       );
       if (connection) {
         orphanConnection.connect(connection);
@@ -151,8 +154,10 @@ export class Connection implements IASTNodeLocationWithBlock {
   dispose() {
     // isConnected returns true for shadows and non-shadows.
     if (this.isConnected()) {
-      // Destroy the attached shadow block & its children (if it exists).
-      this.setShadowStateInternal();
+      if (this.isSuperior()) {
+        // Destroy the attached shadow block & its children (if it exists).
+        this.setShadowStateInternal();
+      }
 
       const targetBlock = this.targetBlock();
       if (targetBlock && !targetBlock.isDeadOrDying()) {
@@ -209,18 +214,18 @@ export class Connection implements IASTNodeLocationWithBlock {
    * Called when an attempted connection fails. NOP by default (i.e. for
    * headless workspaces).
    *
-   * @param _otherConnection Connection that this connection failed to connect
-   *     to.
+   * @param _superiorConnection Connection that this connection failed to connect
+   *     to. The provided connection should be the superior connection.
    * @internal
    */
-  onFailedConnect(_otherConnection: Connection) {}
+  onFailedConnect(_superiorConnection: Connection) {}
   // NOP
 
   /**
    * Connect this connection to another connection.
    *
    * @param otherConnection Connection to connect to.
-   * @returns Whether the the blocks are now connected or not.
+   * @returns Whether the blocks are now connected or not.
    */
   connect(otherConnection: Connection): boolean {
     if (this.targetConnection === otherConnection) {
@@ -277,8 +282,8 @@ export class Connection implements IASTNodeLocationWithBlock {
 
     let event;
     if (eventUtils.isEnabled()) {
-      event = new (eventUtils.get(eventUtils.BLOCK_MOVE))(
-        childConnection.getSourceBlock()
+      event = new (eventUtils.get(EventType.BLOCK_MOVE))(
+        childConnection.getSourceBlock(),
       ) as BlockMove;
       event.setReason(['disconnect']);
     }
@@ -334,6 +339,36 @@ export class Connection implements IASTNodeLocationWithBlock {
   }
 
   /**
+   * Reconnects this connection to the input with the given name on the given
+   * block. If there is already a connection connected to that input, that
+   * connection is disconnected.
+   *
+   * @param block The block to connect this connection to.
+   * @param inputName The name of the input to connect this connection to.
+   * @returns True if this connection was able to connect, false otherwise.
+   */
+  reconnect(block: Block, inputName: string): boolean {
+    // No need to reconnect if this connection's block is deleted.
+    if (this.getSourceBlock().isDeadOrDying()) return false;
+
+    const connectionParent = block.getInput(inputName)?.connection;
+    const currentParent = this.targetBlock();
+    if (
+      (!currentParent || currentParent === block) &&
+      connectionParent &&
+      connectionParent.targetConnection !== this
+    ) {
+      if (connectionParent.isConnected()) {
+        // There's already something connected here.  Get rid of it.
+        connectionParent.disconnect();
+      }
+      connectionParent.connect(this);
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Returns the block that this connection connects to.
    *
    * @returns The connected block or null if none is connected.
@@ -356,7 +391,7 @@ export class Connection implements IASTNodeLocationWithBlock {
         !this.getConnectionChecker().canConnect(
           this,
           this.targetConnection,
-          false
+          false,
         ))
     ) {
       const child = this.isSuperior() ? this.targetBlock() : this.sourceBlock_;
@@ -568,6 +603,8 @@ export class Connection implements IASTNodeLocationWithBlock {
     this.shadowDom = shadowDom;
     this.shadowState = shadowState;
 
+    if (this.getSourceBlock().isDeadOrDying()) return;
+
     const target = this.targetBlock();
     if (!target) {
       this.respawnShadow_();
@@ -576,7 +613,6 @@ export class Connection implements IASTNodeLocationWithBlock {
       }
     } else if (target.isShadow()) {
       target.dispose(false);
-      if (this.getSourceBlock().isDeadOrDying()) return;
       this.respawnShadow_();
       if (this.targetBlock() && this.targetBlock()!.isShadow()) {
         this.serializeShadow(this.targetBlock());
@@ -618,7 +654,7 @@ export class Connection implements IASTNodeLocationWithBlock {
     }
 
     if (shadowDom) {
-      blockShadow = Xml.domToBlock(shadowDom, parentBlock.workspace);
+      blockShadow = Xml.domToBlockInternal(shadowDom, parentBlock.workspace);
       if (attemptToConnect) {
         if (this.type === ConnectionType.INPUT_VALUE) {
           if (!blockShadow.outputConnection) {
@@ -636,7 +672,7 @@ export class Connection implements IASTNodeLocationWithBlock {
           }
         } else {
           throw new Error(
-            'Cannot connect a shadow block to a previous/output connection'
+            'Cannot connect a shadow block to a previous/output connection',
           );
         }
       }
@@ -670,12 +706,12 @@ export class Connection implements IASTNodeLocationWithBlock {
    */
   static getConnectionForOrphanedConnection(
     startBlock: Block,
-    orphanConnection: Connection
+    orphanConnection: Connection,
   ): Connection | null {
     if (orphanConnection.type === ConnectionType.OUTPUT_VALUE) {
       return getConnectionForOrphanedOutput(
         startBlock,
-        orphanConnection.getSourceBlock()
+        orphanConnection.getSourceBlock(),
       );
     }
     // Otherwise we're dealing with a stack.
@@ -713,7 +749,7 @@ function connectReciprocally(first: Connection, second: Connection) {
  */
 function getSingleConnection(
   block: Block,
-  orphanBlock: Block
+  orphanBlock: Block,
 ): Connection | null {
   let foundConnection = null;
   const output = orphanBlock.outputConnection;
@@ -744,7 +780,7 @@ function getSingleConnection(
  */
 function getConnectionForOrphanedOutput(
   startBlock: Block,
-  orphanBlock: Block
+  orphanBlock: Block,
 ): Connection | null {
   let newBlock: Block | null = startBlock;
   let connection;

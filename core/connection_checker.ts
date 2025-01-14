@@ -10,8 +10,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.ConnectionChecker');
+// Former goog.module ID: Blockly.ConnectionChecker
 
 import * as common from './common.js';
 import {Connection} from './connection.js';
@@ -40,7 +39,7 @@ export class ConnectionChecker implements IConnectionChecker {
     a: Connection | null,
     b: Connection | null,
     isDragging: boolean,
-    opt_distance?: number
+    opt_distance?: number,
   ): boolean {
     return (
       this.canConnectWithReason(a, b, isDragging, opt_distance) ===
@@ -64,7 +63,7 @@ export class ConnectionChecker implements IConnectionChecker {
     a: Connection | null,
     b: Connection | null,
     isDragging: boolean,
-    opt_distance?: number
+    opt_distance?: number,
   ): number {
     const safety = this.doSafetyChecks(a, b);
     if (safety !== Connection.CAN_CONNECT) {
@@ -83,7 +82,7 @@ export class ConnectionChecker implements IConnectionChecker {
       !this.doDragChecks(
         a as RenderedConnection,
         b as RenderedConnection,
-        opt_distance || 0
+        opt_distance || 0,
       )
     ) {
       return Connection.REASON_DRAG_CHECKS_FAILED;
@@ -103,7 +102,7 @@ export class ConnectionChecker implements IConnectionChecker {
   getErrorMessage(
     errorCode: number,
     a: Connection | null,
-    b: Connection | null
+    b: Connection | null,
   ): string {
     switch (errorCode) {
       case Connection.REASON_SELF_CONNECTION:
@@ -211,7 +210,7 @@ export class ConnectionChecker implements IConnectionChecker {
     }
     // Find any intersection in the check lists.
     for (let i = 0; i < checkArrayOne.length; i++) {
-      if (checkArrayTwo.indexOf(checkArrayOne[i]) !== -1) {
+      if (checkArrayTwo.includes(checkArrayOne[i])) {
         return true;
       }
     }
@@ -230,7 +229,7 @@ export class ConnectionChecker implements IConnectionChecker {
   doDragChecks(
     a: RenderedConnection,
     b: RenderedConnection,
-    distance: number
+    distance: number,
   ): boolean {
     if (a.distanceFrom(b) > distance) {
       return false;
@@ -299,7 +298,7 @@ export class ConnectionChecker implements IConnectionChecker {
     }
 
     // Don't let blocks try to connect to themselves or ones they nest.
-    if (common.draggingConnections.indexOf(b) !== -1) {
+    if (common.draggingConnections.includes(b)) {
       return false;
     }
 
@@ -322,7 +321,7 @@ export class ConnectionChecker implements IConnectionChecker {
     }
 
     // Don't let blocks try to connect to themselves or ones they nest.
-    if (common.draggingConnections.indexOf(b) !== -1) {
+    if (common.draggingConnections.includes(b)) {
       return false;
     }
 
@@ -345,5 +344,5 @@ export class ConnectionChecker implements IConnectionChecker {
 registry.register(
   registry.Type.CONNECTION_CHECKER,
   registry.DEFAULT,
-  ConnectionChecker
+  ConnectionChecker,
 );

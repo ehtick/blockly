@@ -45,7 +45,7 @@
         // The name that the export had before this version.
         // All of the properties on this object are optional.
         'oldExportName': {
-          // The new module that the export is in in this version.  If
+          // The new module that the export is in this version.  If
           // this is not provided, the newModule is assumed to be the
           // parent module's newPath.
           newModule: 'new.module.name',
@@ -1376,6 +1376,8 @@
       oldName: 'Blockly.Python',
       newExport: 'pythonGenerator',
       newPath: 'Blockly.Python',
+    },
+    {
       oldName: 'Blockly.ContextMenuRegistry',
       exports: {
         'ContextMenuRegistry.ScopeType': {
@@ -1445,7 +1447,153 @@
     },
   ],
 
-  'develop': [
-    // New renamings go here!
+  '10.0.0': [
+    {
+      oldName: 'Blockly.Warning',
+      exports: {
+        Warning: {
+          newExport: 'WarningIcon',
+          oldPath: 'Blockly.Warning',
+          newPath: 'Blockly.icons.WarningIcon',
+        },
+      },
+    },
+    {
+      oldName: 'Blockly.Comment',
+      exports: {
+        Comment: {
+          newExport: 'CommentIcon',
+          oldPath: 'Blockly.Comment',
+          newPath: 'Blockly.icons.CommentIcon',
+        },
+      },
+    },
+    {
+      oldName: 'Blockly.Mutator',
+      newName: 'Blockly.icons.MutatorIcon',
+      exports: {
+        Mutator: {
+          newExport: 'MutatorIcon',
+          oldPath: 'Blockly.Mutator',
+          newPath: 'Blockly.icons.MutatorIcon',
+        },
+      },
+    },
+    {
+      oldName: 'Blockly.Icon',
+      newName: 'Blockly.icons.Icon',
+    },
+    {
+      oldName: 'Blockly.Input',
+      exports: {
+        'Align': {
+          newPath: 'Blockly.inputs.Align',
+        },
+      },
+    },
+    {
+      oldName: 'Blockly',
+      exports: {
+        'Align': {
+          newPath: 'Blockly.inputs.Align',
+        },
+        'ALIGN_LEFT': {
+          newPath: 'Blockly.inputs.Align.LEFT',
+        },
+        'ALIGN_CENTER': {
+          newPath: 'Blockly.inputs.Align.CENTER',
+        },
+        'ALIGN_RIGHT': {
+          newPath: 'Blockly.inputs.Align.RIGHT',
+        },
+        'inputTypes': {
+          newModule: 'Blockly.inputs',
+        },
+      },
+    },
+    {
+      oldName: 'Blockly.Bubble',
+      newName: 'Blockly.bubbles.Bubble',
+    },
+    {
+      oldName: 'Blockly.minimalist',
+      newPath: 'Blockly.blockRendering',
+    },
+    // The following renamings serve two purposes:
+    // - Record that the langGenerator instances have moved to a
+    //   different module (though this is not actually actioned by the
+    //   renaming script).
+    // - Record a change of path, applicable only to code that imports
+    //   generators via <script> tags.
+    {
+      oldName: 'Blockly.Dart',
+      exports: {
+        dartGenerator: {
+          newModule: 'Blockly.Dart.all',
+          oldPath: 'Blockly.Dart',
+          newPath: 'dart.dartGenerator',
+        },
+      },
+    },
+    {
+      oldName: 'Blockly.JavaScript',
+      exports: {
+        javascriptGenerator: {
+          newModule: 'Blockly.Javascript.all',
+          oldPath: 'Blockly.JavaScript',
+          newPath: 'javascript.javascriptGenerator',
+        },
+      },
+    },
+    {
+      oldName: 'Blockly.Lua',
+      exports: {
+        luaGenerator: {
+          newModule: 'Blockly.Lua.all',
+          oldPath: 'Blockly.Lua',
+          newPath: 'lua.luaGenerator',
+        },
+      },
+    },
+    {
+      oldName: 'Blockly.Php',
+      exports: {
+        phpGenerator: {
+          newModule: 'Blockly.PHP.all',
+          oldPath: 'Blockly.PHP',
+          newPath: 'php.phpGenerator',
+        },
+      },
+    },
+    {
+      oldName: 'Blockly.Python',
+      exports: {
+        pythonGenerator: {
+          newModule: 'Blockly.Python.all',
+          oldPath: 'Blockly.Python',
+          newPath: 'python.pythonGenerator',
+        },
+      },
+    },
   ],
+
+  '10.0.1': [
+    {
+      oldName: 'Blockly',
+      exports: {
+        HSV_SATURATION: {
+          newModule: 'Blockly.utils.colour',
+          getMethod: 'getHsvSaturation',
+          setMethod: 'setHsvSaturation',
+        },
+        HSV_VALUE: {
+          newModule: 'Blockly.utils.colour',
+          getMethod: 'getHsvValue',
+          setMethod: 'setHsvValue',
+        },
+      },
+    },
+  ],
+
+  'develop': [],
 }

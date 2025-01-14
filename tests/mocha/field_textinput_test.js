@@ -4,19 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.fieldTextInput');
-
 import * as Blockly from '../../build/src/core/blockly.js';
+import {assert} from '../../node_modules/chai/chai.js';
+import {
+  createTestBlock,
+  defineRowBlock,
+} from './test_helpers/block_definitions.js';
 import {
   assertFieldValue,
   runConstructorSuiteTests,
   runFromJsonSuiteTests,
   runSetValueTests,
 } from './test_helpers/fields.js';
-import {
-  createTestBlock,
-  defineRowBlock,
-} from './test_helpers/block_definitions.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -83,7 +82,7 @@ suite('Text Input Fields', function () {
     validValueTestCases,
     invalidValueTestCases,
     validTestCaseAssertField,
-    assertFieldDefault
+    assertFieldDefault,
   );
 
   runFromJsonSuiteTests(
@@ -91,7 +90,7 @@ suite('Text Input Fields', function () {
     validValueTestCases,
     invalidValueTestCases,
     validTestCaseAssertField,
-    assertFieldDefault
+    assertFieldDefault,
   );
 
   suite('setValue', function () {
@@ -102,7 +101,7 @@ suite('Text Input Fields', function () {
       runSetValueTests(
         validValueTestCases,
         invalidValueTestCases,
-        defaultFieldValue
+        defaultFieldValue,
       );
       test('With source block', function () {
         this.field.setSourceBlock(createTestBlock());
@@ -118,7 +117,7 @@ suite('Text Input Fields', function () {
       runSetValueTests(
         validValueTestCases,
         invalidValueTestCases,
-        initialValue
+        initialValue,
       );
       test('With source block', function () {
         this.field.setSourceBlock(createTestBlock());
@@ -131,6 +130,7 @@ suite('Text Input Fields', function () {
   suite('Validators', function () {
     setup(function () {
       this.field = new Blockly.FieldTextInput('value');
+      this.field.valueWhenEditorWasOpened_ = this.field.getValue();
       this.field.htmlInput_ = document.createElement('input');
       this.field.htmlInput_.setAttribute('data-old-value', 'value');
       this.field.htmlInput_.setAttribute('data-untyped-default-value', 'value');
@@ -172,11 +172,11 @@ suite('Text Input Fields', function () {
         test('When Editing', function () {
           this.field.isBeingEdited_ = true;
           this.field.htmlInput_.value = suiteInfo.value;
-          this.field.onHtmlInputChange_(null);
+          this.field.onHtmlInputChange(null);
           assertFieldValue(
             this.field,
             suiteInfo.expectedValue,
-            suiteInfo.value
+            suiteInfo.value,
           );
         });
         test('When Not Editing', function () {
@@ -229,9 +229,9 @@ suite('Text Input Fields', function () {
         this.assertSpellcheck = function (field, value) {
           this.prepField(field);
           field.showEditor_();
-          chai.assert.equal(
+          assert.equal(
             field.htmlInput_.getAttribute('spellcheck'),
-            value.toString()
+            value.toString(),
           );
         };
       });
@@ -267,7 +267,7 @@ suite('Text Input Fields', function () {
         this.prepField(field);
         field.showEditor_();
         field.setSpellcheck(false);
-        chai.assert.equal(field.htmlInput_.getAttribute('spellcheck'), 'false');
+        assert.equal(field.htmlInput_.getAttribute('spellcheck'), 'false');
       });
     });
   });
@@ -282,7 +282,7 @@ suite('Text Input Fields', function () {
         const field = new Blockly.FieldTextInput(value);
         block.getInput('INPUT').appendField(field, 'TEXT');
         const jso = Blockly.serialization.blocks.save(block);
-        chai.assert.deepEqual(jso['fields'], {'TEXT': value});
+        assert.deepEqual(jso['fields'], {'TEXT': value});
       };
     });
 

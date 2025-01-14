@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.eventBubbleOpen');
-
+import {assert} from '../../node_modules/chai/chai.js';
 import {defineMutatorBlocks} from './test_helpers/block_definitions.js';
 import {
   sharedTestSetup,
@@ -31,13 +30,13 @@ suite('Bubble Open Event', function () {
       const origEvent = new Blockly.Events.BubbleOpen(
         block,
         true,
-        Blockly.Events.BubbleType.MUTATOR
+        Blockly.Events.BubbleType.MUTATOR,
       );
 
       const json = origEvent.toJson();
       const newEvent = new Blockly.Events.fromJson(json, this.workspace);
 
-      chai.assert.deepEqual(newEvent, origEvent);
+      assert.deepEqual(newEvent, origEvent);
     });
   });
 });

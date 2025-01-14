@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.FieldImage');
+// Former goog.module ID: Blockly.FieldImage
 
 import {Field, FieldConfig} from './field.js';
 import * as fieldRegistry from './field_registry.js';
@@ -29,13 +28,13 @@ export class FieldImage extends Field<string> {
    */
   private static readonly Y_PADDING = 1;
   protected override size_: Size;
-  private readonly imageHeight: number;
+  protected readonly imageHeight: number;
 
   /** The function to be called when this field is clicked. */
   private clickHandler: ((p1: FieldImage) => void) | null = null;
 
   /** The rendered field's image element. */
-  private imageElement: SVGImageElement | null = null;
+  protected imageElement: SVGImageElement | null = null;
 
   /**
    * Editable fields usually show some sort of UI indicating they are
@@ -79,7 +78,7 @@ export class FieldImage extends Field<string> {
     alt?: string,
     onClick?: (p1: FieldImage) => void,
     flipRtl?: boolean,
-    config?: FieldImageConfig
+    config?: FieldImageConfig,
   ) {
     super(Field.SKIP_SETUP);
 
@@ -87,12 +86,13 @@ export class FieldImage extends Field<string> {
     const imageWidth = Number(parsing.replaceMessageReferences(width));
     if (isNaN(imageHeight) || isNaN(imageWidth)) {
       throw Error(
-        'Height and width values of an image field must cast to' + ' numbers.'
+        'Height and width values of an image field must cast to' + ' numbers.',
       );
     }
     if (imageHeight <= 0 || imageWidth <= 0) {
       throw Error(
-        'Height and width values of an image field must be greater' + ' than 0.'
+        'Height and width values of an image field must be greater' +
+          ' than 0.',
       );
     }
 
@@ -134,8 +134,6 @@ export class FieldImage extends Field<string> {
 
   /**
    * Create the block UI for this image.
-   *
-   * @internal
    */
   override initView() {
     this.imageElement = dom.createSvgElement(
@@ -145,12 +143,12 @@ export class FieldImage extends Field<string> {
         'width': this.size_.width + 'px',
         'alt': this.altText,
       },
-      this.fieldGroup_
+      this.fieldGroup_,
     );
     this.imageElement.setAttributeNS(
       dom.XLINK_NS,
       'xlink:href',
-      this.value_ as string
+      this.value_ as string,
     );
 
     if (this.clickHandler) {
@@ -252,11 +250,11 @@ export class FieldImage extends Field<string> {
    * @nocollapse
    * @internal
    */
-  static fromJson(options: FieldImageFromJsonConfig): FieldImage {
+  static override fromJson(options: FieldImageFromJsonConfig): FieldImage {
     if (!options.src || !options.width || !options.height) {
       throw new Error(
         'src, width, and height values for an image field are' +
-          'required. The width and height must be non-zero.'
+          'required. The width and height must be non-zero.',
       );
     }
     // `this` might be a subclass of FieldImage if that class doesn't override
@@ -268,7 +266,7 @@ export class FieldImage extends Field<string> {
       undefined,
       undefined,
       undefined,
-      options
+      options,
     );
   }
 }
@@ -286,7 +284,7 @@ export interface FieldImageConfig extends FieldConfig {
 }
 
 /**
- * fromJson config options for the colour field.
+ * fromJson config options for the image field.
  */
 export interface FieldImageFromJsonConfig extends FieldImageConfig {
   src?: string;

@@ -4,18 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {assert} from '../../node_modules/chai/chai.js';
+import {MockProcedureModel} from './test_helpers/procedures.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
 } from './test_helpers/setup_teardown.js';
-import {
-  assertEventFiredShallow,
-  assertEventNotFired,
-  createChangeListenerSpy,
-} from './test_helpers/events.js';
-import {MockProcedureModel} from './test_helpers/procedures.js';
-
-goog.declareModuleId('Blockly.test.procedureMap');
 
 suite('Procedure Map', function () {
   setup(function () {
@@ -34,7 +28,7 @@ suite('Procedure Map', function () {
       const spy = sinon.spy(procedureModel, 'startPublishing');
       this.procedureMap.set(procedureModel.getId(), procedureModel);
 
-      chai.assert.isTrue(spy.called, 'Expected the model to start publishing');
+      assert.isTrue(spy.called, 'Expected the model to start publishing');
     });
 
     test('adding a procedure tells it to start publishing', function () {
@@ -42,7 +36,7 @@ suite('Procedure Map', function () {
       const spy = sinon.spy(procedureModel, 'startPublishing');
       this.procedureMap.add(procedureModel);
 
-      chai.assert.isTrue(spy.called, 'Expected the model to start publishing');
+      assert.isTrue(spy.called, 'Expected the model to start publishing');
     });
 
     test('deleting a procedure tells it to stop publishing', function () {
@@ -52,7 +46,7 @@ suite('Procedure Map', function () {
 
       this.procedureMap.delete(procedureModel.getId());
 
-      chai.assert.isTrue(spy.calledOnce, 'Expected the model stop publishing');
+      assert.isTrue(spy.calledOnce, 'Expected the model stop publishing');
     });
   });
 });

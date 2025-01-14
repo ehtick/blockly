@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.HorizontalFlyout');
+// Former goog.module ID: Blockly.HorizontalFlyout
 
 import * as browserEvents from './browser_events.js';
 import * as dropDownDiv from './dropdowndiv.js';
@@ -60,7 +59,7 @@ export class HorizontalFlyout extends Flyout {
 
     this.workspace_.translate(
       this.workspace_.scrollX + absoluteMetrics.left,
-      this.workspace_.scrollY + absoluteMetrics.top
+      this.workspace_.scrollY + absoluteMetrics.top,
     );
   }
 
@@ -170,7 +169,7 @@ export class HorizontalFlyout extends Flyout {
         0,
         1,
         -this.CORNER_RADIUS,
-        this.CORNER_RADIUS
+        this.CORNER_RADIUS,
       );
       path.push('h', -width);
       // Left.
@@ -182,7 +181,7 @@ export class HorizontalFlyout extends Flyout {
         0,
         1,
         -this.CORNER_RADIUS,
-        -this.CORNER_RADIUS
+        -this.CORNER_RADIUS,
       );
       path.push('z');
     } else {
@@ -195,7 +194,7 @@ export class HorizontalFlyout extends Flyout {
         0,
         1,
         this.CORNER_RADIUS,
-        -this.CORNER_RADIUS
+        -this.CORNER_RADIUS,
       );
       path.push('h', width);
       // Right.
@@ -207,7 +206,7 @@ export class HorizontalFlyout extends Flyout {
         0,
         1,
         this.CORNER_RADIUS,
-        this.CORNER_RADIUS
+        this.CORNER_RADIUS,
       );
       path.push('v', height);
       // Bottom.
@@ -241,7 +240,7 @@ export class HorizontalFlyout extends Flyout {
       this.workspace_.scrollbar?.setX(pos);
       // When the flyout moves from a wheel event, hide WidgetDiv and
       // dropDownDiv.
-      WidgetDiv.hide();
+      WidgetDiv.hideIfOwnerIsInWorkspace(this.workspace_);
       dropDownDiv.hideWithoutAnimation();
     }
     // Don't scroll the page.
@@ -268,29 +267,35 @@ export class HorizontalFlyout extends Flyout {
     for (let i = 0, item; (item = contents[i]); i++) {
       if (item.type === 'block') {
         const block = item.block;
-        const allBlocks = block!.getDescendants(false);
+
+        if (block === undefined || block === null) {
+          continue;
+        }
+
+        const allBlocks = block.getDescendants(false);
+
         for (let j = 0, child; (child = allBlocks[j]); j++) {
           // Mark blocks as being inside a flyout.  This is used to detect and
           // prevent the closure of the flyout if the user right-clicks on such
           // a block.
           child.isInFlyout = true;
         }
-        const root = block!.getSvgRoot();
-        const blockHW = block!.getHeightWidth();
+        const root = block.getSvgRoot();
+        const blockHW = block.getHeightWidth();
         // Figure out where to place the block.
-        const tab = block!.outputConnection ? this.tabWidth_ : 0;
+        const tab = block.outputConnection ? this.tabWidth_ : 0;
         let moveX;
         if (this.RTL) {
           moveX = cursorX + blockHW.width;
         } else {
           moveX = cursorX - tab;
         }
-        block!.moveBy(moveX, cursorY);
+        block.moveBy(moveX, cursorY);
 
-        const rect = this.createRect_(block!, moveX, cursorY, blockHW, i);
+        const rect = this.createRect_(block, moveX, cursorY, blockHW, i);
         cursorX += blockHW.width + gaps[i];
 
-        this.addBlockListeners_(root, block!, rect);
+        this.addBlockListeners_(root, block, rect);
       } else if (item.type === 'button') {
         const button = item.button as FlyoutButton;
         this.initFlyoutButton_(button, cursorX, cursorY);
@@ -307,7 +312,6 @@ export class HorizontalFlyout extends Flyout {
    * @param currentDragDeltaXY How far the pointer has moved from the position
    *     at mouse down, in pixel units.
    * @returns True if the drag is toward the workspace.
-   * @internal
    */
   override isDragTowardWorkspace(currentDragDeltaXY: Coordinate): boolean {
     const dx = currentDragDeltaXY.x;
@@ -383,22 +387,25 @@ export class HorizontalFlyout extends Flyout {
         }
       }
 
+      // TODO(#7689): Remove this.
+      // Workspace with no scrollbars where this is permanently open on the top.
+      // If scrollbars exist they properly update the metrics.
       if (
-        this.targetWorkspace!.toolboxPosition === this.toolboxPosition_ &&
-        this.toolboxPosition_ === toolbox.Position.TOP &&
-        !this.targetWorkspace!.getToolbox()
+        !this.targetWorkspace.scrollbar &&
+        !this.autoClose &&
+        this.targetWorkspace.getFlyout() === this &&
+        this.toolboxPosition_ === toolbox.Position.TOP
       ) {
-        // This flyout is a simple toolbox. Reposition the workspace so that
-        // (0,0) is in the correct position relative to the new absolute edge
-        // (ie toolbox edge).
-        this.targetWorkspace!.translate(
-          this.targetWorkspace!.scrollX,
-          this.targetWorkspace!.scrollY + flyoutHeight
+        this.targetWorkspace.translate(
+          this.targetWorkspace.scrollX,
+          this.targetWorkspace.scrollY + flyoutHeight,
         );
       }
+
       this.height_ = flyoutHeight;
       this.position();
-      this.targetWorkspace!.recordDragTargets();
+      this.targetWorkspace.resizeContents();
+      this.targetWorkspace.recordDragTargets();
     }
   }
 }
@@ -406,5 +413,5 @@ export class HorizontalFlyout extends Flyout {
 registry.register(
   registry.Type.FLYOUTS_HORIZONTAL_TOOLBOX,
   registry.DEFAULT,
-  HorizontalFlyout
+  HorizontalFlyout,
 );

@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.Types');
+// Former goog.module ID: Blockly.blockRendering.Types
 
 import type {Measurable} from './base.js';
 import type {Row} from './row.js';
@@ -14,6 +13,9 @@ import type {Row} from './row.js';
  * Types of rendering elements.
  */
 class TypesContainer {
+  // This class is very non-idiomatic for typescript, so we have to use
+  // the Function type to make it happy.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   [index: string]: number | Function;
 
   NONE = 0; // None

@@ -9,16 +9,16 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.BlockSvg');
+// Former goog.module ID: Blockly.BlockSvg
 
 // Unused import preserved for side-effects. Remove if unneeded.
 import './events/events_selected.js';
 
 import {Block} from './block.js';
 import * as blockAnimations from './block_animations.js';
+import {IDeletable} from './blockly.js';
 import * as browserEvents from './browser_events.js';
-import {Comment} from './comment.js';
+import {BlockCopyData, BlockPaster} from './clipboard/block_paster.js';
 import * as common from './common.js';
 import {config} from './config.js';
 import type {Connection} from './connection.js';
@@ -30,36 +30,41 @@ import {
   ContextMenuRegistry,
   LegacyContextMenuOption,
 } from './contextmenu_registry.js';
+import {BlockDragStrategy} from './dragging/block_drag_strategy.js';
 import type {BlockMove} from './events/events_block_move.js';
+import {EventType} from './events/type.js';
 import * as eventUtils from './events/utils.js';
 import type {Field} from './field.js';
 import {FieldLabel} from './field_label.js';
+import {IconType} from './icons/icon_types.js';
+import {MutatorIcon} from './icons/mutator_icon.js';
+import {WarningIcon} from './icons/warning_icon.js';
 import type {Input} from './inputs/input.js';
 import type {IASTNodeLocationSvg} from './interfaces/i_ast_node_location_svg.js';
 import type {IBoundedElement} from './interfaces/i_bounded_element.js';
-import type {CopyData, ICopyable} from './interfaces/i_copyable.js';
-import type {IDraggable} from './interfaces/i_draggable.js';
-import type {IIcon} from './interfaces/i_icon.js';
+import type {ICopyable} from './interfaces/i_copyable.js';
+import type {IDragStrategy, IDraggable} from './interfaces/i_draggable.js';
+import {IIcon} from './interfaces/i_icon.js';
 import * as internalConstants from './internal_constants.js';
 import {ASTNode} from './keyboard_nav/ast_node.js';
 import {TabNavigateCursor} from './keyboard_nav/tab_navigate_cursor.js';
 import {MarkerManager} from './marker_manager.js';
 import {Msg} from './msg.js';
-import type {Mutator} from './mutator.js';
+import * as renderManagement from './render_management.js';
 import {RenderedConnection} from './rendered_connection.js';
 import type {IPathObject} from './renderers/common/i_path_object.js';
 import * as blocks from './serialization/blocks.js';
 import type {BlockStyle} from './theme.js';
 import * as Tooltip from './tooltip.js';
 import {Coordinate} from './utils/coordinate.js';
+import * as deprecation from './utils/deprecation.js';
 import * as dom from './utils/dom.js';
 import {Rect} from './utils/rect.js';
 import {Svg} from './utils/svg.js';
 import * as svgMath from './utils/svg_math.js';
-import {Warning} from './warning.js';
+import {FlyoutItemInfo} from './utils/toolbox.js';
 import type {Workspace} from './workspace.js';
 import type {WorkspaceSvg} from './workspace_svg.js';
-import {queueRender} from './render_management.js';
 
 /**
  * Class for a block's SVG representation.
@@ -67,7 +72,12 @@ import {queueRender} from './render_management.js';
  */
 export class BlockSvg
   extends Block
-  implements IASTNodeLocationSvg, IBoundedElement, ICopyable, IDraggable
+  implements
+    IASTNodeLocationSvg,
+    IBoundedElement,
+    ICopyable<BlockCopyData>,
+    IDraggable,
+    IDeletable
 {
   /**
    * Constant for identifying rows that are to be rendered inline.
@@ -83,9 +93,27 @@ export class BlockSvg
   static readonly COLLAPSED_WARNING_ID = 'TEMP_COLLAPSED_WARNING_';
   override decompose?: (p1: Workspace) => BlockSvg;
   // override compose?: ((p1: BlockSvg) => void)|null;
-  saveConnections?: (p1: BlockSvg) => void;
+
+  /**
+   * An optional method which saves a record of blocks connected to
+   * this block so they can be later restored after this block is
+   * recoomposed (reconfigured).  Typically records the connected
+   * blocks on properties on blocks in the mutator flyout, so that
+   * rearranging those component blocks will automatically rearrange
+   * the corresponding connected blocks on this block after this block
+   * is recomposed.
+   *
+   * To keep the saved connection information up-to-date, MutatorIcon
+   * arranges for an event listener to call this method any time the
+   * mutator flyout is open and a change occurs on this block's
+   * workspace.
+   *
+   * @param rootBlock The root block in the mutator flyout.
+   */
+  saveConnections?: (rootBlock: BlockSvg) => void;
+
   customContextMenu?: (
-    p1: Array<ContextMenuOption | LegacyContextMenuOption>
+    p1: Array<ContextMenuOption | LegacyContextMenuOption>,
   ) => void;
 
   /**
@@ -101,35 +129,31 @@ export class BlockSvg
   width = 0;
 
   /**
+   * Width of this block, not including any connected value blocks.
+   * Width is in workspace units.
+   *
+   * @internal
+   */
+  childlessWidth = 0;
+
+  /**
    * Map from IDs for warnings text to PIDs of functions to apply them.
    * Used to be able to maintain multiple warnings.
    */
   private warningTextDb = new Map<string, ReturnType<typeof setTimeout>>();
 
   /** Block's mutator icon (if any). */
-  mutator: Mutator | null = null;
+  mutator: MutatorIcon | null = null;
 
-  /** Block's comment icon (if any). */
-  private commentIcon_: Comment | null = null;
-
-  /** Block's warning icon (if any). */
-  warning: Warning | null = null;
-
-  private svgGroup_: SVGGElement;
+  private svgGroup: SVGGElement;
   style: BlockStyle;
   /** @internal */
   pathObject: IPathObject;
-  override rendered = false;
+
+  /** Is this block a BlockSVG? */
+  override readonly rendered = true;
+
   private visuallyDisabled = false;
-
-  /**
-   * Is this block currently rendering? Used to stop recursive render calls
-   * from actually triggering a re-render.
-   */
-  private renderIsInProgress_ = false;
-
-  /** Whether mousedown events have been bound yet. */
-  private eventsInit_ = false;
 
   override workspace: WorkspaceSvg;
   // TODO(b/109816955): remove '!', see go/strict-prop-init-fix.
@@ -141,11 +165,8 @@ export class BlockSvg
 
   private translation = '';
 
-  /**
-   * The ID of the setTimeout callback for bumping neighbours, or 0 if no bump
-   * is currently scheduled.
-   */
-  private bumpNeighboursPid = 0;
+  /** Whether this block is currently being dragged. */
+  private dragging = false;
 
   /**
    * The location of the top left of this block (in workspace coordinates)
@@ -156,6 +177,8 @@ export class BlockSvg
    */
   relativeCoords = new Coordinate(0, 0);
 
+  private dragStrategy: IDragStrategy = new BlockDragStrategy(this);
+
   /**
    * @param workspace The block's workspace.
    * @param prototypeName Name of the language object containing type-specific
@@ -165,8 +188,11 @@ export class BlockSvg
    */
   constructor(workspace: WorkspaceSvg, prototypeName: string, opt_id?: string) {
     super(workspace, prototypeName, opt_id);
+    if (!workspace.rendered) {
+      throw TypeError('Cannot create a rendered block in a headless workspace');
+    }
     this.workspace = workspace;
-    this.svgGroup_ = dom.createSvgElement(Svg.G, {});
+    this.svgGroup = dom.createSvgElement(Svg.G, {});
 
     /** A block style object. */
     this.style = workspace.getRenderer().getConstants().getBlockStyle(null);
@@ -174,14 +200,14 @@ export class BlockSvg
     /** The renderer's path object. */
     this.pathObject = workspace
       .getRenderer()
-      .makePathObject(this.svgGroup_, this.style);
+      .makePathObject(this.svgGroup, this.style);
 
     const svgPath = this.pathObject.svgPath;
     (svgPath as any).tooltip = this;
     Tooltip.bindMouseEvents(svgPath);
 
     // Expose this block's ID on its top-level SVG group.
-    this.svgGroup_.setAttribute('data-id', this.id);
+    this.svgGroup.setAttribute('data-id', this.id);
 
     this.doInit_();
   }
@@ -191,32 +217,25 @@ export class BlockSvg
    * May be called more than once.
    */
   initSvg() {
-    if (!this.workspace.rendered) {
-      throw TypeError('Workspace is headless.');
-    }
-    for (let i = 0, input; (input = this.inputList[i]); i++) {
+    if (this.initialized) return;
+    for (const input of this.inputList) {
       input.init();
     }
-    const icons = this.getIcons();
-    for (let i = 0; i < icons.length; i++) {
-      icons[i].createIcon();
+    for (const icon of this.getIcons()) {
+      icon.initView(this.createIconPointerDownListener(icon));
+      icon.updateEditable();
     }
     this.applyColour();
-    this.pathObject.updateMovable(this.isMovable());
+    this.pathObject.updateMovable(this.isMovable() || this.isInFlyout);
     const svg = this.getSvgRoot();
-    if (!this.workspace.options.readOnly && !this.eventsInit_ && svg) {
-      browserEvents.conditionalBind(
-        svg,
-        'pointerdown',
-        this,
-        this.onMouseDown_
-      );
+    if (!this.workspace.options.readOnly && svg) {
+      browserEvents.conditionalBind(svg, 'pointerdown', this, this.onMouseDown);
     }
-    this.eventsInit_ = true;
 
     if (!svg.parentNode) {
       this.workspace.getCanvas().appendChild(svg);
     }
+    this.initialized = true;
   }
 
   /**
@@ -224,7 +243,7 @@ export class BlockSvg
    *
    * @returns #RRGGBB string.
    */
-  getColourSecondary(): string | undefined {
+  getColourSecondary(): string {
     return this.style.colourSecondary;
   }
 
@@ -233,60 +252,25 @@ export class BlockSvg
    *
    * @returns #RRGGBB string.
    */
-  getColourTertiary(): string | undefined {
+  getColourTertiary(): string {
     return this.style.colourTertiary;
   }
 
-  /**
-   * Selects this block. Highlights the block visually and fires a select event
-   * if the block is not already selected.
-   */
+  /** Selects this block. Highlights the block visually. */
   select() {
-    if (this.isShadow() && this.getParent()) {
-      // Shadow blocks should not be selected.
-      this.getParent()!.select();
+    if (this.isShadow()) {
+      this.getParent()?.select();
       return;
     }
-    if (common.getSelected() === this) {
-      return;
-    }
-    let oldId = null;
-    if (common.getSelected()) {
-      oldId = common.getSelected()!.id;
-      // Unselect any previously selected block.
-      eventUtils.disable();
-      try {
-        common.getSelected()!.unselect();
-      } finally {
-        eventUtils.enable();
-      }
-    }
-    const event = new (eventUtils.get(eventUtils.SELECTED))(
-      oldId,
-      this.id,
-      this.workspace.id
-    );
-    eventUtils.fire(event);
-    common.setSelected(this);
     this.addSelect();
   }
 
-  /**
-   * Unselects this block. Unhighlights the block and fires a select (false)
-   * event if the block is currently selected.
-   */
+  /** Unselects this block. Unhighlights the block visually. */
   unselect() {
-    if (common.getSelected() !== this) {
+    if (this.isShadow()) {
+      this.getParent()?.unselect();
       return;
     }
-    const event = new (eventUtils.get(eventUtils.SELECTED))(
-      this.id,
-      null,
-      this.workspace.id
-    );
-    event.workspaceId = this.workspace.id;
-    eventUtils.fire(event);
-    common.setSelected(null);
     this.removeSelect();
   }
 
@@ -320,7 +304,14 @@ export class BlockSvg
     } else if (oldParent) {
       // If we are losing a parent, we want to move our DOM element to the
       // root of the workspace.
-      this.workspace.getCanvas().appendChild(svgRoot);
+      const draggingBlock = this.workspace
+        .getCanvas()
+        .querySelector('.blocklyDragging');
+      if (draggingBlock) {
+        this.workspace.getCanvas().insertBefore(svgRoot, draggingBlock);
+      } else {
+        this.workspace.getCanvas().appendChild(svgRoot);
+      }
       this.translate(oldXY.x, oldXY.y);
     }
 
@@ -337,6 +328,12 @@ export class BlockSvg
    * @returns Object with .x and .y properties in workspace coordinates.
    */
   override getRelativeToSurfaceXY(): Coordinate {
+    const layerManger = this.workspace.getLayerManager();
+    if (!layerManger) {
+      throw new Error(
+        'Cannot calculate position because the workspace has not been appended',
+      );
+    }
     let x = 0;
     let y = 0;
 
@@ -348,7 +345,7 @@ export class BlockSvg
         x += xy.x;
         y += xy.y;
         element = element.parentNode as SVGElement;
-      } while (element && element !== this.workspace.getCanvas());
+      } while (element && !layerManger.hasLayer(element));
     }
     return new Coordinate(x, y);
   }
@@ -367,12 +364,16 @@ export class BlockSvg
     const eventsEnabled = eventUtils.isEnabled();
     let event: BlockMove | null = null;
     if (eventsEnabled) {
-      event = new (eventUtils.get(eventUtils.BLOCK_MOVE)!)(this) as BlockMove;
-      reason && event.setReason(reason);
+      event = new (eventUtils.get(EventType.BLOCK_MOVE)!)(this) as BlockMove;
+      if (reason) event.setReason(reason);
     }
-    const xy = this.getRelativeToSurfaceXY();
-    this.translate(xy.x + dx, xy.y + dy);
-    this.moveConnections(dx, dy);
+
+    const delta = new Coordinate(dx, dy);
+    const currLoc = this.getRelativeToSurfaceXY();
+    const newLoc = Coordinate.sum(currLoc, delta);
+    this.translate(newLoc.x, newLoc.y);
+    this.updateComponentLocations(newLoc);
+
     if (eventsEnabled && event) {
       event!.recordNew();
       eventUtils.fire(event);
@@ -423,46 +424,20 @@ export class BlockSvg
   moveDuringDrag(newLoc: Coordinate) {
     this.translate(newLoc.x, newLoc.y);
     this.getSvgRoot().setAttribute('transform', this.getTranslation());
-  }
-
-  /**
-   * Clear the block of transform="..." attributes.
-   * Used when the block is switching from 3d to 2d transform or vice versa.
-   */
-  private clearTransformAttributes_() {
-    this.getSvgRoot().removeAttribute('transform');
+    this.updateComponentLocations(newLoc);
   }
 
   /** Snap this block to the nearest grid point. */
   snapToGrid() {
-    if (this.isDeadOrDying()) {
-      return; // Deleted block.
-    }
-    if (this.workspace.isDragging()) {
-      return; // Don't bump blocks during a drag.;
-    }
-
-    if (this.getParent()) {
-      return; // Only snap top-level blocks.
-    }
-    if (this.isInFlyout) {
-      return; // Don't move blocks around in a flyout.
-    }
+    if (this.isDeadOrDying()) return;
+    if (this.getParent()) return;
+    if (this.isInFlyout) return;
     const grid = this.workspace.getGrid();
-    if (!grid || !grid.shouldSnap()) {
-      return; // Config says no snapping.
-    }
-    const spacing = grid.getSpacing();
-    const half = spacing / 2;
-    const xy = this.getRelativeToSurfaceXY();
-    const dx = Math.round(
-      Math.round((xy.x - half) / spacing) * spacing + half - xy.x
-    );
-    const dy = Math.round(
-      Math.round((xy.y - half) / spacing) * spacing + half - xy.y
-    );
-    if (dx || dy) {
-      this.moveBy(dx, dy, ['snap']);
+    if (!grid?.shouldSnap()) return;
+    const currentXY = this.getRelativeToSurfaceXY();
+    const alignedXY = grid.alignXY(currentXY);
+    if (alignedXY !== currentXY) {
+      this.moveTo(alignedXY, ['snap']);
     }
   }
 
@@ -474,8 +449,28 @@ export class BlockSvg
    * @returns Object with coordinates of the bounding box.
    */
   getBoundingRectangle(): Rect {
+    return this.getBoundingRectangleWithDimensions(this.getHeightWidth());
+  }
+
+  /**
+   * Returns the coordinates of a bounding box describing the dimensions of this
+   * block alone.
+   * Coordinate system: workspace coordinates.
+   *
+   * @returns Object with coordinates of the bounding box.
+   */
+  getBoundingRectangleWithoutChildren(): Rect {
+    return this.getBoundingRectangleWithDimensions({
+      height: this.height,
+      width: this.childlessWidth,
+    });
+  }
+
+  private getBoundingRectangleWithDimensions(blockBounds: {
+    height: number;
+    width: number;
+  }) {
     const blockXY = this.getRelativeToSurfaceXY();
-    const blockBounds = this.getHeightWidth();
     let left;
     let right;
     if (this.RTL) {
@@ -509,14 +504,14 @@ export class BlockSvg
       return;
     }
     super.setCollapsed(collapsed);
-    this.updateCollapsed_();
+    this.updateCollapsed();
   }
 
   /**
    * Makes sure that when the block is collapsed, it is rendered correctly
    * for that state.
    */
-  private updateCollapsed_() {
+  private updateCollapsed() {
     const collapsed = this.isCollapsed();
     const collapsedInputName = constants.COLLAPSED_INPUT_NAME;
     const collapsedFieldName = constants.COLLAPSED_FIELD_NAME;
@@ -527,15 +522,14 @@ export class BlockSvg
       }
     }
 
+    for (const icon of this.getIcons()) {
+      icon.updateCollapsed();
+    }
+
     if (!collapsed) {
       this.updateDisabled();
       this.removeInput(collapsedInputName);
       return;
-    }
-
-    const icons = this.getIcons();
-    for (let i = 0, icon; (icon = icons[i]); i++) {
-      icon.setVisible(false);
     }
 
     const text = this.toString(internalConstants.COLLAPSE_CHARS);
@@ -584,7 +578,7 @@ export class BlockSvg
    *
    * @param e Pointer down event.
    */
-  private onMouseDown_(e: PointerEvent) {
+  private onMouseDown(e: PointerEvent) {
     const gesture = this.workspace.getGesture(e);
     if (gesture) {
       gesture.handleBlockStart(e, this);
@@ -617,7 +611,7 @@ export class BlockSvg
     }
     const menuOptions = ContextMenuRegistry.registry.getContextMenuOptions(
       ContextMenuRegistry.ScopeType.BLOCK,
-      {block: this}
+      {block: this},
     );
 
     // Allow the block to add or modify menuOptions.
@@ -634,41 +628,51 @@ export class BlockSvg
    * @param e Mouse event.
    * @internal
    */
-  showContextMenu(e: Event) {
+  showContextMenu(e: PointerEvent) {
     const menuOptions = this.generateContextMenu();
 
     if (menuOptions && menuOptions.length) {
-      ContextMenu.show(e, menuOptions, this.RTL);
+      ContextMenu.show(e, menuOptions, this.RTL, this.workspace);
       ContextMenu.setCurrentBlock(this);
     }
   }
 
   /**
-   * Move the connections for this block and all blocks attached under it.
-   * Also update any attached bubbles.
+   * Updates the locations of any parts of the block that need to know where
+   * they are (e.g. connections, icons).
    *
-   * @param dx Horizontal offset from current location, in workspace units.
-   * @param dy Vertical offset from current location, in workspace units.
+   * @param blockOrigin The top-left of this block in workspace coordinates.
    * @internal
    */
-  moveConnections(dx: number, dy: number) {
-    if (!this.rendered) {
-      // Rendering is required to lay out the blocks.
-      // This is probably an invisible block attached to a collapsed block.
-      return;
-    }
-    const myConnections = this.getConnections_(false);
-    for (let i = 0; i < myConnections.length; i++) {
-      myConnections[i].moveBy(dx, dy);
-    }
-    const icons = this.getIcons();
-    for (let i = 0; i < icons.length; i++) {
-      icons[i].computeIconLocation();
-    }
+  updateComponentLocations(blockOrigin: Coordinate) {
+    if (!this.dragging) this.updateConnectionLocations(blockOrigin);
+    this.updateIconLocations(blockOrigin);
+    this.updateFieldLocations(blockOrigin);
 
-    // Recurse through all blocks attached under this one.
-    for (let i = 0; i < this.childBlocks_.length; i++) {
-      (this.childBlocks_[i] as BlockSvg).moveConnections(dx, dy);
+    for (const child of this.getChildren(false)) {
+      child.updateComponentLocations(
+        Coordinate.sum(blockOrigin, child.relativeCoords),
+      );
+    }
+  }
+
+  private updateConnectionLocations(blockOrigin: Coordinate) {
+    for (const conn of this.getConnections_(false)) {
+      conn.moveToOffset(blockOrigin);
+    }
+  }
+
+  private updateIconLocations(blockOrigin: Coordinate) {
+    for (const icon of this.getIcons()) {
+      icon.onLocationChange(blockOrigin);
+    }
+  }
+
+  private updateFieldLocations(blockOrigin: Coordinate) {
+    for (const input of this.inputList) {
+      for (const field of input.fieldRow) {
+        field.onLocationChange(blockOrigin);
+      }
     }
   }
 
@@ -680,13 +684,14 @@ export class BlockSvg
    * @internal
    */
   setDragging(adding: boolean) {
+    this.dragging = adding;
     if (adding) {
       this.translation = '';
       common.draggingConnections.push(...this.getConnections_(true));
-      dom.addClass(this.svgGroup_, 'blocklyDragging');
+      dom.addClass(this.svgGroup, 'blocklyDragging');
     } else {
       common.draggingConnections.length = 0;
-      dom.removeClass(this.svgGroup_, 'blocklyDragging');
+      dom.removeClass(this.svgGroup, 'blocklyDragging');
     }
     // Recurse through all blocks attached under this one.
     for (let i = 0; i < this.childBlocks_.length; i++) {
@@ -719,6 +724,8 @@ export class BlockSvg
 
   /**
    * Sets whether this block is a shadow block or not.
+   * This method is internal and should not be called by users of Blockly. To
+   * create shadow blocks programmatically call connection.setShadowState
    *
    * @param shadow True if a shadow.
    * @internal
@@ -742,7 +749,7 @@ export class BlockSvg
     this.isInsertionMarker_ = insertionMarker;
     if (this.isInsertionMarker_) {
       this.setColour(
-        this.workspace.getRenderer().getConstants().INSERTION_MARKER_COLOUR
+        this.workspace.getRenderer().getConstants().INSERTION_MARKER_COLOUR,
       );
       this.pathObject.updateInsertionMarker(true);
     }
@@ -754,7 +761,7 @@ export class BlockSvg
    * @returns The root SVG node (probably a group).
    */
   getSvgRoot(): SVGGElement {
-    return this.svgGroup_;
+    return this.svgGroup;
   }
 
   /**
@@ -764,21 +771,39 @@ export class BlockSvg
    *     statement with the previous statement.  Otherwise, dispose of all
    *     children of this block.
    * @param animate If true, show a disposal animation and sound.
-   * @suppress {checkTypes}
    */
   override dispose(healStack?: boolean, animate?: boolean) {
-    if (this.isDeadOrDying()) return;
+    this.disposing = true;
 
     Tooltip.dispose();
     ContextMenu.hide();
 
-    if (animate && this.rendered) {
+    if (animate) {
       this.unplug(healStack);
       blockAnimations.disposeUiEffect(this);
     }
 
+    // Selecting a shadow block highlights an ancestor block, but that highlight
+    // should be removed if the shadow block will be deleted. So, before
+    // deleting blocks and severing the connections between them, check whether
+    // doing so would delete a selected block and make sure that any associated
+    // parent is updated.
+    const selection = common.getSelected();
+    if (selection instanceof Block) {
+      let selectionAncestor: Block | null = selection;
+      while (selectionAncestor !== null) {
+        if (selectionAncestor === this) {
+          // The block to be deleted contains the selected block, so remove any
+          // selection highlight associated with the selected block before
+          // deleting them.
+          selection.unselect();
+        }
+        selectionAncestor = selectionAncestor.getParent();
+      }
+    }
+
     super.dispose(!!healStack);
-    dom.removeNode(this.svgGroup_);
+    dom.removeNode(this.svgGroup);
   }
 
   /**
@@ -786,10 +811,8 @@ export class BlockSvg
    * E.g. does trigger UI effects, remove nodes, etc.
    */
   override disposeInternal() {
-    if (this.isDeadOrDying()) return;
+    this.disposing = true;
     super.disposeInternal();
-
-    this.rendered = false;
 
     if (common.getSelected() === this) {
       this.unselect();
@@ -829,18 +852,17 @@ export class BlockSvg
    * Encode a block for copying.
    *
    * @returns Copy metadata, or null if the block is an insertion marker.
-   * @internal
    */
-  toCopyData(): CopyData | null {
+  toCopyData(): BlockCopyData | null {
     if (this.isInsertionMarker_) {
       return null;
     }
     return {
-      saveInfo: blocks.save(this, {
+      paster: BlockPaster.TYPE,
+      blockState: blocks.save(this, {
         addCoordinates: true,
         addNextBlocks: false,
       }) as blocks.State,
-      source: this.workspace,
       typeCounts: common.getBlockTypeCounts(this, true),
     };
   }
@@ -887,59 +909,13 @@ export class BlockSvg
   }
 
   /**
-   * Get the comment icon attached to this block, or null if the block has no
-   * comment.
-   *
-   * @returns The comment icon attached to this block, or null.
-   */
-  getCommentIcon(): Comment | null {
-    return this.commentIcon_;
-  }
-
-  /**
-   * Set this block's comment text.
-   *
-   * @param text The text, or null to delete.
-   */
-  override setCommentText(text: string | null) {
-    if (this.commentModel.text === text) {
-      return;
-    }
-    super.setCommentText(text);
-
-    const shouldHaveComment = text !== null;
-    if (!!this.commentIcon_ === shouldHaveComment) {
-      // If the comment's state of existence is correct, but the text is new
-      // that means we're just updating a comment.
-      this.commentIcon_!.updateText();
-      return;
-    }
-    if (shouldHaveComment) {
-      this.commentIcon_ = new Comment(this);
-      this.comment = this.commentIcon_; // For backwards compatibility.
-    } else {
-      this.commentIcon_!.dispose();
-      this.commentIcon_ = null;
-      this.comment = null; // For backwards compatibility.
-    }
-    if (this.rendered) {
-      // Icons must force an immediate render so that bubbles can be opened
-      // immedately at the correct position.
-      this.render();
-      // Adding or removing a comment icon will cause the block to change shape.
-      this.bumpNeighbours();
-    }
-  }
-
-  /**
    * Set this block's warning text.
    *
    * @param text The text, or null to delete.
-   * @param opt_id An optional ID for the warning text to be able to maintain
+   * @param id An optional ID for the warning text to be able to maintain
    *     multiple warnings.
    */
-  override setWarningText(text: string | null, opt_id?: string) {
-    const id = opt_id || '';
+  override setWarningText(text: string | null, id: string = '') {
     if (!id) {
       // Kill all previous pending processes, this edit supersedes them all.
       for (const timeout of this.warningTextDb.values()) {
@@ -961,7 +937,7 @@ export class BlockSvg
             this.warningTextDb.delete(id);
             this.setWarningText(text, id);
           }
-        }, 100)
+        }, 100),
       );
       return;
     }
@@ -969,9 +945,10 @@ export class BlockSvg
       text = null;
     }
 
-    let changedState = false;
-    if (typeof text === 'string') {
+    const icon = this.getIcon(WarningIcon.TYPE) as WarningIcon | undefined;
+    if (text) {
       // Bubble up to add a warning on top-most collapsed block.
+      // TODO(#6020): This warning is never removed.
       let parent = this.getSurroundParent();
       let collapsedParent = null;
       while (parent) {
@@ -983,36 +960,25 @@ export class BlockSvg
       if (collapsedParent) {
         collapsedParent.setWarningText(
           Msg['COLLAPSED_WARNINGS_WARNING'],
-          BlockSvg.COLLAPSED_WARNING_ID
+          BlockSvg.COLLAPSED_WARNING_ID,
         );
       }
 
-      if (!this.warning) {
-        this.warning = new Warning(this);
-        changedState = true;
+      if (icon) {
+        (icon as WarningIcon).addMessage(text, id);
+      } else {
+        this.addIcon(new WarningIcon(this).addMessage(text, id));
       }
-      this.warning!.setText(text, id);
-    } else {
+    } else if (icon) {
       // Dispose all warnings if no ID is given.
-      if (this.warning && !id) {
-        this.warning.dispose();
-        changedState = true;
-      } else if (this.warning) {
-        const oldText = this.warning.getText();
-        this.warning.setText('', id);
-        const newText = this.warning.getText();
-        if (!newText) {
-          this.warning.dispose();
-        }
-        changedState = oldText !== newText;
+      if (!id) {
+        this.removeIcon(WarningIcon.TYPE);
+      } else {
+        // Remove just this warning id's message.
+        icon.addMessage('', id);
+        // Then remove the entire icon if there is no longer any text.
+        if (!icon.getText()) this.removeIcon(WarningIcon.TYPE);
       }
-    }
-    if (changedState && this.rendered) {
-      // Icons must force an immediate render so that bubbles can be opened
-      // immedately at the correct position.
-      this.render();
-      // Adding or removing a warning icon will cause the block to change shape.
-      this.bumpNeighbours();
     }
   }
 
@@ -1021,65 +987,91 @@ export class BlockSvg
    *
    * @param mutator A mutator dialog instance or null to remove.
    */
-  override setMutator(mutator: Mutator | null) {
-    if (this.mutator && this.mutator !== mutator) {
-      this.mutator.dispose();
-    }
-    if (mutator) {
-      mutator.setBlock(this);
-      this.mutator = mutator;
-      mutator.createIcon();
-    }
-    if (this.rendered) {
-      // Icons must force an immediate render so that bubbles can be opened
-      // immedately at the correct position.
-      this.render();
-      // Adding or removing a mutator icon will cause the block to change shape.
-      this.bumpNeighbours();
-    }
+  override setMutator(mutator: MutatorIcon | null) {
+    this.removeIcon(MutatorIcon.TYPE);
+    if (mutator) this.addIcon(mutator);
   }
 
   override addIcon<T extends IIcon>(icon: T): T {
     super.addIcon(icon);
-    if (this.rendered) {
-      // TODO: Change this based on #7024.
-      this.render();
-      this.bumpNeighbours();
-    }
+
+    if (icon instanceof MutatorIcon) this.mutator = icon;
+
+    icon.initView(this.createIconPointerDownListener(icon));
+    icon.applyColour();
+    icon.updateEditable();
+    this.queueRender();
+
     return icon;
   }
 
-  override removeIcon(type: string): boolean {
+  /**
+   * Creates a pointer down event listener for the icon to append to its
+   * root svg.
+   */
+  private createIconPointerDownListener(icon: IIcon) {
+    return (e: PointerEvent) => {
+      if (this.isDeadOrDying()) return;
+      const gesture = this.workspace.getGesture(e);
+      if (gesture) {
+        gesture.setStartIcon(icon);
+      }
+    };
+  }
+
+  override removeIcon(type: IconType<IIcon>): boolean {
     const removed = super.removeIcon(type);
-    if (this.rendered) {
-      // TODO: Change this based on #7024.
-      this.render();
-      this.bumpNeighbours();
-    }
+
+    if (type.equals(MutatorIcon.TYPE)) this.mutator = null;
+
+    this.queueRender();
+
     return removed;
   }
 
-  // TODO: remove this implementation after #7038, #7039, and #7040 are
-  //   resolved.
-  override getIcons(): AnyDuringMigration[] {
-    const icons = [];
-    if (this.commentIcon_) icons.push(this.commentIcon_);
-    if (this.warning) icons.push(this.warning);
-    if (this.mutator) icons.push(this.mutator);
-    return icons;
-  }
-
   /**
-   * Set whether the block is enabled or not.
+   * @deprecated v11 - Set whether the block is manually enabled or disabled.
+   * The user can toggle whether a block is disabled from a context menu
+   * option. A block may still be disabled for other reasons even if the user
+   * attempts to manually enable it, such as when the block is in an invalid
+   * location. This method is deprecated and setDisabledReason should be used
+   * instead.
    *
    * @param enabled True if enabled.
    */
   override setEnabled(enabled: boolean) {
-    if (this.isEnabled() !== enabled) {
-      super.setEnabled(enabled);
-      if (this.rendered && !this.getInheritedDisabled()) {
-        this.updateDisabled();
-      }
+    deprecation.warn(
+      'setEnabled',
+      'v11',
+      'v12',
+      'the setDisabledReason method of BlockSvg',
+    );
+    const wasEnabled = this.isEnabled();
+    super.setEnabled(enabled);
+    if (this.isEnabled() !== wasEnabled && !this.getInheritedDisabled()) {
+      this.updateDisabled();
+    }
+  }
+
+  /**
+   * Add or remove a reason why the block might be disabled. If a block has
+   * any reasons to be disabled, then the block itself will be considered
+   * disabled. A block could be disabled for multiple independent reasons
+   * simultaneously, such as when the user manually disables it, or the block
+   * is invalid.
+   *
+   * @param disabled If true, then the block should be considered disabled for
+   *     at least the provided reason, otherwise the block is no longer disabled
+   *     for that reason.
+   * @param reason A language-neutral identifier for a reason why the block
+   *     could be disabled. Call this method again with the same identifier to
+   *     update whether the block is currently disabled for this reason.
+   */
+  override setDisabledReason(disabled: boolean, reason: string): void {
+    const wasEnabled = this.isEnabled();
+    super.setDisabledReason(disabled, reason);
+    if (this.isEnabled() !== wasEnabled && !this.getInheritedDisabled()) {
+      this.updateDisabled();
     }
   }
 
@@ -1090,9 +1082,6 @@ export class BlockSvg
    * @param highlighted True if highlighted.
    */
   setHighlighted(highlighted: boolean) {
-    if (!this.rendered) {
-      return;
-    }
     this.pathObject.updateHighlighted(highlighted);
   }
 
@@ -1127,7 +1116,6 @@ export class BlockSvg
   }
 
   // Overrides of functions on Blockly.Block that take into account whether the
-
   // block has been rendered.
 
   /**
@@ -1185,16 +1173,31 @@ export class BlockSvg
   }
 
   /**
+   * Returns the BlockStyle object used to style this block.
+   *
+   * @returns This block's style object.
+   */
+  getStyle(): BlockStyle {
+    return this.style;
+  }
+
+  /**
    * Move this block to the front of the visible workspace.
    * <g> tags do not respect z-index so SVG renders them in the
    * order that they are in the DOM.  By placing this block first within the
    * block group's <g>, it will render on top of any other blocks.
+   * Use sparingly, this method is expensive because it reorders the DOM
+   * nodes.
    *
-   * @internal
+   * @param blockOnly True to only move this block to the front without
+   *     adjusting its parents.
    */
-  bringToFront() {
+  bringToFront(blockOnly = false) {
     /* eslint-disable-next-line @typescript-eslint/no-this-alias */
     let block: this | null = this;
+    if (block.isDeadOrDying()) {
+      return;
+    }
     do {
       const root = block.getSvgRoot();
       const parent = root.parentNode;
@@ -1203,6 +1206,7 @@ export class BlockSvg
       if (childNodes[childNodes.length - 1] !== root) {
         parent!.appendChild(root);
       }
+      if (blockOnly) break;
       block = block.getParent();
     } while (block);
   }
@@ -1216,14 +1220,10 @@ export class BlockSvg
    */
   override setPreviousStatement(
     newBoolean: boolean,
-    opt_check?: string | string[] | null
+    opt_check?: string | string[] | null,
   ) {
     super.setPreviousStatement(newBoolean, opt_check);
-
-    if (this.rendered) {
-      this.queueRender();
-      this.bumpNeighbours();
-    }
+    this.queueRender();
   }
 
   /**
@@ -1235,14 +1235,10 @@ export class BlockSvg
    */
   override setNextStatement(
     newBoolean: boolean,
-    opt_check?: string | string[] | null
+    opt_check?: string | string[] | null,
   ) {
     super.setNextStatement(newBoolean, opt_check);
-
-    if (this.rendered) {
-      this.queueRender();
-      this.bumpNeighbours();
-    }
+    this.queueRender();
   }
 
   /**
@@ -1254,14 +1250,10 @@ export class BlockSvg
    */
   override setOutput(
     newBoolean: boolean,
-    opt_check?: string | string[] | null
+    opt_check?: string | string[] | null,
   ) {
     super.setOutput(newBoolean, opt_check);
-
-    if (this.rendered) {
-      this.queueRender();
-      this.bumpNeighbours();
-    }
+    this.queueRender();
   }
 
   /**
@@ -1271,11 +1263,7 @@ export class BlockSvg
    */
   override setInputsInline(newBoolean: boolean) {
     super.setInputsInline(newBoolean);
-
-    if (this.rendered) {
-      this.queueRender();
-      this.bumpNeighbours();
-    }
+    this.queueRender();
   }
 
   /**
@@ -1289,13 +1277,7 @@ export class BlockSvg
    */
   override removeInput(name: string, opt_quiet?: boolean): boolean {
     const removed = super.removeInput(name, opt_quiet);
-
-    if (this.rendered) {
-      this.queueRender();
-      // Removing an input will cause the block to change shape.
-      this.bumpNeighbours();
-    }
-
+    this.queueRender();
     return removed;
   }
 
@@ -1307,23 +1289,13 @@ export class BlockSvg
    */
   override moveNumberedInputBefore(inputIndex: number, refIndex: number) {
     super.moveNumberedInputBefore(inputIndex, refIndex);
-
-    if (this.rendered) {
-      this.queueRender();
-      // Moving an input will cause the block to change shape.
-      this.bumpNeighbours();
-    }
+    this.queueRender();
   }
 
   /** @override */
   override appendInput(input: Input): Input {
     super.appendInput(input);
-
-    if (this.rendered) {
-      this.queueRender();
-      // Adding an input will cause the block to change shape.
-      this.bumpNeighbours();
-    }
+    this.queueRender();
     return input;
   }
 
@@ -1377,28 +1349,25 @@ export class BlockSvg
    * Returns connections originating from this block.
    *
    * @param all If true, return all connections even hidden ones.
-   *     Otherwise, for a non-rendered block return an empty list, and for a
-   *     collapsed block don't return inputs connections.
+   *     Otherwise, for a collapsed block don't return inputs connections.
    * @returns Array of connections.
    * @internal
    */
   override getConnections_(all: boolean): RenderedConnection[] {
     const myConnections = [];
-    if (all || this.rendered) {
-      if (this.outputConnection) {
-        myConnections.push(this.outputConnection);
-      }
-      if (this.previousConnection) {
-        myConnections.push(this.previousConnection);
-      }
-      if (this.nextConnection) {
-        myConnections.push(this.nextConnection);
-      }
-      if (all || !this.collapsed_) {
-        for (let i = 0, input; (input = this.inputList[i]); i++) {
-          if (input.connection) {
-            myConnections.push(input.connection as RenderedConnection);
-          }
+    if (this.outputConnection) {
+      myConnections.push(this.outputConnection);
+    }
+    if (this.previousConnection) {
+      myConnections.push(this.previousConnection);
+    }
+    if (this.nextConnection) {
+      myConnections.push(this.nextConnection);
+    }
+    if (all || !this.collapsed_) {
+      for (let i = 0, input; (input = this.inputList[i]); i++) {
+        if (input.connection) {
+          myConnections.push(input.connection as RenderedConnection);
         }
       }
     }
@@ -1416,7 +1385,7 @@ export class BlockSvg
    * @internal
    */
   override lastConnectionInStack(
-    ignoreShadows: boolean
+    ignoreShadows: boolean,
   ): RenderedConnection | null {
     return super.lastConnectionInStack(ignoreShadows) as RenderedConnection;
   }
@@ -1433,7 +1402,7 @@ export class BlockSvg
    */
   override getMatchingConnection(
     otherBlock: Block,
-    conn: Connection
+    conn: Connection,
   ): RenderedConnection | null {
     return super.getMatchingConnection(otherBlock, conn) as RenderedConnection;
   }
@@ -1443,8 +1412,9 @@ export class BlockSvg
    *
    * @param type The type of the connection to create.
    * @returns A new connection of the specified type.
+   * @internal
    */
-  protected override makeConnection_(type: number): RenderedConnection {
+  override makeConnection_(type: ConnectionType): RenderedConnection {
     return new RenderedConnection(this, type);
   }
 
@@ -1473,22 +1443,6 @@ export class BlockSvg
    * up on screen, because that creates confusion for end-users.
    */
   override bumpNeighbours() {
-    if (this.bumpNeighboursPid) return;
-    const group = eventUtils.getGroup();
-
-    this.bumpNeighboursPid = setTimeout(() => {
-      const oldGroup = eventUtils.getGroup();
-      eventUtils.setGroup(group);
-      this.getRootBlock().bumpNeighboursInternal();
-      eventUtils.setGroup(oldGroup);
-      this.bumpNeighboursPid = 0;
-    }, config.bumpDelay);
-  }
-
-  /**
-   * Bumps unconnected blocks out of alignment.
-   */
-  private bumpNeighboursInternal() {
     const root = this.getRootBlock();
     if (
       this.isDeadOrDying() ||
@@ -1505,41 +1459,28 @@ export class BlockSvg
     for (const conn of this.getConnections_(false)) {
       if (conn.isSuperior()) {
         // Recurse down the block stack.
-        conn.targetBlock()?.bumpNeighboursInternal();
+        conn.targetBlock()?.bumpNeighbours();
       }
 
       for (const neighbour of conn.neighbours(config.snapRadius)) {
-        // Don't bump away from things that are in our stack.
         if (neighbourIsInStack(neighbour)) continue;
-        // If both connections are connected, that's fine.
         if (conn.isConnected() && neighbour.isConnected()) continue;
 
-        // Always bump the inferior connection.
         if (conn.isSuperior()) {
-          neighbour.bumpAwayFrom(conn);
+          neighbour.bumpAwayFrom(conn, /* initiatedByThis = */ false);
         } else {
-          conn.bumpAwayFrom(neighbour);
+          conn.bumpAwayFrom(neighbour, /* initiatedByThis = */ true);
         }
       }
     }
   }
 
   /**
-   * Schedule snapping to grid and bumping neighbours to occur after a brief
-   * delay.
-   *
-   * @internal
+   * Snap to grid, and then bump neighbouring blocks away at the end of the next
+   * render.
    */
   scheduleSnapAndBump() {
-    // Ensure that any snap and bump are part of this move's event group.
-    const group = eventUtils.getGroup();
-
-    setTimeout(() => {
-      eventUtils.setGroup(group);
-      this.snapToGrid();
-      eventUtils.setGroup(false);
-    }, config.bumpDelay / 2);
-
+    this.snapToGrid();
     this.bumpNeighbours();
   }
 
@@ -1549,13 +1490,14 @@ export class BlockSvg
    * or an insertion marker.
    *
    * @param sourceConnection The connection on the moving block's stack.
-   * @param targetConnection The connection that should stay stationary as this
-   *     block is positioned.
+   * @param originalOffsetToTarget The connection original offset to the target connection
+   * @param originalOffsetInBlock The connection original offset in its block
    * @internal
    */
   positionNearConnection(
     sourceConnection: RenderedConnection,
-    targetConnection: RenderedConnection
+    originalOffsetToTarget: {x: number; y: number},
+    originalOffsetInBlock: Coordinate,
   ) {
     // We only need to position the new block if it's before the existing one,
     // otherwise its position is set by the previous block.
@@ -1563,19 +1505,15 @@ export class BlockSvg
       sourceConnection.type === ConnectionType.NEXT_STATEMENT ||
       sourceConnection.type === ConnectionType.INPUT_VALUE
     ) {
-      const dx = targetConnection.x - sourceConnection.x;
-      const dy = targetConnection.y - sourceConnection.y;
+      // First move the block to match the orginal target connection position
+      let dx = originalOffsetToTarget.x;
+      let dy = originalOffsetToTarget.y;
+      // Then adjust its position according to the connection resize
+      dx += originalOffsetInBlock.x - sourceConnection.getOffsetInBlock().x;
+      dy += originalOffsetInBlock.y - sourceConnection.getOffsetInBlock().y;
 
       this.moveBy(dx, dy);
     }
-  }
-
-  /**
-   * @returns The first statement connection or null.
-   * @internal
-   */
-  override getFirstStatementConnection(): RenderedConnection | null {
-    return super.getFirstStatementConnection() as RenderedConnection | null;
   }
 
   /**
@@ -1600,46 +1538,16 @@ export class BlockSvg
    * @internal
    */
   queueRender(): Promise<void> {
-    return queueRender(this);
+    return renderManagement.queueRender(this);
   }
 
   /**
    * Immediately lays out and reflows a block based on its contents and
    * settings.
-   *
-   * @param opt_bubble If false, just render this block.
-   *   If true, also render block's parent, grandparent, etc.  Defaults to true.
    */
-  render(opt_bubble?: boolean) {
-    if (this.renderIsInProgress_) {
-      return; // Don't allow recursive renders.
-    }
-    this.renderIsInProgress_ = true;
-    try {
-      this.rendered = true;
-      dom.startTextWidthCache();
-
-      if (this.isCollapsed()) {
-        this.updateCollapsed_();
-      }
-      this.workspace.getRenderer().render(this);
-      this.updateConnectionLocations();
-
-      if (opt_bubble !== false) {
-        const parentBlock = this.getParent();
-        if (parentBlock) {
-          parentBlock.render(true);
-        } else {
-          // Top-most block. Fire an event to allow scrollbars to resize.
-          this.workspace.resizeContents();
-        }
-      }
-
-      dom.stopTextWidthCache();
-      this.updateMarkers_();
-    } finally {
-      this.renderIsInProgress_ = false;
-    }
+  render() {
+    this.queueRender();
+    renderManagement.triggerQueuedRenders();
   }
 
   /**
@@ -1649,12 +1557,16 @@ export class BlockSvg
    * @internal
    */
   renderEfficiently() {
-    this.rendered = true;
     dom.startTextWidthCache();
 
     if (this.isCollapsed()) {
-      this.updateCollapsed_();
+      this.updateCollapsed();
     }
+
+    if (!this.isEnabled()) {
+      this.updateDisabled();
+    }
+
     this.workspace.getRenderer().render(this);
     this.tightenChildrenEfficiently();
 
@@ -1691,42 +1603,6 @@ export class BlockSvg
     for (const input of this.inputList) {
       for (const field of input.fieldRow) {
         field.updateMarkers_();
-      }
-    }
-  }
-
-  /**
-   * Update all of the connections on this block with the new locations
-   * calculated during rendering.  Also move all of the connected blocks based
-   * on the new connection locations.
-   *
-   * @internal
-   */
-  updateConnectionLocations() {
-    const blockTL = this.getRelativeToSurfaceXY();
-    // Don't tighten previous or output connections because they are inferior
-    // connections.
-    if (this.previousConnection) {
-      this.previousConnection.moveToOffset(blockTL);
-    }
-    if (this.outputConnection) {
-      this.outputConnection.moveToOffset(blockTL);
-    }
-
-    for (let i = 0; i < this.inputList.length; i++) {
-      const conn = this.inputList[i].connection as RenderedConnection;
-      if (conn) {
-        conn.moveToOffset(blockTL);
-        if (conn.isConnected()) {
-          conn.tighten();
-        }
-      }
-    }
-
-    if (this.nextConnection) {
-      this.nextConnection.moveToOffset(blockTL);
-      if (this.nextConnection.isConnected()) {
-        this.nextConnection.tighten();
       }
     }
   }
@@ -1785,7 +1661,8 @@ export class BlockSvg
    * @internal
    */
   fadeForReplacement(add: boolean) {
-    this.pathObject.updateReplacementFade(add);
+    // TODO (7204): Remove these internal methods.
+    (this.pathObject as AnyDuringMigration).updateReplacementFade(add);
   }
 
   /**
@@ -1797,6 +1674,66 @@ export class BlockSvg
    * @internal
    */
   highlightShapeForInput(conn: RenderedConnection, add: boolean) {
-    this.pathObject.updateShapeForInputHighlight(conn, add);
+    // TODO (7204): Remove these internal methods.
+    (this.pathObject as AnyDuringMigration).updateShapeForInputHighlight(
+      conn,
+      add,
+    );
+  }
+
+  /** Sets the drag strategy for this block. */
+  setDragStrategy(dragStrategy: IDragStrategy) {
+    this.dragStrategy = dragStrategy;
+  }
+
+  /** Returns whether this block is movable or not. */
+  override isMovable(): boolean {
+    return this.dragStrategy.isMovable();
+  }
+
+  /** Starts a drag on the block. */
+  startDrag(e?: PointerEvent): void {
+    this.dragStrategy.startDrag(e);
+  }
+
+  /** Drags the block to the given location. */
+  drag(newLoc: Coordinate, e?: PointerEvent): void {
+    this.dragStrategy.drag(newLoc, e);
+  }
+
+  /** Ends the drag on the block. */
+  endDrag(e?: PointerEvent): void {
+    this.dragStrategy.endDrag(e);
+  }
+
+  /** Moves the block back to where it was at the start of a drag. */
+  revertDrag(): void {
+    this.dragStrategy.revertDrag();
+  }
+
+  /**
+   * Returns a representation of this block that can be displayed in a flyout.
+   */
+  toFlyoutInfo(): FlyoutItemInfo[] {
+    const json: FlyoutItemInfo = {
+      kind: 'BLOCK',
+      ...blocks.save(this),
+    };
+
+    const toRemove = new Set(['id', 'height', 'width', 'pinned', 'enabled']);
+
+    // Traverse the JSON recursively.
+    const traverseJson = function (json: {[key: string]: unknown}) {
+      for (const key in json) {
+        if (toRemove.has(key)) {
+          delete json[key];
+        } else if (typeof json[key] === 'object') {
+          traverseJson(json[key] as {[key: string]: unknown});
+        }
+      }
+    };
+
+    traverseJson(json as unknown as {[key: string]: unknown});
+    return [json];
   }
 }

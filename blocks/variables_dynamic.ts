@@ -4,32 +4,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @fileoverview Variable blocks for Blockly.
- * @suppress {checkTypes}
- */
+// Former goog.module ID: Blockly.libraryBlocks.variablesDynamic
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.libraryBlocks.variablesDynamic');
-
-import * as ContextMenu from '../core/contextmenu.js';
-import * as Extensions from '../core/extensions.js';
-import * as Variables from '../core/variables.js';
-import * as xml from '../core/utils/xml.js';
-import {Abstract as AbstractEvent} from '../core/events/events_abstract.js';
 import type {Block} from '../core/block.js';
-import type {
-  ContextMenuOption,
-  LegacyContextMenuOption,
-} from '../core/contextmenu_registry.js';
-import {FieldVariable} from '../core/field_variable.js';
-import {Msg} from '../core/msg.js';
-import type {WorkspaceSvg} from '../core/workspace_svg.js';
 import {
   createBlockDefinitionsFromJsonArray,
   defineBlocks,
 } from '../core/common.js';
+import * as ContextMenu from '../core/contextmenu.js';
+import type {
+  ContextMenuOption,
+  LegacyContextMenuOption,
+} from '../core/contextmenu_registry.js';
+import {Abstract as AbstractEvent} from '../core/events/events_abstract.js';
+import * as Extensions from '../core/extensions.js';
 import '../core/field_label.js';
+import {FieldVariable} from '../core/field_variable.js';
+import {Msg} from '../core/msg.js';
+import * as Variables from '../core/variables.js';
+import type {WorkspaceSvg} from '../core/workspace_svg.js';
 
 /**
  * A dictionary of the block definitions provided by this module.
@@ -95,15 +88,12 @@ const CUSTOM_CONTEXT_MENU_VARIABLE_GETTER_SETTER_MIXIN = {
    */
   customContextMenu: function (
     this: VariableBlock,
-    options: Array<ContextMenuOption | LegacyContextMenuOption>
+    options: Array<ContextMenuOption | LegacyContextMenuOption>,
   ) {
     // Getter blocks have the option to create a setter block, and vice versa.
     if (!this.isInFlyout) {
       let oppositeType;
       let contextMenuMsg;
-      const id = this.getFieldValue('VAR');
-      const variableModel = this.workspace.getVariableById(id);
-      const varType = variableModel!.type;
       if (this.type === 'variables_get_dynamic') {
         oppositeType = 'variables_set_dynamic';
         contextMenuMsg = Msg['VARIABLES_GET_CREATE_SET'];
@@ -112,19 +102,16 @@ const CUSTOM_CONTEXT_MENU_VARIABLE_GETTER_SETTER_MIXIN = {
         contextMenuMsg = Msg['VARIABLES_SET_CREATE_GET'];
       }
 
-      const name = this.getField('VAR')!.getText();
-      const xmlField = xml.createElement('field');
-      xmlField.setAttribute('name', 'VAR');
-      xmlField.setAttribute('variabletype', varType);
-      xmlField.appendChild(xml.createTextNode(name));
-      const xmlBlock = xml.createElement('block');
-      xmlBlock.setAttribute('type', oppositeType);
-      xmlBlock.appendChild(xmlField);
+      const varField = this.getField('VAR')!;
+      const newVarBlockState = {
+        type: oppositeType,
+        fields: {VAR: varField.saveState(true)},
+      };
 
       options.push({
         enabled: this.workspace.remainingCapacity() > 0,
-        text: contextMenuMsg.replace('%1', name),
-        callback: ContextMenu.callbackFactory(this, xmlBlock),
+        text: contextMenuMsg.replace('%1', varField.getText()),
+        callback: ContextMenu.callbackFactory(this, newVarBlockState),
       });
     } else {
       if (
@@ -199,7 +186,7 @@ const deleteOptionCallbackFactory = function (block: VariableBlock) {
 
 Extensions.registerMixin(
   'contextMenu_variableDynamicSetterGetter',
-  CUSTOM_CONTEXT_MENU_VARIABLE_GETTER_SETTER_MIXIN
+  CUSTOM_CONTEXT_MENU_VARIABLE_GETTER_SETTER_MIXIN,
 );
 
 // Register provided blocks.

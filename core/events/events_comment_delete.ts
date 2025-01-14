@@ -9,26 +9,28 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.CommentDelete');
+// Former goog.module ID: Blockly.Events.CommentDelete
 
+import type {WorkspaceComment} from '../comments/workspace_comment.js';
 import * as registry from '../registry.js';
-import type {WorkspaceComment} from '../workspace_comment.js';
-
-import {CommentBase, CommentBaseJson} from './events_comment_base.js';
-import * as eventUtils from './utils.js';
+import * as comments from '../serialization/workspace_comments.js';
 import * as utilsXml from '../utils/xml.js';
-import * as Xml from '../xml.js';
 import type {Workspace} from '../workspace.js';
+import * as Xml from '../xml.js';
+import {CommentBase, CommentBaseJson} from './events_comment_base.js';
+import {EventType} from './type.js';
 
 /**
  * Notifies listeners that a workspace comment has been deleted.
  */
 export class CommentDelete extends CommentBase {
-  override type = eventUtils.COMMENT_DELETE;
+  override type = EventType.COMMENT_DELETE;
 
   /** The XML representation of the deleted workspace comment. */
   xml?: Element;
+
+  /** The JSON representation of the created workspace comment. */
+  json?: comments.State;
 
   /**
    * @param opt_comment The deleted comment.
@@ -41,7 +43,8 @@ export class CommentDelete extends CommentBase {
       return; // Blank event to be populated by fromJson.
     }
 
-    this.xml = opt_comment.toXmlWithXY();
+    this.xml = Xml.saveWorkspaceComment(opt_comment);
+    this.json = comments.save(opt_comment, {addCoordinates: true});
   }
 
   /**
@@ -63,10 +66,17 @@ export class CommentDelete extends CommentBase {
     if (!this.xml) {
       throw new Error(
         'The comment XML is undefined. Either pass a comment to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
+      );
+    }
+    if (!this.json) {
+      throw new Error(
+        'The comment JSON is undefined. Either pass a block to ' +
+          'the constructor, or call fromJson',
       );
     }
     json['xml'] = Xml.domToText(this.xml);
+    json['json'] = this.json;
     return json;
   }
 
@@ -82,24 +92,22 @@ export class CommentDelete extends CommentBase {
   static fromJson(
     json: CommentDeleteJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): CommentDelete {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new CommentDelete()
+      event ?? new CommentDelete(),
     ) as CommentDelete;
     newEvent.xml = utilsXml.textToDom(json['xml']);
+    newEvent.json = json['json'];
     return newEvent;
   }
 }
 
 export interface CommentDeleteJson extends CommentBaseJson {
   xml: string;
+  json: object;
 }
 
-registry.register(
-  registry.Type.EVENT,
-  eventUtils.COMMENT_DELETE,
-  CommentDelete
-);
+registry.register(registry.Type.EVENT, EventType.COMMENT_DELETE, CommentDelete);

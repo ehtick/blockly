@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.ConstantProvider');
+// Former goog.module ID: Blockly.blockRendering.ConstantProvider
 
 import {ConnectionType} from '../../connection_type.js';
 import type {RenderedConnection} from '../../rendered_connection.js';
@@ -54,8 +53,8 @@ export interface PuzzleTab {
   type: number;
   width: number;
   height: number;
-  pathDown: string | ((p1: number) => string);
-  pathUp: string | ((p1: number) => string);
+  pathDown: string;
+  pathUp: string;
 }
 
 /**
@@ -99,6 +98,22 @@ export type Shape = BaseShape | DynamicShape;
  */
 export function isDynamicShape(shape: Shape): shape is DynamicShape {
   return (shape as DynamicShape).isDynamic;
+}
+
+/** Returns whether the shape is a puzzle tab or not. */
+export function isPuzzleTab(shape: Shape): shape is PuzzleTab {
+  return (
+    (shape as PuzzleTab).pathDown !== undefined &&
+    (shape as PuzzleTab).pathUp !== undefined
+  );
+}
+
+/** Returns whether the shape is a notch or not. */
+export function isNotch(shape: Shape): shape is Notch {
+  return (
+    (shape as Notch).pathLeft !== undefined &&
+    (shape as Notch).pathRight !== undefined
+  );
 }
 
 /**
@@ -551,7 +566,7 @@ export class ConstantProvider {
       'Hg',
       this.FIELD_TEXT_FONTSIZE + 'pt',
       this.FIELD_TEXT_FONTWEIGHT,
-      this.FIELD_TEXT_FONTFAMILY
+      this.FIELD_TEXT_FONTFAMILY,
     );
 
     this.FIELD_TEXT_HEIGHT = fontMetrics.height;
@@ -602,7 +617,7 @@ export class ConstantProvider {
   getBlockStyle(blockStyleName: string | null): BlockStyle {
     return (
       this.blockStyles[blockStyleName || ''] ||
-      (blockStyleName && blockStyleName.indexOf('auto_') === 0
+      (blockStyleName && blockStyleName.startsWith('auto_')
         ? this.getBlockStyleForColour(blockStyleName.substring(5)).style
         : this.createBlockStyle_('#000000'))
     );
@@ -633,7 +648,7 @@ export class ConstantProvider {
     }
     // Validate required properties.
     const parsedColour = parsing.parseBlockColour(
-      valid['colourPrimary'] || '#000'
+      valid['colourPrimary'] || '#000',
     );
     valid.colourPrimary = parsedColour.hex;
     valid.colourSecondary = valid['colourSecondary']
@@ -820,14 +835,14 @@ export class ConstantProvider {
       'a',
       '0 0,0',
       radius,
-      svgPaths.point(-radius, radius)
+      svgPaths.point(-radius, radius),
     );
 
     const innerBottomLeftCorner = svgPaths.arc(
       'a',
       '0 0,0',
       radius,
-      svgPaths.point(radius, radius)
+      svgPaths.point(radius, radius),
     );
 
     return {
@@ -854,7 +869,7 @@ export class ConstantProvider {
       'a',
       '0 0,1',
       radius,
-      svgPaths.point(radius, radius)
+      svgPaths.point(radius, radius),
     );
 
     /** SVG path for drawing the rounded bottom-left corner. */
@@ -862,7 +877,7 @@ export class ConstantProvider {
       'a',
       '0 0,1',
       radius,
-      svgPaths.point(-radius, -radius)
+      svgPaths.point(-radius, -radius),
     );
 
     /** SVG path for drawing the rounded bottom-right corner. */
@@ -870,7 +885,7 @@ export class ConstantProvider {
       'a',
       '0 0,1',
       radius,
-      svgPaths.point(-radius, radius)
+      svgPaths.point(-radius, radius),
     );
 
     return {
@@ -908,8 +923,6 @@ export class ConstantProvider {
    * @param svg The root of the workspace's SVG.
    * @param tagName The name to use for the CSS style tag.
    * @param selector The CSS selector to use.
-   * @suppress {strictModuleDepCheck} Debug renderer only included in
-   * playground.
    */
   createDom(svg: SVGElement, tagName: string, selector: string) {
     this.injectCSS_(tagName, selector);
@@ -937,12 +950,12 @@ export class ConstantProvider {
     const embossFilter = dom.createSvgElement(
       Svg.FILTER,
       {'id': 'blocklyEmbossFilter' + this.randomIdentifier},
-      this.defs
+      this.defs,
     );
     dom.createSvgElement(
       Svg.FEGAUSSIANBLUR,
       {'in': 'SourceAlpha', 'stdDeviation': 1, 'result': 'blur'},
-      embossFilter
+      embossFilter,
     );
     const feSpecularLighting = dom.createSvgElement(
       Svg.FESPECULARLIGHTING,
@@ -954,12 +967,12 @@ export class ConstantProvider {
         'lighting-color': 'white',
         'result': 'specOut',
       },
-      embossFilter
+      embossFilter,
     );
     dom.createSvgElement(
       Svg.FEPOINTLIGHT,
       {'x': -5000, 'y': -10000, 'z': 20000},
-      feSpecularLighting
+      feSpecularLighting,
     );
     dom.createSvgElement(
       Svg.FECOMPOSITE,
@@ -969,7 +982,7 @@ export class ConstantProvider {
         'operator': 'in',
         'result': 'specOut',
       },
-      embossFilter
+      embossFilter,
     );
     dom.createSvgElement(
       Svg.FECOMPOSITE,
@@ -982,7 +995,7 @@ export class ConstantProvider {
         'k3': 1,
         'k4': 0,
       },
-      embossFilter
+      embossFilter,
     );
     this.embossFilterId = embossFilter.id;
     this.embossFilter = embossFilter;
@@ -1002,17 +1015,17 @@ export class ConstantProvider {
         'width': 10,
         'height': 10,
       },
-      this.defs
+      this.defs,
     );
     dom.createSvgElement(
       Svg.RECT,
       {'width': 10, 'height': 10, 'fill': '#aaa'},
-      disabledPattern
+      disabledPattern,
     );
     dom.createSvgElement(
       Svg.PATH,
       {'d': 'M 0 0 L 10 10 M 10 0 L 0 10', 'stroke': '#cc0'},
-      disabledPattern
+      disabledPattern,
     );
     this.disabledPatternId = disabledPattern.id;
     this.disabledPattern = disabledPattern;
@@ -1036,18 +1049,18 @@ export class ConstantProvider {
           'y': '-30%',
           'x': '-40%',
         },
-        this.defs
+        this.defs,
       );
       // Set all gaussian blur pixels to 1 opacity before applying flood
       const debugComponentTransfer = dom.createSvgElement(
         Svg.FECOMPONENTTRANSFER,
         {'result': 'outBlur'},
-        debugFilter
+        debugFilter,
       );
       dom.createSvgElement(
         Svg.FEFUNCA,
         {'type': 'table', 'tableValues': '0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'},
-        debugComponentTransfer
+        debugComponentTransfer,
       );
       // Color the highlight
       dom.createSvgElement(
@@ -1057,7 +1070,7 @@ export class ConstantProvider {
           'flood-opacity': 0.5,
           'result': 'outColor',
         },
-        debugFilter
+        debugFilter,
       );
       dom.createSvgElement(
         Svg.FECOMPOSITE,
@@ -1067,7 +1080,7 @@ export class ConstantProvider {
           'operator': 'in',
           'result': 'outGlow',
         },
-        debugFilter
+        debugFilter,
       );
       this.debugFilterId = debugFilter.id;
       this.debugFilter = debugFilter;

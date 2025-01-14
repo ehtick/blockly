@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.utils.toolbox');
+// Former goog.module ID: Blockly.utils.toolbox
 
 import type {ConnectionState} from '../serialization/blocks.js';
 import type {CssConfig as CategoryCssConfig} from '../toolbox/category.js';
@@ -22,6 +21,7 @@ export interface BlockInfo {
   type?: string;
   gap?: string | number;
   disabled?: string | boolean;
+  disabledReasons?: string[];
   enabled?: boolean;
   id?: string;
   x?: number;
@@ -177,7 +177,7 @@ export enum Position {
  * @internal
  */
 export function convertToolboxDefToJson(
-  toolboxDef: ToolboxDefinition | null
+  toolboxDef: ToolboxDefinition | null,
 ): ToolboxInfo | null {
   if (!toolboxDef) {
     return null;
@@ -217,7 +217,7 @@ function validateToolbox(toolboxJson: ToolboxInfo) {
           ' Please supply either ' +
           FLYOUT_TOOLBOX_KIND +
           ' or ' +
-          CATEGORY_TOOLBOX_KIND
+          CATEGORY_TOOLBOX_KIND,
       );
     }
   }
@@ -234,7 +234,7 @@ function validateToolbox(toolboxJson: ToolboxInfo) {
  * @internal
  */
 export function convertFlyoutDefToJsonArray(
-  flyoutDef: FlyoutDefinition | null
+  flyoutDef: FlyoutDefinition | null,
 ): FlyoutItemInfoArray {
   if (!flyoutDef) {
     return [];
@@ -285,9 +285,9 @@ function hasCategoriesInternal(toolboxJson: ToolboxInfo | null): boolean {
     return toolboxKind === CATEGORY_TOOLBOX_KIND;
   }
 
-  const categories = toolboxJson['contents'].filter(function (item) {
-    return item['kind'].toUpperCase() === 'CATEGORY';
-  });
+  const categories = toolboxJson['contents'].filter(
+    (item) => item['kind'].toUpperCase() === 'CATEGORY',
+  );
   return !!categories.length;
 }
 
@@ -306,7 +306,7 @@ export function isCategoryCollapsible(categoryInfo: CategoryInfo): boolean {
   const categories = (categoryInfo as AnyDuringMigration)['contents'].filter(
     function (item: AnyDuringMigration) {
       return item['kind'].toUpperCase() === 'CATEGORY';
-    }
+    },
   );
   return !!categories.length;
 }
@@ -333,7 +333,7 @@ function convertToToolboxJson(toolboxDef: Node): ToolboxInfo {
  * @returns A list of objects in the toolbox.
  */
 function xmlToJsonArray(
-  toolboxDef: Node | Node[] | NodeList
+  toolboxDef: Node | Node[] | NodeList,
 ): FlyoutItemInfoArray | ToolboxItemInfo[] {
   const arr = [];
   // If it is a node it will have children.
@@ -382,7 +382,7 @@ function addAttributes(node: Node, obj: AnyDuringMigration) {
     // AnyDuringMigration because:  Property 'attributes' does not exist on type
     // 'Node'.
     const attr = (node as AnyDuringMigration).attributes[j];
-    if (attr.nodeName.indexOf('css-') > -1) {
+    if (attr.nodeName.includes('css-')) {
       obj['cssconfig'] = obj['cssconfig'] || {};
       obj['cssconfig'][attr.nodeName.replace('css-', '')] = attr.value;
     } else {
@@ -398,7 +398,7 @@ function addAttributes(node: Node, obj: AnyDuringMigration) {
  * @returns DOM tree of blocks, or null.
  */
 export function parseToolboxTree(
-  toolboxDef: Element | null | string
+  toolboxDef: Element | null | string,
 ): Element | null {
   let parsedToolboxDef: Element | null = null;
   if (toolboxDef) {

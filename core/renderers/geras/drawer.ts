@@ -4,14 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.geras.Drawer');
+// Former goog.module ID: Blockly.geras.Drawer
 
 import type {BlockSvg} from '../../block_svg.js';
 import * as svgPaths from '../../utils/svg_paths.js';
 import {Drawer as BaseDrawer} from '../common/drawer.js';
 import type {Row} from '../measurables/row.js';
-
 import type {ConstantProvider} from './constants.js';
 import {Highlighter} from './highlighter.js';
 import type {RenderInfo} from './info.js';
@@ -39,9 +37,9 @@ export class Drawer extends BaseDrawer {
   }
 
   override draw() {
-    this.hideHiddenIcons_();
     this.drawOutline_();
     this.drawInternals_();
+    this.updateConnectionHighlights();
 
     const pathObject = this.block_.pathObject as PathObject;
     pathObject.setPath(this.outlinePath_ + '\n' + this.inlinePath_);
@@ -119,7 +117,7 @@ export class Drawer extends BaseDrawer {
       }
       input.connectionModel.setOffsetInBlock(
         connX,
-        yPos + input.connectionOffsetY + this.constants_.DARK_PATH_OFFSET
+        yPos + input.connectionOffsetY + this.constants_.DARK_PATH_OFFSET,
       );
     }
   }
@@ -135,7 +133,7 @@ export class Drawer extends BaseDrawer {
       }
       input.connectionModel.setOffsetInBlock(
         connX,
-        row.yPos + this.constants_.DARK_PATH_OFFSET
+        row.yPos + this.constants_.DARK_PATH_OFFSET,
       );
     }
   }
@@ -161,7 +159,7 @@ export class Drawer extends BaseDrawer {
         (this.info_.RTL ? -x : x) + this.constants_.DARK_PATH_OFFSET / 2;
       connInfo.connectionModel.setOffsetInBlock(
         connX,
-        bottomRow.baseline + this.constants_.DARK_PATH_OFFSET
+        bottomRow.baseline + this.constants_.DARK_PATH_OFFSET,
       );
     }
   }

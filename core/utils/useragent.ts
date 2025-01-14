@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.utils.userAgent');
+// Former goog.module ID: Blockly.utils.userAgent
 
 /** The raw useragent string. */
 let rawUserAgent: string;
@@ -38,7 +37,7 @@ let isMobile: boolean;
    * @returns True if name is present.
    */
   function has(name: string): boolean {
-    return rawUpper.indexOf(name.toUpperCase()) !== -1;
+    return rawUpper.includes(name.toUpperCase());
   }
 
   // Browsers.  Logic from:

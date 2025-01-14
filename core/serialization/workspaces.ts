@@ -4,14 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.serialization.workspaces');
+// Former goog.module ID: Blockly.serialization.workspaces
 
+import {EventType} from '../events/type.js';
 import * as eventUtils from '../events/utils.js';
 import type {ISerializer} from '../interfaces/i_serializer.js';
 import * as registry from '../registry.js';
 import * as dom from '../utils/dom.js';
-// eslint-disable-next-line no-unused-vars
 import type {Workspace} from '../workspace.js';
 import {WorkspaceSvg} from '../workspace_svg.js';
 
@@ -46,7 +45,7 @@ export function save(workspace: Workspace): {
 export function load(
   state: {[key: string]: AnyDuringMigration},
   workspace: Workspace,
-  {recordUndo = false}: {recordUndo?: boolean} = {}
+  {recordUndo = false}: {recordUndo?: boolean} = {},
 ) {
   const serializerMap = registry.getAllItems(registry.Type.SERIALIZER, true);
   if (!serializerMap) {
@@ -54,7 +53,7 @@ export function load(
   }
 
   const deserializers = Object.entries(serializerMap).sort(
-    (a, b) => (b[1] as ISerializer)!.priority - (a[1] as ISerializer)!.priority
+    (a, b) => (b[1] as ISerializer)!.priority - (a[1] as ISerializer)!.priority,
   );
 
   const prevRecordUndo = eventUtils.getRecordUndo();
@@ -76,8 +75,7 @@ export function load(
   }
 
   // reverse() is destructive, so we have to re-reverse to correct the order.
-  for (let [name, deserializer] of deserializers.reverse()) {
-    name = name;
+  for (const [name, deserializer] of deserializers.reverse()) {
     const pluginState = state[name];
     if (pluginState) {
       (deserializer as ISerializer)?.load(state[name], workspace);
@@ -89,7 +87,7 @@ export function load(
   }
   dom.stopTextWidthCache();
 
-  eventUtils.fire(new (eventUtils.get(eventUtils.FINISHED_LOADING))(workspace));
+  eventUtils.fire(new (eventUtils.get(EventType.FINISHED_LOADING))(workspace));
 
   eventUtils.setGroup(existingGroup);
   eventUtils.setRecordUndo(prevRecordUndo);

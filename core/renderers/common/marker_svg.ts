@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.MarkerSvg');
+// Former goog.module ID: Blockly.blockRendering.MarkerSvg
 
 // Unused import preserved for side-effects. Remove if unneeded.
 import '../../events/events_marker_move.js';
@@ -13,8 +12,10 @@ import '../../events/events_marker_move.js';
 import type {BlockSvg} from '../../block_svg.js';
 import type {Connection} from '../../connection.js';
 import {ConnectionType} from '../../connection_type.js';
+import {EventType} from '../../events/type.js';
 import * as eventUtils from '../../events/utils.js';
 import type {Field} from '../../field.js';
+import {FlyoutButton} from '../../flyout_button.js';
 import type {IASTNodeLocationSvg} from '../../interfaces/i_ast_node_location_svg.js';
 import {ASTNode} from '../../keyboard_nav/ast_node.js';
 import type {Marker} from '../../keyboard_nav/marker.js';
@@ -23,7 +24,6 @@ import * as dom from '../../utils/dom.js';
 import {Svg} from '../../utils/svg.js';
 import * as svgPaths from '../../utils/svg_paths.js';
 import type {WorkspaceSvg} from '../../workspace_svg.js';
-
 import type {ConstantProvider, Notch, PuzzleTab} from './constants.js';
 
 /** The name of the CSS class for a cursor. */
@@ -47,7 +47,7 @@ export class MarkerSvg {
    * The workspace, field, or block that the marker SVG element should be
    * attached to.
    */
-  private parent: IASTNodeLocationSvg | null = null;
+  protected parent: IASTNodeLocationSvg | null = null;
 
   /** The current SVG element for the marker. */
   currentMarkerSvg: SVGElement | null = null;
@@ -73,9 +73,9 @@ export class MarkerSvg {
    * @param marker The marker to draw.
    */
   constructor(
-    private readonly workspace: WorkspaceSvg,
+    protected readonly workspace: WorkspaceSvg,
     constants: ConstantProvider,
-    private readonly marker: Marker
+    protected readonly marker: Marker,
   ) {
     this.constants_ = constants;
 
@@ -176,9 +176,11 @@ export class MarkerSvg {
 
     // Ensures the marker will be visible immediately after the move.
     const animate = this.currentMarkerSvg!.childNodes[0];
-    if (animate !== undefined) {
-      (animate as SVGAnimationElement).beginElement &&
-        (animate as SVGAnimationElement).beginElement();
+    if (
+      animate !== undefined &&
+      (animate as SVGAnimationElement).beginElement
+    ) {
+      (animate as SVGAnimationElement).beginElement();
     }
   }
 
@@ -206,6 +208,8 @@ export class MarkerSvg {
       this.showWithCoordinates_(curNode);
     } else if (curNode.getType() === ASTNode.types.STACK) {
       this.showWithStack_(curNode);
+    } else if (curNode.getType() === ASTNode.types.BUTTON) {
+      this.showWithButton_(curNode);
     }
   }
 
@@ -219,7 +223,7 @@ export class MarkerSvg {
    *
    * @param curNode The node to draw the marker for.
    */
-  private showWithBlockPrevOutput(curNode: ASTNode) {
+  protected showWithBlockPrevOutput(curNode: ASTNode) {
     const block = curNode.getSourceBlock() as BlockSvg;
     const width = block.width;
     const height = block.height;
@@ -228,17 +232,17 @@ export class MarkerSvg {
 
     if (block.previousConnection) {
       const connectionShape = this.constants_.shapeFor(
-        block.previousConnection
+        block.previousConnection,
       ) as Notch;
       this.positionPrevious_(
         width,
         markerOffset,
         markerHeight,
-        connectionShape
+        connectionShape,
       );
     } else if (block.outputConnection) {
       const connectionShape = this.constants_.shapeFor(
-        block.outputConnection
+        block.outputConnection,
       ) as PuzzleTab;
       this.positionOutput_(width, height, connectionShape);
     } else {
@@ -379,6 +383,38 @@ export class MarkerSvg {
     this.showCurrent_();
   }
 
+  /**
+   * Position and display the marker for a flyout button.
+   * This is a box with extra padding around the button.
+   *
+   * @param curNode The node to draw the marker for.
+   */
+  protected showWithButton_(curNode: ASTNode) {
+    const button = curNode.getLocation() as FlyoutButton;
+
+    // Gets the height and width of entire stack.
+    const heightWidth = {height: button.height, width: button.width};
+
+    // Add padding so that being on a button looks similar to being on a stack.
+    const width = heightWidth.width + this.constants_.CURSOR_STACK_PADDING;
+    const height = heightWidth.height + this.constants_.CURSOR_STACK_PADDING;
+
+    // Shift the rectangle slightly to upper left so padding is equal on all
+    // sides.
+    const xPadding = -this.constants_.CURSOR_STACK_PADDING / 2;
+    const yPadding = -this.constants_.CURSOR_STACK_PADDING / 2;
+
+    let x = xPadding;
+    const y = yPadding;
+
+    if (this.workspace.RTL) {
+      x = -(width + xPadding);
+    }
+    this.positionRect_(x, y, width, height);
+    this.setParent_(button);
+    this.showCurrent_();
+  }
+
   /** Show the current marker. */
   protected showCurrent_() {
     this.hide();
@@ -402,7 +438,7 @@ export class MarkerSvg {
   protected positionBlock_(
     width: number,
     markerOffset: number,
-    markerHeight: number
+    markerHeight: number,
   ) {
     const markerPath =
       svgPaths.moveBy(-markerOffset, markerHeight) +
@@ -411,7 +447,7 @@ export class MarkerSvg {
       svgPaths.lineOnAxis('V', markerHeight);
     if (!this.markerBlock_) {
       throw new Error(
-        'createDom should be called before positioning the marker'
+        'createDom should be called before positioning the marker',
       );
     }
     this.markerBlock_.setAttribute('d', markerPath);
@@ -443,7 +479,7 @@ export class MarkerSvg {
         ',' +
         y +
         ')' +
-        (this.workspace.RTL ? ' scale(-1 1)' : '')
+        (this.workspace.RTL ? ' scale(-1 1)' : ''),
     );
     this.currentMarkerSvg = this.markerInput_;
   }
@@ -477,11 +513,11 @@ export class MarkerSvg {
   protected positionOutput_(
     width: number,
     height: number,
-    connectionShape: PuzzleTab
+    connectionShape: PuzzleTab,
   ) {
     if (!this.markerBlock_) {
       throw new Error(
-        'createDom should be called before positioning the output'
+        'createDom should be called before positioning the output',
       );
     }
     const markerPath =
@@ -512,11 +548,11 @@ export class MarkerSvg {
     width: number,
     markerOffset: number,
     markerHeight: number,
-    connectionShape: Notch
+    connectionShape: Notch,
   ) {
     if (!this.markerBlock_) {
       throw new Error(
-        'createDom should be called before positioning the previous connection marker'
+        'createDom should be called before positioning the previous connection marker',
       );
     }
     const markerPath =
@@ -584,13 +620,13 @@ export class MarkerSvg {
    * @param oldNode The old node the marker used to be on.
    * @param curNode The new node the marker is currently on.
    */
-  private fireMarkerEvent(oldNode: ASTNode, curNode: ASTNode) {
+  protected fireMarkerEvent(oldNode: ASTNode, curNode: ASTNode) {
     const curBlock = curNode.getSourceBlock();
-    const event = new (eventUtils.get(eventUtils.MARKER_MOVE))(
+    const event = new (eventUtils.get(EventType.MARKER_MOVE))(
       curBlock,
       this.isCursor(),
       oldNode,
-      curNode
+      curNode,
     );
     eventUtils.fire(event);
   }
@@ -632,7 +668,7 @@ export class MarkerSvg {
         'width': this.constants_.CURSOR_WS_WIDTH,
         'height': this.constants_.WS_CURSOR_HEIGHT,
       },
-      this.svgGroup_
+      this.svgGroup_,
     );
 
     // A horizontal line used to represent a workspace coordinate or next
@@ -642,9 +678,8 @@ export class MarkerSvg {
       {
         'width': this.constants_.CURSOR_WS_WIDTH,
         'height': this.constants_.WS_CURSOR_HEIGHT,
-        'style': 'display: none',
       },
-      this.markerSvg_
+      this.markerSvg_,
     );
 
     // A filled in rectangle used to represent a stack.
@@ -654,16 +689,15 @@ export class MarkerSvg {
         'class': 'blocklyVerticalMarker',
         'rx': 10,
         'ry': 10,
-        'style': 'display: none',
       },
-      this.markerSvg_
+      this.markerSvg_,
     );
 
     // A filled in puzzle piece used to represent an input value.
     this.markerInput_ = dom.createSvgElement(
       Svg.PATH,
-      {'transform': '', 'style': 'display: none'},
-      this.markerSvg_
+      {'transform': ''},
+      this.markerSvg_,
     );
 
     // A path used to represent a previous connection and a block, an output
@@ -672,12 +706,13 @@ export class MarkerSvg {
       Svg.PATH,
       {
         'transform': '',
-        'style': 'display: none',
         'fill': 'none',
         'stroke-width': this.constants_.CURSOR_STROKE_WIDTH,
       },
-      this.markerSvg_
+      this.markerSvg_,
     );
+
+    this.hide();
 
     // Markers and stack markers don't blink.
     if (this.isCursor()) {
@@ -687,7 +722,7 @@ export class MarkerSvg {
       dom.createSvgElement(
         Svg.ANIMATE,
         {...blinkProperties, attributeName: 'stroke'},
-        this.markerBlock_
+        this.markerBlock_,
       );
     }
 
@@ -707,7 +742,7 @@ export class MarkerSvg {
       !this.markerBlock_
     ) {
       throw new Error(
-        'createDom should be called before applying color to the markerj'
+        'createDom should be called before applying color to the markerj',
       );
     }
     this.markerSvgLine_.setAttribute('fill', this.colour_);

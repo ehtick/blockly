@@ -4,11 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.utils.svgMath');
+// Former goog.module ID: Blockly.utils.svgMath
 
 import type {WorkspaceSvg} from '../workspace_svg.js';
-
 import {Coordinate} from './coordinate.js';
 import {Rect} from './rect.js';
 import * as style from './style.js';
@@ -63,7 +61,7 @@ export function getRelativeXY(element: Element): Coordinate {
 
   // Then check for style = transform: translate(...) or translate3d(...)
   const style = element.getAttribute('style');
-  if (style && style.indexOf('translate') > -1) {
+  if (style && style.includes('translate')) {
     const styleComponents = style.match(XY_STYLE_REGEX);
     if (styleComponents) {
       xy.x += Number(styleComponents[1]);
@@ -88,10 +86,10 @@ export function getInjectionDivXY(element: Element): Coordinate {
   let y = 0;
   while (element) {
     const xy = getRelativeXY(element);
-    x = x + xy.x;
-    y = y + xy.y;
+    x += xy.x;
+    y += xy.y;
     const classes = element.getAttribute('class') || '';
-    if ((' ' + classes + ' ').indexOf(' injectionDiv ') !== -1) {
+    if ((' ' + classes + ' ').includes(' injectionDiv ')) {
       break;
     }
     element = element.parentNode as Element;
@@ -114,7 +112,7 @@ export function getViewportBBox(): Rect {
     scrollOffset.y,
     document.documentElement.clientHeight + scrollOffset.y,
     scrollOffset.x,
-    document.documentElement.clientWidth + scrollOffset.x
+    document.documentElement.clientWidth + scrollOffset.x,
   );
 }
 
@@ -129,7 +127,7 @@ export function getDocumentScroll(): Coordinate {
   const win = window;
   return new Coordinate(
     win.pageXOffset || el.scrollLeft,
-    win.pageYOffset || el.scrollTop
+    win.pageYOffset || el.scrollTop,
   );
 }
 
@@ -143,7 +141,7 @@ export function getDocumentScroll(): Coordinate {
  */
 export function screenToWsCoordinates(
   ws: WorkspaceSvg,
-  screenCoordinates: Coordinate
+  screenCoordinates: Coordinate,
 ): Coordinate {
   const screenX = screenCoordinates.x;
   const screenY = screenCoordinates.y;
@@ -157,7 +155,7 @@ export function screenToWsCoordinates(
   // The client coordinates offset by the injection div's upper left corner.
   const clientOffsetPixels = new Coordinate(
     screenX - boundingRect.left,
-    screenY - boundingRect.top
+    screenY - boundingRect.top,
   );
 
   // The offset in pixels between the main workspace's origin and the upper
@@ -168,11 +166,39 @@ export function screenToWsCoordinates(
   // main workspace.
   const finalOffsetPixels = Coordinate.difference(
     clientOffsetPixels,
-    mainOffsetPixels
+    mainOffsetPixels,
   );
   // The position in main workspace coordinates.
   const finalOffsetMainWs = finalOffsetPixels.scale(1 / ws.scale);
   return finalOffsetMainWs;
+}
+
+/**
+ * Converts workspace coordinates to screen coordinates.
+ *
+ * @param ws The workspace to get the coordinates out of.
+ * @param workspaceCoordinates  The workspace coordinates to be converted
+ *     to screen coordinates.
+ * @returns The screen coordinates.
+ */
+export function wsToScreenCoordinates(
+  ws: WorkspaceSvg,
+  workspaceCoordinates: Coordinate,
+): Coordinate {
+  // Fix workspace scale vs browser scale.
+  const screenCoordinates = workspaceCoordinates.scale(ws.scale);
+  const screenX = screenCoordinates.x;
+  const screenY = screenCoordinates.y;
+
+  const injectionDiv = ws.getInjectionDiv();
+  const boundingRect = injectionDiv.getBoundingClientRect();
+  const mainOffset = ws.getOriginOffsetInPixels();
+
+  // Fix workspace origin vs browser origin.
+  return new Coordinate(
+    screenX + boundingRect.left + mainOffset.x,
+    screenY + boundingRect.top + mainOffset.y,
+  );
 }
 
 export const TEST_ONLY = {

@@ -4,11 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.IASTNodeLocationWithBlock');
+// Former goog.module ID: Blockly.IASTNodeLocationWithBlock
 
-import type {IASTNodeLocation} from './i_ast_node_location.js';
 import type {Block} from '../block.js';
+import type {IASTNodeLocation} from './i_ast_node_location.js';
 
 /**
  * An AST node location that has an associated block.

@@ -10,13 +10,11 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.Abstract');
+// Former goog.module ID: Blockly.Events.Abstract
 
 import * as common from '../common.js';
 import type {Workspace} from '../workspace.js';
-
-import * as eventUtils from './utils.js';
+import {getGroup, getRecordUndo} from './utils.js';
 
 /**
  * Abstract class for an event.
@@ -49,8 +47,8 @@ export abstract class Abstract {
   type = '';
 
   constructor() {
-    this.group = eventUtils.getGroup();
-    this.recordUndo = eventUtils.getRecordUndo();
+    this.group = getGroup();
+    this.recordUndo = getRecordUndo();
   }
 
   /**
@@ -77,7 +75,7 @@ export abstract class Abstract {
   static fromJson(
     json: AbstractEventJson,
     workspace: Workspace,
-    event: any
+    event: any,
   ): Abstract {
     event.isBlank = false;
     event.group = json['group'] || '';
@@ -109,7 +107,6 @@ export abstract class Abstract {
    *
    * @returns The workspace the event belongs to.
    * @throws {Error} if workspace is null.
-   * @internal
    */
   getEventWorkspace_(): Workspace {
     let workspace;
@@ -119,7 +116,7 @@ export abstract class Abstract {
     if (!workspace) {
       throw Error(
         'Workspace is null. Event must have been generated from real' +
-          ' Blockly events.'
+          ' Blockly events.',
       );
     }
     return workspace;

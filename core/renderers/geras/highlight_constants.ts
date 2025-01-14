@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.geras.HighlightConstantProvider');
+// Former goog.module ID: Blockly.geras.HighlightConstantProvider
 
 import * as svgPaths from '../../utils/svg_paths.js';
 import type {ConstantProvider} from '../common/constants.js';
@@ -151,14 +150,14 @@ export class HighlightConstantProvider {
         'a',
         '0 0,0',
         radius,
-        svgPaths.point(-distance45outside - offset, radius - distance45outside)
+        svgPaths.point(-distance45outside - offset, radius - distance45outside),
       );
 
     const pathBottomRtl = svgPaths.arc(
       'a',
       '0 0,0',
       radius + offset,
-      svgPaths.point(radius + offset, radius + offset)
+      svgPaths.point(radius + offset, radius + offset),
     );
 
     const pathBottomLtr =
@@ -167,7 +166,7 @@ export class HighlightConstantProvider {
         'a',
         '0 0,0',
         radius + offset,
-        svgPaths.point(radius - distance45outside, distance45outside + offset)
+        svgPaths.point(radius - distance45outside, distance45outside + offset),
       );
 
     return {
@@ -204,7 +203,7 @@ export class HighlightConstantProvider {
         'a',
         '0 0,1',
         radius - offset,
-        svgPaths.point(radius - topLeftStartX, -topLeftStartY + offset)
+        svgPaths.point(radius - topLeftStartX, -topLeftStartY + offset),
       );
     /**
      * SVG path for drawing the highlight on the rounded top-left corner.
@@ -215,7 +214,7 @@ export class HighlightConstantProvider {
         'a',
         '0 0,1',
         radius - offset,
-        svgPaths.point(radius, -radius + offset)
+        svgPaths.point(radius, -radius + offset),
       );
 
     const bottomLeftStartX = distance45inside;
@@ -226,7 +225,7 @@ export class HighlightConstantProvider {
         'a',
         '0 0,1',
         radius - offset,
-        svgPaths.point(-bottomLeftStartX + offset, -bottomLeftStartY - radius)
+        svgPaths.point(-bottomLeftStartX + offset, -bottomLeftStartY - radius),
       );
 
     return {

@@ -4,14 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.generator');
-
 import * as Blockly from '../../build/src/core/blockly.js';
-const {dartGenerator} = goog.require('Blockly.Dart');
-const {javascriptGenerator} = goog.require('Blockly.JavaScript');
-const {luaGenerator} = goog.require('Blockly.Lua');
-const {phpGenerator} = goog.require('Blockly.PHP');
-const {pythonGenerator} = goog.require('Blockly.Python');
+import {DartGenerator} from '../../build/src/generators/dart/dart_generator.js';
+import {JavascriptGenerator} from '../../build/src/generators/javascript/javascript_generator.js';
+import {LuaGenerator} from '../../build/src/generators/lua/lua_generator.js';
+import {PhpGenerator} from '../../build/src/generators/php/php_generator.js';
+import {PythonGenerator} from '../../build/src/generators/python/python_generator.js';
+import {assert} from '../../node_modules/chai/chai.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -33,24 +32,21 @@ suite('Generator', function () {
     });
 
     test('Nothing', function () {
-      chai.assert.equal(this.generator.prefixLines('', ''), '');
+      assert.equal(this.generator.prefixLines('', ''), '');
     });
 
     test('One word', function () {
-      chai.assert.equal(this.generator.prefixLines('Hello', '@'), '@Hello');
+      assert.equal(this.generator.prefixLines('Hello', '@'), '@Hello');
     });
 
     test('One line', function () {
-      chai.assert.equal(
-        this.generator.prefixLines('Hello\n', '12'),
-        '12Hello\n'
-      );
+      assert.equal(this.generator.prefixLines('Hello\n', '12'), '12Hello\n');
     });
 
     test('Two lines', function () {
-      chai.assert.equal(
+      assert.equal(
         this.generator.prefixLines('Hello\nWorld\n', '***'),
-        '***Hello\n***World\n'
+        '***Hello\n***World\n',
       );
     });
   });
@@ -85,28 +81,30 @@ suite('Generator', function () {
         blockDisabled,
         opt_thisOnly,
         expectedCode,
-        opt_message
+        opt_message,
       ) {
-        generator.row_block = function (_) {
+        generator.forBlock['row_block'] = function (_) {
           return 'row_block';
         };
-        generator.stack_block = function (_) {
+        generator.forBlock['stack_block'] = function (_) {
           return 'stack_block';
         };
         rowBlock.nextConnection.connect(stackBlock.previousConnection);
-        rowBlock.disabled = blockDisabled;
+        rowBlock.setDisabledReason(blockDisabled, 'test reason');
 
         const code = generator.blockToCode(rowBlock, opt_thisOnly);
-        chai.assert.equal(code, expectedCode, opt_message);
+        delete generator.forBlock['stack_block'];
+        delete generator.forBlock['row_block'];
+        assert.equal(code, expectedCode, opt_message);
       };
     });
 
     const testCase = [
-      [dartGenerator, 'Dart'],
-      [javascriptGenerator, 'JavaScript'],
-      [luaGenerator, 'Lua'],
-      [phpGenerator, 'PHP'],
-      [pythonGenerator, 'Python'],
+      [new DartGenerator(), 'Dart'],
+      [new JavascriptGenerator(), 'JavaScript'],
+      [new LuaGenerator(), 'Lua'],
+      [new PhpGenerator(), 'PHP'],
+      [new PythonGenerator(), 'Python'],
     ];
 
     suite('Trivial', function () {
@@ -115,13 +113,18 @@ suite('Generator', function () {
         const name = testCase[1];
         test(name, function () {
           generator.init(this.workspace);
-          this.blockToCodeTest(generator, false, true, 'row_block');
           this.blockToCodeTest(
             generator,
-            false,
-            false,
+            /* blockDisabled = */ false,
+            /* opt_thisOnly = */ true,
+            'row_block',
+          );
+          this.blockToCodeTest(
+            generator,
+            /* blockDisabled = */ false,
+            /* opt_thisOnly = */ false,
             'row_blockstack_block',
-            'thisOnly=false'
+            'thisOnly=false',
           );
         });
       });
@@ -132,13 +135,18 @@ suite('Generator', function () {
         const generator = testCase[0];
         const name = testCase[1];
         test(name, function () {
-          this.blockToCodeTest(generator, true, true, '');
           this.blockToCodeTest(
             generator,
-            true,
-            false,
+            /* blockDisabled = */ true,
+            /* opt_thisOnly = */ true,
+            '',
+          );
+          this.blockToCodeTest(
+            generator,
+            /* blockDisabled = */ true,
+            /* opt_thisOnly = */ false,
             'stack_block',
-            'thisOnly=false'
+            'thisOnly=false',
           );
         });
       });
@@ -168,16 +176,16 @@ suite('Generator', function () {
           generator,
           opt_thisOnly,
           expectedCode,
-          opt_message
+          opt_message,
         ) {
-          generator.test_loop_block = function (block) {
+          generator.forBlock['test_loop_block'] = function (block) {
             return '{' + generator.statementToCode(block, 'DO') + '}';
           };
           blockA.getInput('DO').connection.connect(blockB.previousConnection);
           blockA.nextConnection.connect(blockC.previousConnection);
 
           const code = generator.blockToCode(blockA, opt_thisOnly);
-          chai.assert.equal(code, expectedCode, opt_message);
+          assert.equal(code, expectedCode, opt_message);
         };
       });
 
@@ -188,6 +196,37 @@ suite('Generator', function () {
           this.loopTest(generator, true, '{  {}}');
           this.loopTest(generator, false, '{  {}}{}', 'thisOnly=false');
         });
+      });
+    });
+
+    suite('Names', function () {
+      setup(function () {
+        class TestGenerator extends Blockly.CodeGenerator {
+          init() {
+            super.init();
+            this.nameDB_ = sinon.createStubInstance(Blockly.Names, {
+              getName: 'foo',
+            });
+          }
+        }
+        this.generator = new TestGenerator();
+      });
+      test('No nameDB_ initialized', function () {
+        assert.throws(() => {
+          this.generator.getVariableName('foo');
+        });
+      });
+
+      test('Get variable name', function () {
+        this.generator.init();
+
+        assert.equal(this.generator.getVariableName('foo'), 'foo');
+      });
+
+      test('Get procedure name', function () {
+        this.generator.init();
+
+        assert.equal(this.generator.getProcedureName('foo'), 'foo');
       });
     });
   });

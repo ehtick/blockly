@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.NextConnection');
+// Former goog.module ID: Blockly.blockRendering.NextConnection
 
 import type {RenderedConnection} from '../../rendered_connection.js';
 import type {ConstantProvider} from '../common/constants.js';
-
 import {Connection} from './connection.js';
 import {Types} from './types.js';
 
@@ -25,7 +23,7 @@ export class NextConnection extends Connection {
    */
   constructor(
     constants: ConstantProvider,
-    connectionModel: RenderedConnection
+    connectionModel: RenderedConnection,
   ) {
     super(constants, connectionModel);
     this.type |= Types.NEXT_CONNECTION;

@@ -9,17 +9,15 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.MarkerMove');
+// Former goog.module ID: Blockly.Events.MarkerMove
 
 import type {Block} from '../block.js';
 import {ASTNode} from '../keyboard_nav/ast_node.js';
 import * as registry from '../registry.js';
 import type {Workspace} from '../workspace.js';
 import {AbstractEventJson} from './events_abstract.js';
-
 import {UiBase} from './events_ui_base.js';
-import * as eventUtils from './utils.js';
+import {EventType} from './type.js';
 
 /**
  * Notifies listeners that a marker (used for keyboard navigation) has
@@ -42,7 +40,7 @@ export class MarkerMove extends UiBase {
    */
   isCursor?: boolean;
 
-  override type = eventUtils.MARKER_MOVE;
+  override type = EventType.MARKER_MOVE;
 
   /**
    * @param opt_block The affected block. Null if current node is of type
@@ -58,7 +56,7 @@ export class MarkerMove extends UiBase {
     opt_block?: Block | null,
     isCursor?: boolean,
     opt_oldNode?: ASTNode | null,
-    opt_newNode?: ASTNode
+    opt_newNode?: ASTNode,
   ) {
     let workspaceId = opt_block ? opt_block.workspace.id : undefined;
     if (opt_newNode && opt_newNode.getType() === ASTNode.types.WORKSPACE) {
@@ -82,13 +80,13 @@ export class MarkerMove extends UiBase {
     if (this.isCursor === undefined) {
       throw new Error(
         'Whether this is a cursor event or not is undefined. Either pass ' +
-          'a value to the constructor, or call fromJson'
+          'a value to the constructor, or call fromJson',
       );
     }
     if (!this.newNode) {
       throw new Error(
         'The new node is undefined. Either pass a node to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     json['isCursor'] = this.isCursor;
@@ -110,12 +108,12 @@ export class MarkerMove extends UiBase {
   static fromJson(
     json: MarkerMoveJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): MarkerMove {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new MarkerMove()
+      event ?? new MarkerMove(),
     ) as MarkerMove;
     newEvent.isCursor = json['isCursor'];
     newEvent.blockId = json['blockId'];
@@ -132,4 +130,4 @@ export interface MarkerMoveJson extends AbstractEventJson {
   newNode: ASTNode;
 }
 
-registry.register(registry.Type.EVENT, eventUtils.MARKER_MOVE, MarkerMove);
+registry.register(registry.Type.EVENT, EventType.MARKER_MOVE, MarkerMove);

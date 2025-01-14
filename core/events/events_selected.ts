@@ -9,15 +9,13 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.Selected');
+// Former goog.module ID: Blockly.Events.Selected
 
 import * as registry from '../registry.js';
-import {AbstractEventJson} from './events_abstract.js';
-
-import {UiBase} from './events_ui_base.js';
-import * as eventUtils from './utils.js';
 import type {Workspace} from '../workspace.js';
+import {AbstractEventJson} from './events_abstract.js';
+import {UiBase} from './events_ui_base.js';
+import {EventType} from './type.js';
 
 /**
  * Class for a selected event.
@@ -33,7 +31,7 @@ export class Selected extends UiBase {
    */
   newElementId?: string;
 
-  override type = eventUtils.SELECTED;
+  override type = EventType.SELECTED;
 
   /**
    * @param opt_oldElementId The ID of the previously selected element. Null if
@@ -46,7 +44,7 @@ export class Selected extends UiBase {
   constructor(
     opt_oldElementId?: string | null,
     opt_newElementId?: string | null,
-    opt_workspaceId?: string
+    opt_workspaceId?: string,
   ) {
     super(opt_workspaceId);
 
@@ -78,12 +76,12 @@ export class Selected extends UiBase {
   static fromJson(
     json: SelectedJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): Selected {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new Selected()
+      event ?? new Selected(),
     ) as Selected;
     newEvent.oldElementId = json['oldElementId'];
     newEvent.newElementId = json['newElementId'];
@@ -96,4 +94,4 @@ export interface SelectedJson extends AbstractEventJson {
   newElementId?: string;
 }
 
-registry.register(registry.Type.EVENT, eventUtils.SELECTED, Selected);
+registry.register(registry.Type.EVENT, EventType.SELECTED, Selected);

@@ -9,21 +9,19 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.CommentChange');
+// Former goog.module ID: Blockly.Events.CommentChange
 
+import type {WorkspaceComment} from '../comments/workspace_comment.js';
 import * as registry from '../registry.js';
-import type {WorkspaceComment} from '../workspace_comment.js';
-
-import {CommentBase, CommentBaseJson} from './events_comment_base.js';
-import * as eventUtils from './utils.js';
 import type {Workspace} from '../workspace.js';
+import {CommentBase, CommentBaseJson} from './events_comment_base.js';
+import {EventType} from './type.js';
 
 /**
  * Notifies listeners that the contents of a workspace comment has changed.
  */
 export class CommentChange extends CommentBase {
-  override type = eventUtils.COMMENT_CHANGE;
+  override type = EventType.COMMENT_CHANGE;
 
   // TODO(#6774): We should remove underscores.
   /** The previous contents of the comment. */
@@ -41,7 +39,7 @@ export class CommentChange extends CommentBase {
   constructor(
     opt_comment?: WorkspaceComment,
     opt_oldContents?: string,
-    opt_newContents?: string
+    opt_newContents?: string,
   ) {
     super(opt_comment);
 
@@ -65,13 +63,13 @@ export class CommentChange extends CommentBase {
     if (!this.oldContents_) {
       throw new Error(
         'The old contents is undefined. Either pass a value to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     if (!this.newContents_) {
       throw new Error(
         'The new contents is undefined. Either pass a value to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     json['oldContents'] = this.oldContents_;
@@ -91,12 +89,12 @@ export class CommentChange extends CommentBase {
   static fromJson(
     json: CommentChangeJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): CommentChange {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new CommentChange()
+      event ?? new CommentChange(),
     ) as CommentChange;
     newEvent.oldContents_ = json['oldContents'];
     newEvent.newContents_ = json['newContents'];
@@ -122,28 +120,31 @@ export class CommentChange extends CommentBase {
     if (!this.commentId) {
       throw new Error(
         'The comment ID is undefined. Either pass a comment to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
-    const comment = workspace.getCommentById(this.commentId);
+    // TODO: Remove the cast when we fix the type of getCommentById.
+    const comment = workspace.getCommentById(
+      this.commentId,
+    ) as unknown as WorkspaceComment;
     if (!comment) {
       console.warn("Can't change non-existent comment: " + this.commentId);
       return;
     }
     const contents = forward ? this.newContents_ : this.oldContents_;
-    if (!contents) {
+    if (contents === undefined) {
       if (forward) {
         throw new Error(
           'The new contents is undefined. Either pass a value to ' +
-            'the constructor, or call fromJson'
+            'the constructor, or call fromJson',
         );
       }
       throw new Error(
         'The old contents is undefined. Either pass a value to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
-    comment.setContent(contents);
+    comment.setText(contents);
   }
 }
 
@@ -152,8 +153,4 @@ export interface CommentChangeJson extends CommentBaseJson {
   newContents: string;
 }
 
-registry.register(
-  registry.Type.EVENT,
-  eventUtils.COMMENT_CHANGE,
-  CommentChange
-);
+registry.register(registry.Type.EVENT, EventType.COMMENT_CHANGE, CommentChange);

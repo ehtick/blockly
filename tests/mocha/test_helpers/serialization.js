@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.helpers.serialization');
-
+import {assert} from '../../../node_modules/chai/chai.js';
 import {runTestCases} from './common.js';
 
 /**
@@ -63,12 +62,12 @@ export const runSerializationTestSuite = (testCases) => {
         block = Blockly.serialization.blocks.append(
           testCase.json,
           this.workspace,
-          {recordUndo: true}
+          {recordUndo: true},
         );
       } else {
         block = Blockly.Xml.domToBlock(
           Blockly.utils.xml.textToDom(testCase.xml),
-          this.workspace
+          this.workspace,
         );
       }
       this.clock.runAll();
@@ -86,23 +85,23 @@ export const runSerializationTestSuite = (testCases) => {
         const block = Blockly.serialization.blocks.append(
           testCase.json,
           this.workspace,
-          {recordUndo: true}
+          {recordUndo: true},
         );
         this.clock.runAll();
         const generatedJson = Blockly.serialization.blocks.save(block);
         const expectedJson = testCase.expectedJson || testCase.json;
-        chai.assert.deepEqual(generatedJson, expectedJson);
+        assert.deepEqual(generatedJson, expectedJson);
       } else {
         const block = Blockly.Xml.domToBlock(
           Blockly.utils.xml.textToDom(testCase.xml),
-          this.workspace
+          this.workspace,
         );
         this.clock.runAll();
         const generatedXml = Blockly.Xml.domToPrettyText(
-          Blockly.Xml.blockToDom(block)
+          Blockly.Xml.blockToDom(block),
         );
         const expectedXml = testCase.expectedXml || testCase.xml;
-        chai.assert.equal(generatedXml, expectedXml);
+        assert.equal(generatedXml, expectedXml);
       }
     };
   };
@@ -112,25 +111,7 @@ export const runSerializationTestSuite = (testCases) => {
     });
     suite('xml round-trip', function () {
       setup(function () {
-        // The genUid is undergoing change as part of the 2021Q3
-        // goog.module migration:
-        //
-        // - It is being moved from Blockly.utils to
-        //   Blockly.utils.idGenerator (which itself is being renamed
-        //   from IdGenerator).
-        // - For compatibility with changes to the module system (from
-        //   goog.provide to goog.module and in future to ES modules),
-        //   .genUid is now a wrapper around .TEST_ONLY.genUid, which
-        //   can be safely stubbed by sinon or other similar
-        //   frameworks in a way that will continue to work.
-        if (Blockly.utils.idGenerator && Blockly.utils.idGenerator.TEST_ONLY) {
-          sinon
-            .stub(Blockly.utils.idGenerator.TEST_ONLY, 'genUid')
-            .returns('1');
-        } else {
-          // Fall back to stubbing original version on Blockly.utils.
-          sinon.stub(Blockly.utils, 'genUid').returns('1');
-        }
+        sinon.stub(Blockly.utils.idGenerator.TEST_ONLY, 'genUid').returns('1');
       });
 
       teardown(function () {

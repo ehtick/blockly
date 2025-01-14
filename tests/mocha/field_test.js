@@ -4,9 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.fieldTest');
-
 import * as Blockly from '../../build/src/core/blockly.js';
+import {assert} from '../../node_modules/chai/chai.js';
 import {
   addBlockTypeToCleanup,
   addMessageToCleanup,
@@ -14,7 +13,6 @@ import {
   sharedTestTeardown,
   workspaceTeardown,
 } from './test_helpers/setup_teardown.js';
-import {createDeprecationWarningStub} from './test_helpers/warnings.js';
 
 suite('Abstract Fields', function () {
   setup(function () {
@@ -67,26 +65,26 @@ suite('Abstract Fields', function () {
       // An old default field should be serialized.
       const field = new FieldDefault();
       const stub = sinon.stub(console, 'warn');
-      chai.assert.isTrue(field.isSerializable());
+      assert.isTrue(field.isSerializable());
       sinon.assert.calledOnce(stub);
       stub.restore();
     });
     test('Editable False, Serializable Default(false)', function () {
       // An old non-editable field should not be serialized.
       const field = new FieldFalseDefault();
-      chai.assert.isFalse(field.isSerializable());
+      assert.isFalse(field.isSerializable());
     });
     /* Test Other Cases */
     test('Editable Default(true), Serializable True', function () {
       // A field that is both editable and serializable should be serialized.
       const field = new FieldDefaultTrue();
-      chai.assert.isTrue(field.isSerializable());
+      assert.isTrue(field.isSerializable());
     });
     test('Editable False, Serializable True', function () {
       // A field that is not editable, but overrides serializable to true
       // should be serialized (e.g. field_label_serializable)
       const field = new FieldFalseTrue();
-      chai.assert.isTrue(field.isSerializable());
+      assert.isTrue(field.isSerializable());
     });
   });
 
@@ -195,34 +193,34 @@ suite('Abstract Fields', function () {
         test('No implementations', function () {
           const field = new DefaultSerializationField('test value');
           const value = field.saveState();
-          chai.assert.equal(value, 'test value');
+          assert.equal(value, 'test value');
         });
 
         test('Xml implementations', function () {
           const field = new CustomXmlField('test value');
           const value = field.saveState();
-          chai.assert.equal(value, '<field name="">custom value</field>');
+          assert.equal(value, '<field name="">custom value</field>');
         });
 
         test('Xml super implementation', function () {
           const field = new CustomXmlCallSuperField('test value');
           const value = field.saveState();
-          chai.assert.equal(
+          assert.equal(
             value,
-            '<field name="" attribute="custom value">test value</field>'
+            '<field name="" attribute="custom value">test value</field>',
           );
         });
 
         test('JSO implementations', function () {
           const field = new CustomJsoField('test value');
           const value = field.saveState();
-          chai.assert.equal(value, 'custom value');
+          assert.equal(value, 'custom value');
         });
 
         test('JSO super implementations', function () {
           const field = new CustomJsoCallSuperField('test value');
           const value = field.saveState();
-          chai.assert.deepEqual(value, {
+          assert.deepEqual(value, {
             default: 'test value',
             val: 'custom value',
           });
@@ -231,7 +229,7 @@ suite('Abstract Fields', function () {
         test('Xml and JSO implementations', function () {
           const field = new CustomXmlAndJsoField('test value');
           const value = field.saveState();
-          chai.assert.equal(value, 'custom value');
+          assert.equal(value, 'custom value');
         });
       });
 
@@ -240,9 +238,9 @@ suite('Abstract Fields', function () {
           const field = new DefaultSerializationField('test value');
           const element = document.createElement('field');
           const value = Blockly.Xml.domToText(field.toXml(element));
-          chai.assert.equal(
+          assert.equal(
             value,
-            '<field xmlns="http://www.w3.org/1999/xhtml">test value</field>'
+            '<field xmlns="http://www.w3.org/1999/xhtml">test value</field>',
           );
         });
 
@@ -250,9 +248,9 @@ suite('Abstract Fields', function () {
           const field = new CustomXmlField('test value');
           const element = document.createElement('field');
           const value = Blockly.Xml.domToText(field.toXml(element));
-          chai.assert.equal(
+          assert.equal(
             value,
-            '<field xmlns="http://www.w3.org/1999/xhtml">custom value</field>'
+            '<field xmlns="http://www.w3.org/1999/xhtml">custom value</field>',
           );
         });
 
@@ -260,10 +258,10 @@ suite('Abstract Fields', function () {
           const field = new CustomXmlCallSuperField('test value');
           const element = document.createElement('field');
           const value = Blockly.Xml.domToText(field.toXml(element));
-          chai.assert.equal(
+          assert.equal(
             value,
             '<field xmlns="http://www.w3.org/1999/xhtml" ' +
-              'attribute="custom value">test value</field>'
+              'attribute="custom value">test value</field>',
           );
         });
 
@@ -271,9 +269,9 @@ suite('Abstract Fields', function () {
           const field = new CustomXmlAndJsoField('test value');
           const element = document.createElement('field');
           const value = Blockly.Xml.domToText(field.toXml(element));
-          chai.assert.equal(
+          assert.equal(
             value,
-            '<field xmlns="http://www.w3.org/1999/xhtml">custom value</field>'
+            '<field xmlns="http://www.w3.org/1999/xhtml">custom value</field>',
           );
         });
       });
@@ -284,41 +282,41 @@ suite('Abstract Fields', function () {
         test('No implementations', function () {
           const field = new DefaultSerializationField('');
           field.loadState('test value');
-          chai.assert.equal(field.getValue(), 'test value');
+          assert.equal(field.getValue(), 'test value');
         });
 
         test('Xml implementations', function () {
           const field = new CustomXmlField('');
           field.loadState('<field name="">custom value</field>');
-          chai.assert.equal(field.someProperty, 'custom value');
+          assert.equal(field.someProperty, 'custom value');
         });
 
         test('Xml super implementation', function () {
           const field = new CustomXmlCallSuperField('');
           field.loadState(
-            '<field attribute="custom value" name="">test value</field>'
+            '<field attribute="custom value" name="">test value</field>',
           );
-          chai.assert.equal(field.getValue(), 'test value');
-          chai.assert.equal(field.someProperty, 'custom value');
+          assert.equal(field.getValue(), 'test value');
+          assert.equal(field.someProperty, 'custom value');
         });
 
         test('JSO implementations', function () {
           const field = new CustomJsoField('');
           field.loadState('custom value');
-          chai.assert.equal(field.someProperty, 'custom value');
+          assert.equal(field.someProperty, 'custom value');
         });
 
         test('JSO super implementations', function () {
           const field = new CustomJsoCallSuperField('');
           field.loadState({default: 'test value', val: 'custom value'});
-          chai.assert.equal(field.getValue(), 'test value');
-          chai.assert.equal(field.someProperty, 'custom value');
+          assert.equal(field.getValue(), 'test value');
+          assert.equal(field.someProperty, 'custom value');
         });
 
         test('Xml and JSO implementations', function () {
           const field = new CustomXmlAndJsoField('');
           field.loadState('custom value');
-          chai.assert.equal(field.someProperty, 'custom value');
+          assert.equal(field.someProperty, 'custom value');
         });
       });
 
@@ -326,36 +324,36 @@ suite('Abstract Fields', function () {
         test('No implementations', function () {
           const field = new DefaultSerializationField('');
           field.fromXml(
-            Blockly.utils.xml.textToDom('<field name="">test value</field>')
+            Blockly.utils.xml.textToDom('<field name="">test value</field>'),
           );
-          chai.assert.equal(field.getValue(), 'test value');
+          assert.equal(field.getValue(), 'test value');
         });
 
         test('Xml implementations', function () {
           const field = new CustomXmlField('');
           field.fromXml(
-            Blockly.utils.xml.textToDom('<field name="">custom value</field>')
+            Blockly.utils.xml.textToDom('<field name="">custom value</field>'),
           );
-          chai.assert.equal(field.someProperty, 'custom value');
+          assert.equal(field.someProperty, 'custom value');
         });
 
         test('Xml super implementation', function () {
           const field = new CustomXmlCallSuperField('');
           field.fromXml(
             Blockly.utils.xml.textToDom(
-              '<field attribute="custom value" name="">test value</field>'
-            )
+              '<field attribute="custom value" name="">test value</field>',
+            ),
           );
-          chai.assert.equal(field.getValue(), 'test value');
-          chai.assert.equal(field.someProperty, 'custom value');
+          assert.equal(field.getValue(), 'test value');
+          assert.equal(field.someProperty, 'custom value');
         });
 
         test('XML andd JSO implementations', function () {
           const field = new CustomXmlAndJsoField('');
           field.fromXml(
-            Blockly.utils.xml.textToDom('<field name="">custom value</field>')
+            Blockly.utils.xml.textToDom('<field name="">custom value</field>'),
           );
-          chai.assert.equal(field.someProperty, 'custom value');
+          assert.equal(field.someProperty, 'custom value');
         });
       });
     });
@@ -574,7 +572,7 @@ suite('Abstract Fields', function () {
       stubClassValidatorWithReturn(this.field, undefined);
       addSpies(this.field);
       this.field.setValue('value');
-      chai.assert.equal(this.field.getValue(), 'value');
+      assert.equal(this.field.getValue(), 'value');
       sinon.assert.notCalled(this.field.doValueInvalid_);
       sinon.assert.calledOnce(this.field.doValueUpdate_);
     });
@@ -605,7 +603,7 @@ suite('Abstract Fields', function () {
       setLocalValidatorWithReturn(this.field, undefined);
       addSpies(this.field);
       this.field.setValue('value');
-      chai.assert.equal(this.field.getValue(), 'value');
+      assert.equal(this.field.getValue(), 'value');
       sinon.assert.notCalled(this.field.doValueInvalid_);
       sinon.assert.calledOnce(this.field.doValueUpdate_);
     });
@@ -628,7 +626,7 @@ suite('Abstract Fields', function () {
         const field = new Blockly.Field('value', null, {
           tooltip: 'test tooltip',
         });
-        chai.assert.equal(field.tooltip_, 'test tooltip');
+        assert.equal(field.getTooltip(), 'test tooltip');
       });
       test('JS Constructor - Dynamic', function () {
         const returnTooltip = function () {
@@ -637,13 +635,13 @@ suite('Abstract Fields', function () {
         const field = new Blockly.Field('value', null, {
           tooltip: returnTooltip,
         });
-        chai.assert.equal(field.tooltip_, returnTooltip);
+        assert.equal(field.getTooltip(), returnTooltip());
       });
       test('JSON Definition', function () {
         const field = CustomField.fromJson({
           tooltip: 'test tooltip',
         });
-        chai.assert.equal(field.tooltip_, 'test tooltip');
+        assert.equal(field.getTooltip(), 'test tooltip');
       });
       suite('W/ Msg References', function () {
         setup(function () {
@@ -654,13 +652,13 @@ suite('Abstract Fields', function () {
           const field = new Blockly.Field('value', null, {
             tooltip: '%{BKY_TOOLTIP}',
           });
-          chai.assert.equal(field.tooltip_, 'test tooltip');
+          assert.equal(field.getTooltip(), 'test tooltip');
         });
         test('JSON Definition', function () {
           const field = CustomField.fromJson({
             tooltip: '%{BKY_TOOLTIP}',
           });
-          chai.assert.equal(field.tooltip_, 'test tooltip');
+          assert.equal(field.getTooltip(), 'test tooltip');
         });
       });
       suite('setTooltip', function () {
@@ -684,12 +682,12 @@ suite('Abstract Fields', function () {
             Blockly.utils.xml.textToDom(
               '<xml xmlns="https://developers.google.com/blockly/xml">' +
                 '  <block type="tooltip"></block>' +
-                '</xml>'
+                '</xml>',
             ).children[0],
-            this.workspace
+            this.workspace,
           );
           const field = block.getField('TOOLTIP');
-          chai.assert.equal(field.getClickTarget_().tooltip, 'tooltip');
+          assert.equal(field.getClickTarget_().tooltip, 'tooltip');
         });
         test('After Append', function () {
           addBlockTypeToCleanup(this.sharedCleanup, 'tooltip');
@@ -704,12 +702,12 @@ suite('Abstract Fields', function () {
             Blockly.utils.xml.textToDom(
               '<xml xmlns="https://developers.google.com/blockly/xml">' +
                 '  <block type="tooltip"></block>' +
-                '</xml>'
+                '</xml>',
             ).children[0],
-            this.workspace
+            this.workspace,
           );
           const field = block.getField('TOOLTIP');
-          chai.assert.equal(field.getClickTarget_().tooltip, 'tooltip');
+          assert.equal(field.getClickTarget_().tooltip, 'tooltip');
         });
         test('After Block Creation', function () {
           addBlockTypeToCleanup(this.sharedCleanup, 'tooltip');
@@ -723,13 +721,13 @@ suite('Abstract Fields', function () {
             Blockly.utils.xml.textToDom(
               '<xml xmlns="https://developers.google.com/blockly/xml">' +
                 '  <block type="tooltip"></block>' +
-                '</xml>'
+                '</xml>',
             ).children[0],
-            this.workspace
+            this.workspace,
           );
           const field = block.getField('TOOLTIP');
           field.setTooltip('tooltip');
-          chai.assert.equal(field.getClickTarget_().tooltip, 'tooltip');
+          assert.equal(field.getClickTarget_().tooltip, 'tooltip');
         });
         test('Dynamic Function', function () {
           addBlockTypeToCleanup(this.sharedCleanup, 'tooltip');
@@ -748,12 +746,12 @@ suite('Abstract Fields', function () {
             Blockly.utils.xml.textToDom(
               '<xml xmlns="https://developers.google.com/blockly/xml">' +
                 '  <block type="tooltip"></block>' +
-                '</xml>'
+                '</xml>',
             ).children[0],
-            this.workspace
+            this.workspace,
           );
           const field = block.getField('TOOLTIP');
-          chai.assert.equal(field.getClickTarget_().tooltip, block.tooltipFunc);
+          assert.equal(field.getClickTarget_().tooltip, block.tooltipFunc);
         });
         test('Element', function () {
           addBlockTypeToCleanup(this.sharedCleanup, 'tooltip');
@@ -771,12 +769,12 @@ suite('Abstract Fields', function () {
             Blockly.utils.xml.textToDom(
               '<xml xmlns="https://developers.google.com/blockly/xml">' +
                 '  <block type="tooltip"></block>' +
-                '</xml>'
+                '</xml>',
             ).children[0],
-            this.workspace
+            this.workspace,
           );
           const field = block.getField('TOOLTIP');
-          chai.assert.equal(field.getClickTarget_().tooltip, block.element);
+          assert.equal(field.getClickTarget_().tooltip, block.element);
         });
         test('Null', function () {
           addBlockTypeToCleanup(this.sharedCleanup, 'tooltip');
@@ -791,12 +789,12 @@ suite('Abstract Fields', function () {
             Blockly.utils.xml.textToDom(
               '<xml xmlns="https://developers.google.com/blockly/xml">' +
                 '  <block type="tooltip"></block>' +
-                '</xml>'
+                '</xml>',
             ).children[0],
-            this.workspace
+            this.workspace,
           );
           const field = block.getField('TOOLTIP');
-          chai.assert.equal(field.getClickTarget_().tooltip, block);
+          assert.equal(field.getClickTarget_().tooltip, block);
         });
         test('Undefined', function () {
           addBlockTypeToCleanup(this.sharedCleanup, 'tooltip');
@@ -810,12 +808,12 @@ suite('Abstract Fields', function () {
             Blockly.utils.xml.textToDom(
               '<xml xmlns="https://developers.google.com/blockly/xml">' +
                 '  <block type="tooltip"></block>' +
-                '</xml>'
+                '</xml>',
             ).children[0],
-            this.workspace
+            this.workspace,
           );
           const field = block.getField('TOOLTIP');
-          chai.assert.equal(field.getClickTarget_().tooltip, block);
+          assert.equal(field.getClickTarget_().tooltip, block);
         });
       });
     });

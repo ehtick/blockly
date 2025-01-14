@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.eventVarCreate');
-
+import {assert} from '../../node_modules/chai/chai.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -27,14 +26,14 @@ suite('Var Create Event', function () {
         this.workspace,
         'name',
         '',
-        'id'
+        'id',
       );
       const origEvent = new Blockly.Events.VarCreate(varModel);
 
       const json = origEvent.toJson();
       const newEvent = new Blockly.Events.fromJson(json, this.workspace);
 
-      chai.assert.deepEqual(newEvent, origEvent);
+      assert.deepEqual(newEvent, origEvent);
     });
 
     test('typed variable events round-trip through JSON', function () {
@@ -42,14 +41,14 @@ suite('Var Create Event', function () {
         this.workspace,
         'name',
         'type',
-        'id'
+        'id',
       );
       const origEvent = new Blockly.Events.VarCreate(varModel);
 
       const json = origEvent.toJson();
       const newEvent = new Blockly.Events.fromJson(json, this.workspace);
 
-      chai.assert.deepEqual(newEvent, origEvent);
+      assert.deepEqual(newEvent, origEvent);
     });
   });
 });

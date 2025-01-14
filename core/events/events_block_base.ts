@@ -9,12 +9,10 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.BlockBase');
+// Former goog.module ID: Blockly.Events.BlockBase
 
 import type {Block} from '../block.js';
 import type {Workspace} from '../workspace.js';
-
 import {
   Abstract as AbstractEvent,
   AbstractEventJson,
@@ -53,7 +51,7 @@ export class BlockBase extends AbstractEvent {
     if (!this.blockId) {
       throw new Error(
         'The block ID is undefined. Either pass a block to ' +
-          'the constructor, or call fromJson'
+          'the constructor, or call fromJson',
       );
     }
     json['blockId'] = this.blockId;
@@ -72,12 +70,12 @@ export class BlockBase extends AbstractEvent {
   static fromJson(
     json: BlockBaseJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): BlockBase {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new BlockBase()
+      event ?? new BlockBase(),
     ) as BlockBase;
     newEvent.blockId = json['blockId'];
     return newEvent;

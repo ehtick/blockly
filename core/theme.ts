@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Theme');
+// Former goog.module ID: Blockly.Theme
 
 import * as registry from './registry.js';
 import * as object from './utils/object.js';
@@ -58,7 +57,7 @@ export class Theme implements ITheme {
     public name: string,
     opt_blockStyles?: {[key: string]: Partial<BlockStyle>},
     opt_categoryStyles?: {[key: string]: CategoryStyle},
-    opt_componentStyles?: ComponentStyle
+    opt_componentStyles?: ComponentStyle,
   ) {
     /** The block styles map. */
     this.blockStyles = opt_blockStyles || Object.create(null);
@@ -74,7 +73,7 @@ export class Theme implements ITheme {
     this.fontStyle = Object.create(null) as FontStyle;
 
     // Register the theme by name.
-    registry.register(registry.Type.THEME, name, this);
+    registry.register(registry.Type.THEME, name, this, true);
   }
 
   /**

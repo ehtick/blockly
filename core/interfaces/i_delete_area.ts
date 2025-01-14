@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.IDeleteArea');
+// Former goog.module ID: Blockly.IDeleteArea
 
 import type {IDragTarget} from './i_drag_target.js';
 import type {IDraggable} from './i_draggable.js';
@@ -22,9 +21,8 @@ export interface IDeleteArea extends IDragTarget {
    * before onDragEnter/onDragOver/onDragExit.
    *
    * @param element The block or bubble currently being dragged.
-   * @param couldConnect Whether the element could could connect to another.
    * @returns Whether the element provided would be deleted if dropped on this
    *     area.
    */
-  wouldDelete(element: IDraggable, couldConnect: boolean): boolean;
+  wouldDelete(element: IDraggable): boolean;
 }

@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly');
+// Former goog.module ID: Blockly
 
 // Unused import preserved for side-effects. Remove if unneeded.
 import './events/events_block_create.js';
@@ -18,16 +17,15 @@ import './events/events_var_create.js';
 
 import {Block} from './block.js';
 import * as blockAnimations from './block_animations.js';
-import {BlockDragger} from './block_dragger.js';
 import {BlockSvg} from './block_svg.js';
 import {BlocklyOptions} from './blockly_options.js';
 import {Blocks} from './blocks.js';
 import * as browserEvents from './browser_events.js';
-import {Bubble} from './bubble.js';
-import {BubbleDragger} from './bubble_dragger.js';
+import * as bubbles from './bubbles.js';
+import {MiniWorkspaceBubble} from './bubbles/mini_workspace_bubble.js';
 import * as bumpObjects from './bump_objects.js';
 import * as clipboard from './clipboard.js';
-import {Comment} from './comment.js';
+import * as comments from './comments.js';
 import * as common from './common.js';
 import {ComponentManager} from './component_manager.js';
 import {config} from './config.js';
@@ -35,6 +33,7 @@ import {Connection} from './connection.js';
 import {ConnectionChecker} from './connection_checker.js';
 import {ConnectionDB} from './connection_db.js';
 import {ConnectionType} from './connection_type.js';
+import * as constants from './constants.js';
 import * as ContextMenu from './contextmenu.js';
 import * as ContextMenuItems from './contextmenu_items.js';
 import {ContextMenuRegistry} from './contextmenu_registry.js';
@@ -42,6 +41,7 @@ import * as Css from './css.js';
 import {DeleteArea} from './delete_area.js';
 import * as dialog from './dialog.js';
 import {DragTarget} from './drag_target.js';
+import * as dragging from './dragging.js';
 import * as dropDownDiv from './dropdowndiv.js';
 import * as Events from './events/events.js';
 import * as Extensions from './extensions.js';
@@ -52,23 +52,11 @@ import {
   UnattachedFieldError,
 } from './field.js';
 import {
-  FieldAngle,
-  FieldAngleConfig,
-  FieldAngleFromJsonConfig,
-  FieldAngleValidator,
-} from './field_angle.js';
-import {
   FieldCheckbox,
   FieldCheckboxConfig,
   FieldCheckboxFromJsonConfig,
   FieldCheckboxValidator,
 } from './field_checkbox.js';
-import {
-  FieldColour,
-  FieldColourConfig,
-  FieldColourFromJsonConfig,
-  FieldColourValidator,
-} from './field_colour.js';
 import {
   FieldDropdown,
   FieldDropdownConfig,
@@ -89,12 +77,6 @@ import {
   FieldLabelFromJsonConfig,
 } from './field_label.js';
 import {FieldLabelSerializable} from './field_label_serializable.js';
-import {
-  FieldMultilineInput,
-  FieldMultilineInputConfig,
-  FieldMultilineInputFromJsonConfig,
-  FieldMultilineInputValidator,
-} from './field_multilineinput.js';
 import {
   FieldNumber,
   FieldNumberConfig,
@@ -122,40 +104,50 @@ import {VerticalFlyout} from './flyout_vertical.js';
 import {CodeGenerator} from './generator.js';
 import {Gesture} from './gesture.js';
 import {Grid} from './grid.js';
-import {Icon} from './icon_old.js';
 import * as icons from './icons.js';
 import {inject} from './inject.js';
-import {Align, Input} from './inputs/input.js';
-import {inputTypes} from './inputs/input_types.js';
-import {DummyInput} from './inputs/dummy_input.js';
-import {StatementInput} from './inputs/statement_input.js';
-import {ValueInput} from './inputs/value_input.js';
+import * as inputs from './inputs.js';
+import {Input} from './inputs/input.js';
 import {InsertionMarkerManager} from './insertion_marker_manager.js';
+import {InsertionMarkerPreviewer} from './insertion_marker_previewer.js';
 import {IASTNodeLocation} from './interfaces/i_ast_node_location.js';
 import {IASTNodeLocationSvg} from './interfaces/i_ast_node_location_svg.js';
 import {IASTNodeLocationWithBlock} from './interfaces/i_ast_node_location_with_block.js';
 import {IAutoHideable} from './interfaces/i_autohideable.js';
-import {IBlockDragger} from './interfaces/i_block_dragger.js';
 import {IBoundedElement} from './interfaces/i_bounded_element.js';
 import {IBubble} from './interfaces/i_bubble.js';
 import {ICollapsibleToolboxItem} from './interfaces/i_collapsible_toolbox_item.js';
 import {IComponent} from './interfaces/i_component.js';
 import {IConnectionChecker} from './interfaces/i_connection_checker.js';
+import {IConnectionPreviewer} from './interfaces/i_connection_previewer.js';
 import {IContextMenu} from './interfaces/i_contextmenu.js';
-import {ICopyable} from './interfaces/i_copyable.js';
-import {IDeletable} from './interfaces/i_deletable.js';
+import {ICopyData, ICopyable, isCopyable} from './interfaces/i_copyable.js';
+import {IDeletable, isDeletable} from './interfaces/i_deletable.js';
 import {IDeleteArea} from './interfaces/i_delete_area.js';
 import {IDragTarget} from './interfaces/i_drag_target.js';
-import {IDraggable} from './interfaces/i_draggable.js';
+import {
+  IDragStrategy,
+  IDraggable,
+  isDraggable,
+} from './interfaces/i_draggable.js';
+import {IDragger} from './interfaces/i_dragger.js';
 import {IFlyout} from './interfaces/i_flyout.js';
+import {IHasBubble, hasBubble} from './interfaces/i_has_bubble.js';
+import {IIcon, isIcon} from './interfaces/i_icon.js';
 import {IKeyboardAccessible} from './interfaces/i_keyboard_accessible.js';
 import {IMetricsManager} from './interfaces/i_metrics_manager.js';
 import {IMovable} from './interfaces/i_movable.js';
 import {IObservable, isObservable} from './interfaces/i_observable.js';
+import {IPaster, isPaster} from './interfaces/i_paster.js';
 import {IPositionable} from './interfaces/i_positionable.js';
 import {IRegistrable} from './interfaces/i_registrable.js';
-import {ISelectable} from './interfaces/i_selectable.js';
+import {
+  IRenderedElement,
+  isRenderedElement,
+} from './interfaces/i_rendered_element.js';
+import {ISelectable, isSelectable} from './interfaces/i_selectable.js';
 import {ISelectableToolboxItem} from './interfaces/i_selectable_toolbox_item.js';
+import {ISerializable, isSerializable} from './interfaces/i_serializable.js';
 import {IStyleable} from './interfaces/i_styleable.js';
 import {IToolbox} from './interfaces/i_toolbox.js';
 import {IToolboxItem} from './interfaces/i_toolbox_item.js';
@@ -169,23 +161,22 @@ import {BasicCursor} from './keyboard_nav/basic_cursor.js';
 import {Cursor} from './keyboard_nav/cursor.js';
 import {Marker} from './keyboard_nav/marker.js';
 import {TabNavigateCursor} from './keyboard_nav/tab_navigate_cursor.js';
+import type {LayerManager} from './layer_manager.js';
+import * as layers from './layers.js';
 import {MarkerManager} from './marker_manager.js';
 import {Menu} from './menu.js';
 import {MenuItem} from './menuitem.js';
 import {MetricsManager} from './metrics_manager.js';
 import {Msg, setLocale} from './msg.js';
-import {Mutator} from './mutator.js';
 import {Names} from './names.js';
 import {Options} from './options.js';
 import * as uiPosition from './positionable_helpers.js';
 import * as Procedures from './procedures.js';
 import * as registry from './registry.js';
-import {RenderedConnection} from './rendered_connection.js';
 import * as renderManagement from './render_management.js';
+import {RenderedConnection} from './rendered_connection.js';
 import * as blockRendering from './renderers/common/block_rendering.js';
-import * as constants from './constants.js';
 import * as geras from './renderers/geras/geras.js';
-import * as minimalist from './renderers/minimalist/minimalist.js';
 import * as thrasos from './renderers/thrasos/thrasos.js';
 import * as zelos from './renderers/zelos/zelos.js';
 import {Scrollbar} from './scrollbar.js';
@@ -210,12 +201,9 @@ import {VariableMap} from './variable_map.js';
 import {VariableModel} from './variable_model.js';
 import * as Variables from './variables.js';
 import * as VariablesDynamic from './variables_dynamic.js';
-import {Warning} from './warning.js';
 import * as WidgetDiv from './widgetdiv.js';
 import {Workspace} from './workspace.js';
 import {WorkspaceAudio} from './workspace_audio.js';
-import {WorkspaceComment} from './workspace_comment.js';
-import {WorkspaceCommentSvg} from './workspace_comment_svg.js';
 import {WorkspaceDragger} from './workspace_dragger.js';
 import {WorkspaceSvg} from './workspace_svg.js';
 import * as Xml from './xml.js';
@@ -242,24 +230,6 @@ export const VERSION = 'uncompiled';
  */
 
 /*
- * Aliases for input alignments used in block defintions.
- */
-
-/**
- * @see Blockly.Input.Align.LEFT
- */
-export const ALIGN_LEFT = Align.LEFT;
-
-/**
- * @see Blockly.Input.Align.CENTRE
- */
-export const ALIGN_CENTRE = Align.CENTRE;
-
-/**
- * @see Blockly.Input.Align.RIGHT
- */
-export const ALIGN_RIGHT = Align.RIGHT;
-/*
  * Aliases for constants used for connection and input types.
  */
 
@@ -282,11 +252,6 @@ export const NEXT_STATEMENT = ConnectionType.NEXT_STATEMENT;
  * @see ConnectionType.PREVIOUS_STATEMENT
  */
 export const PREVIOUS_STATEMENT = ConnectionType.PREVIOUS_STATEMENT;
-
-/**
- * @see inputTypes.DUMMY_INPUT
- */
-export const DUMMY_INPUT = inputTypes.DUMMY;
 
 /** Aliases for toolbox positions. */
 
@@ -372,7 +337,6 @@ export const setParentContainer = common.setParentContainer;
 
 // Aliases to allow external code to access these values for legacy reasons.
 export const COLLAPSE_CHARS = internalConstants.COLLAPSE_CHARS;
-export const DRAG_STACK = internalConstants.DRAG_STACK;
 export const OPPOSITE_TYPE = internalConstants.OPPOSITE_TYPE;
 export const RENAME_VARIABLE_ID = internalConstants.RENAME_VARIABLE_ID;
 export const DELETE_VARIABLE_ID = internalConstants.DELETE_VARIABLE_ID;
@@ -406,46 +370,43 @@ export const PROCEDURE_CATEGORY_NAME: string = Procedures.CATEGORY_NAME;
 // clang-format off
 Workspace.prototype.newBlock = function (
   prototypeName: string,
-  opt_id?: string
+  opt_id?: string,
 ): Block {
   return new Block(this, prototypeName, opt_id);
 };
 
 WorkspaceSvg.prototype.newBlock = function (
   prototypeName: string,
-  opt_id?: string
+  opt_id?: string,
 ): BlockSvg {
   return new BlockSvg(this, prototypeName, opt_id);
+};
+
+Workspace.prototype.newComment = function (
+  id?: string,
+): comments.WorkspaceComment {
+  return new comments.WorkspaceComment(this, id);
+};
+
+WorkspaceSvg.prototype.newComment = function (
+  id?: string,
+): comments.RenderedWorkspaceComment {
+  return new comments.RenderedWorkspaceComment(this, id);
 };
 
 WorkspaceSvg.newTrashcan = function (workspace: WorkspaceSvg): Trashcan {
   return new Trashcan(workspace);
 };
 
-WorkspaceCommentSvg.prototype.showContextMenu = function (
-  this: WorkspaceCommentSvg,
-  e: Event
-) {
-  if (this.workspace.options.readOnly) {
-    return;
-  }
-  const menuOptions = [];
-
-  if (this.isDeletable() && this.isMovable()) {
-    menuOptions.push(ContextMenu.commentDuplicateOption(this));
-    menuOptions.push(ContextMenu.commentDeleteOption(this));
-  }
-
-  ContextMenu.show(e, menuOptions, this.RTL);
-};
-
-Mutator.prototype.newWorkspaceSvg = function (options: Options): WorkspaceSvg {
+MiniWorkspaceBubble.prototype.newWorkspaceSvg = function (
+  options: Options,
+): WorkspaceSvg {
   return new WorkspaceSvg(options);
 };
 
 Names.prototype.populateProcedures = function (
   this: Names,
-  workspace: Workspace
+  workspace: Workspace,
 ) {
   const procedures = Procedures.allProcedures(workspace);
   // Flatten the return vs no-return procedure lists.
@@ -457,197 +418,187 @@ Names.prototype.populateProcedures = function (
 // clang-format on
 
 // Re-export submodules that no longer declareLegacyNamespace.
-export {browserEvents};
-export {ContextMenu};
-export {ContextMenuItems};
-export {Css};
-export {Events};
-export {Extensions};
-export {Procedures};
-export {Procedures as procedures};
-export {ShortcutItems};
-export {Themes};
-export {Tooltip};
-export {Touch};
-export {Variables};
-export {VariablesDynamic};
-export {WidgetDiv};
-export {Xml};
-export {blockAnimations};
-export {blockRendering};
-export {bumpObjects};
-export {clipboard};
-export {common};
-export {constants};
-export {dialog};
-export {fieldRegistry};
-export {geras};
-export {minimalist};
-export {registry};
-export {thrasos};
-export {uiPosition};
-export {utils};
-export {zelos};
-export {ASTNode};
-export {BasicCursor};
-export {Block};
-export {BlocklyOptions};
-export {BlockDragger};
-export {BlockSvg};
-export {Blocks};
-export {Bubble};
-export {BubbleDragger};
-export {CollapsibleToolboxCategory};
-export {Comment};
-export {ComponentManager};
-export {Connection};
-export {ConnectionType};
-export {ConnectionChecker};
-export {ConnectionDB};
-export {ContextMenuRegistry};
-export {Cursor};
-export {DeleteArea};
-export {DragTarget};
-export const DropDownDiv = dropDownDiv;
-export {Field, FieldConfig, FieldValidator, UnattachedFieldError};
 export {
-  FieldAngle,
-  FieldAngleConfig,
-  FieldAngleFromJsonConfig,
-  FieldAngleValidator,
+  ASTNode,
+  BasicCursor,
+  Block,
+  BlockSvg,
+  BlocklyOptions,
+  Blocks,
+  CollapsibleToolboxCategory,
+  ComponentManager,
+  Connection,
+  ConnectionChecker,
+  ConnectionDB,
+  ConnectionType,
+  ContextMenu,
+  ContextMenuItems,
+  ContextMenuRegistry,
+  Css,
+  Cursor,
+  DeleteArea,
+  DragTarget,
+  Events,
+  Extensions,
+  Procedures,
+  ShortcutItems,
+  Themes,
+  Tooltip,
+  Touch,
+  Variables,
+  VariablesDynamic,
+  WidgetDiv,
+  Xml,
+  blockAnimations,
+  blockRendering,
+  browserEvents,
+  bubbles,
+  bumpObjects,
+  clipboard,
+  comments,
+  common,
+  constants,
+  dialog,
+  dragging,
+  fieldRegistry,
+  geras,
+  Procedures as procedures,
+  registry,
+  thrasos,
+  uiPosition,
+  utils,
+  zelos,
 };
+export const DropDownDiv = dropDownDiv;
 export {
+  CodeGenerator,
+  Field,
   FieldCheckbox,
   FieldCheckboxConfig,
   FieldCheckboxFromJsonConfig,
   FieldCheckboxValidator,
-};
-export {
-  FieldColour,
-  FieldColourConfig,
-  FieldColourFromJsonConfig,
-  FieldColourValidator,
-};
-export {
+  FieldConfig,
   FieldDropdown,
   FieldDropdownConfig,
   FieldDropdownFromJsonConfig,
   FieldDropdownValidator,
-  MenuGenerator,
-  MenuGeneratorFunction,
-  MenuOption,
-};
-export {FieldImage, FieldImageConfig, FieldImageFromJsonConfig};
-export {FieldLabel, FieldLabelConfig, FieldLabelFromJsonConfig};
-export {FieldLabelSerializable};
-export {
-  FieldMultilineInput,
-  FieldMultilineInputConfig,
-  FieldMultilineInputFromJsonConfig,
-  FieldMultilineInputValidator,
-};
-export {
+  FieldImage,
+  FieldImageConfig,
+  FieldImageFromJsonConfig,
+  FieldLabel,
+  FieldLabelConfig,
+  FieldLabelFromJsonConfig,
+  FieldLabelSerializable,
   FieldNumber,
   FieldNumberConfig,
   FieldNumberFromJsonConfig,
   FieldNumberValidator,
-};
-export {
   FieldTextInput,
   FieldTextInputConfig,
   FieldTextInputFromJsonConfig,
   FieldTextInputValidator,
-};
-export {
+  FieldValidator,
   FieldVariable,
   FieldVariableConfig,
   FieldVariableFromJsonConfig,
   FieldVariableValidator,
-};
-export {Flyout};
-export {FlyoutButton};
-export {FlyoutMetricsManager};
-export {CodeGenerator};
-export {CodeGenerator as Generator}; // Deprecated name, October 2022.
-export {Gesture};
-export {Grid};
-export {HorizontalFlyout};
-export {IASTNodeLocation};
-export {IASTNodeLocationSvg};
-export {IASTNodeLocationWithBlock};
-export {IAutoHideable};
-export {IBlockDragger};
-export {IBoundedElement};
-export {IBubble};
-export {ICollapsibleToolboxItem};
-export {IComponent};
-export {IConnectionChecker};
-export {IContextMenu};
-export {Icon};
-export {icons};
-export {ICopyable};
-export {IDeletable};
-export {IDeleteArea};
-export {IDragTarget};
-export {IDraggable};
-export {IFlyout};
-export {IKeyboardAccessible};
-export {IMetricsManager};
-export {IMovable};
-export {Input};
-export const inputs = {
+  Flyout,
+  FlyoutButton,
+  FlyoutMetricsManager,
+  CodeGenerator as Generator,
+  Gesture,
+  Grid,
+  HorizontalFlyout,
+  IASTNodeLocation,
+  IASTNodeLocationSvg,
+  IASTNodeLocationWithBlock,
+  IAutoHideable,
+  IBoundedElement,
+  IBubble,
+  ICollapsibleToolboxItem,
+  IComponent,
+  IConnectionChecker,
+  IConnectionPreviewer,
+  IContextMenu,
+  ICopyData,
+  ICopyable,
+  IDeletable,
+  IDeleteArea,
+  IDragStrategy,
+  IDragTarget,
+  IDraggable,
+  IDragger,
+  IFlyout,
+  IHasBubble,
+  IIcon,
+  IKeyboardAccessible,
+  IMetricsManager,
+  IMovable,
+  IObservable,
+  IPaster,
+  IPositionable,
+  IRegistrable,
+  IRenderedElement,
+  ISelectable,
+  ISelectableToolboxItem,
+  ISerializable,
+  IStyleable,
+  IToolbox,
+  IToolboxItem,
+  IVariableBackedParameterModel,
   Input,
-  inputTypes,
-  DummyInput,
-  StatementInput,
-  ValueInput,
+  InsertionMarkerManager,
+  InsertionMarkerPreviewer,
+  LayerManager,
+  Marker,
+  MarkerManager,
+  Menu,
+  MenuGenerator,
+  MenuGeneratorFunction,
+  MenuItem,
+  MenuOption,
+  MetricsManager,
+  Msg,
+  Names,
+  Options,
+  RenderedConnection,
+  Scrollbar,
+  ScrollbarPair,
+  ShortcutRegistry,
+  TabNavigateCursor,
+  Theme,
+  ThemeManager,
+  Toolbox,
+  ToolboxCategory,
+  ToolboxItem,
+  ToolboxSeparator,
+  Trashcan,
+  UnattachedFieldError,
+  VariableMap,
+  VariableModel,
+  VerticalFlyout,
+  Workspace,
+  WorkspaceAudio,
+  WorkspaceDragger,
+  WorkspaceSvg,
+  ZoomControls,
+  config,
+  hasBubble,
+  icons,
+  inject,
+  inputs,
+  isCopyable,
+  isDeletable,
+  isDraggable,
+  isIcon,
+  isObservable,
+  isPaster,
+  isRenderedElement,
+  isSelectable,
+  isSerializable,
+  isVariableBackedParameterModel,
+  layers,
+  renderManagement,
+  serialization,
+  setLocale,
 };
-export {InsertionMarkerManager};
-export {IObservable, isObservable};
-export {IPositionable};
-export {IRegistrable};
-export {ISelectable};
-export {ISelectableToolboxItem};
-export {IStyleable};
-export {IToolbox};
-export {IToolboxItem};
-export {IVariableBackedParameterModel, isVariableBackedParameterModel};
-export {Marker};
-export {MarkerManager};
-export {Menu};
-export {MenuItem};
-export {MetricsManager};
-export {Mutator};
-export {Msg, setLocale};
-export {Names};
-export {Options};
-export {RenderedConnection};
-export {renderManagement};
-export {Scrollbar};
-export {ScrollbarPair};
-export {ShortcutRegistry};
-export {TabNavigateCursor};
-export {Theme};
-export {ThemeManager};
-export {Toolbox};
-export {ToolboxCategory};
-export {ToolboxItem};
-export {ToolboxSeparator};
-export {Trashcan};
-export {VariableMap};
-export {VariableModel};
-export {VerticalFlyout};
-export {Warning};
-export {Workspace};
-export {WorkspaceAudio};
-export {WorkspaceComment};
-export {WorkspaceCommentSvg};
-export {WorkspaceDragger};
-export {WorkspaceSvg};
-export {ZoomControls};
-export {config};
-/** @deprecated Use Blockly.ConnectionType instead. */
-export const connectionTypes = ConnectionType;
-export {inject};
-export {inputTypes};
-export {serialization};

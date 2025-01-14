@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.geras.Highlighter');
+// Former goog.module ID: Blockly.geras.Highlighter
 
 import * as svgPaths from '../../utils/svg_paths.js';
 import type {ConstantProvider} from '../common/constants.js';
@@ -14,7 +13,6 @@ import type {Row} from '../measurables/row.js';
 import {SpacerRow} from '../measurables/spacer_row.js';
 import type {TopRow} from '../measurables/top_row.js';
 import {Types} from '../measurables/types.js';
-
 import type {
   HighlightConstantProvider,
   InsideCorner,
@@ -111,7 +109,7 @@ export class Highlighter {
         // move.
         this.steps_ += svgPaths.lineOnAxis(
           'H',
-          elem.xPos + elem.width - this.highlightOffset
+          elem.xPos + elem.width - this.highlightOffset,
         );
       }
     }
@@ -147,7 +145,7 @@ export class Highlighter {
       this.steps_ +=
         svgPaths.moveTo(
           input.xPos + input.width - this.highlightOffset,
-          row.yPos
+          row.yPos,
         ) +
         this.puzzleTabPaths_.pathDown(this.RTL_) +
         svgPaths.lineOnAxis('v', belowTabHeight);
@@ -175,7 +173,7 @@ export class Highlighter {
         this.insideCornerPaths_.pathBottom(this.RTL_) +
         svgPaths.lineTo(
           row.width - input.xPos - this.insideCornerPaths_.width,
-          0
+          0,
         );
     } else {
       this.steps_ +=
@@ -183,7 +181,7 @@ export class Highlighter {
         this.insideCornerPaths_.pathBottom(this.RTL_) +
         svgPaths.lineTo(
           row.width - input.xPos - this.insideCornerPaths_.width,
-          0
+          0,
         );
     }
   }
@@ -203,7 +201,7 @@ export class Highlighter {
       if (row.height > this.highlightOffset) {
         this.steps_ += svgPaths.lineOnAxis(
           'V',
-          row.yPos + row.height - this.highlightOffset
+          row.yPos + row.height - this.highlightOffset,
         );
       }
     }
@@ -220,14 +218,14 @@ export class Highlighter {
     if (this.RTL_) {
       this.steps_ += svgPaths.lineOnAxis(
         'V',
-        row.baseline - this.highlightOffset
+        row.baseline - this.highlightOffset,
       );
     } else {
       const cornerElem = this.info_.bottomRow.elements[0];
       if (Types.isLeftSquareCorner(cornerElem)) {
         this.steps_ += svgPaths.moveTo(
           row.xPos + this.highlightOffset,
-          row.baseline - this.highlightOffset
+          row.baseline - this.highlightOffset,
         );
       } else if (Types.isLeftRoundedCorner(cornerElem)) {
         this.steps_ += svgPaths.moveTo(row.xPos, row.baseline);
@@ -261,12 +259,12 @@ export class Highlighter {
       if (Types.isLeftRoundedCorner(topRow.elements[0])) {
         this.steps_ += svgPaths.lineOnAxis(
           'V',
-          this.outsideCornerPaths_.height
+          this.outsideCornerPaths_.height,
         );
       } else {
         this.steps_ += svgPaths.lineOnAxis(
           'V',
-          topRow.capline + this.highlightOffset
+          topRow.capline + this.highlightOffset,
         );
       }
     }

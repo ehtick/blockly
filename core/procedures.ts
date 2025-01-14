@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Procedures');
+// Former goog.module ID: Blockly.Procedures
 
 // Unused import preserved for side-effects. Remove if unneeded.
 import './events/events_block_change.js';
@@ -16,23 +15,32 @@ import {Blocks} from './blocks.js';
 import * as common from './common.js';
 import type {Abstract} from './events/events_abstract.js';
 import type {BubbleOpen} from './events/events_bubble_open.js';
+import {
+  isBlockChange,
+  isBlockCreate,
+  isBlockDelete,
+  isBlockFieldIntermediateChange,
+  isBubbleOpen,
+} from './events/predicates.js';
+import {EventType} from './events/type.js';
 import * as eventUtils from './events/utils.js';
 import {Field, UnattachedFieldError} from './field.js';
-import {Msg} from './msg.js';
-import {Names} from './names.js';
-import {IParameterModel} from './interfaces/i_parameter_model.js';
-import {IProcedureMap} from './interfaces/i_procedure_map.js';
-import {IProcedureModel} from './interfaces/i_procedure_model.js';
-import {
-  IProcedureBlock,
-  isProcedureBlock,
-} from './interfaces/i_procedure_block.js';
+import {MutatorIcon} from './icons.js';
 import {
   isLegacyProcedureCallBlock,
   isLegacyProcedureDefBlock,
   ProcedureBlock,
   ProcedureTuple,
 } from './interfaces/i_legacy_procedure_blocks.js';
+import {IParameterModel} from './interfaces/i_parameter_model.js';
+import {
+  IProcedureBlock,
+  isProcedureBlock,
+} from './interfaces/i_procedure_block.js';
+import {IProcedureMap} from './interfaces/i_procedure_map.js';
+import {IProcedureModel} from './interfaces/i_procedure_model.js';
+import {Msg} from './msg.js';
+import {Names} from './names.js';
 import {ObservableProcedureMap} from './observable_procedure_map.js';
 import * as utilsXml from './utils/xml.js';
 import * as Variables from './variables.js';
@@ -62,7 +70,7 @@ export const DEFAULT_ARG = 'x';
  *     list of name, parameter list, and return value boolean.
  */
 export function allProcedures(
-  root: Workspace
+  root: Workspace,
 ): [ProcedureTuple[], ProcedureTuple[]] {
   const proceduresNoReturn: ProcedureTuple[] = root
     .getProcedureMap()
@@ -149,7 +157,7 @@ export function findLegalName(name: string, block: Block): string {
 function isLegalName(
   name: string,
   workspace: Workspace,
-  opt_exclude?: Block
+  opt_exclude?: Block,
 ): boolean {
   return !isNameUsed(name, workspace, opt_exclude);
 }
@@ -166,7 +174,7 @@ function isLegalName(
 export function isNameUsed(
   name: string,
   workspace: Workspace,
-  opt_exclude?: Block
+  opt_exclude?: Block,
 ): boolean {
   for (const block of workspace.getAllBlocks(false)) {
     if (block === opt_exclude) continue;
@@ -242,7 +250,7 @@ export function flyoutCategory(workspace: WorkspaceSvg): Element[] {
     const nameField = utilsXml.createElement('field');
     nameField.setAttribute('name', 'NAME');
     nameField.appendChild(
-      utilsXml.createTextNode(Msg['PROCEDURES_DEFNORETURN_PROCEDURE'])
+      utilsXml.createTextNode(Msg['PROCEDURES_DEFNORETURN_PROCEDURE']),
     );
     block.appendChild(nameField);
     xmlList.push(block);
@@ -257,7 +265,7 @@ export function flyoutCategory(workspace: WorkspaceSvg): Element[] {
     const nameField = utilsXml.createElement('field');
     nameField.setAttribute('name', 'NAME');
     nameField.appendChild(
-      utilsXml.createTextNode(Msg['PROCEDURES_DEFRETURN_PROCEDURE'])
+      utilsXml.createTextNode(Msg['PROCEDURES_DEFRETURN_PROCEDURE']),
     );
     block.appendChild(nameField);
     xmlList.push(block);
@@ -283,7 +291,7 @@ export function flyoutCategory(workspace: WorkspaceSvg): Element[] {
    */
   function populateProcedures(
     procedureList: ProcedureTuple[],
-    templateName: string
+    templateName: string,
   ) {
     for (let i = 0; i < procedureList.length; i++) {
       const name = procedureList[i][0];
@@ -335,7 +343,7 @@ function updateMutatorFlyout(workspace: WorkspaceSvg) {
   nameField.setAttribute('name', 'NAME');
   const argValue = Variables.generateUniqueNameFromOptions(
     DEFAULT_ARG,
-    usedNames
+    usedNames,
   );
   const fieldContent = utilsXml.createTextNode(argValue);
 
@@ -354,9 +362,8 @@ function updateMutatorFlyout(workspace: WorkspaceSvg) {
  * @internal
  */
 export function mutatorOpenListener(e: Abstract) {
-  if (e.type !== eventUtils.BUBBLE_OPEN) {
-    return;
-  }
+  if (!isBubbleOpen(e)) return;
+
   const bubbleEvent = e as BubbleOpen;
   if (
     !(bubbleEvent.bubbleType === 'mutator' && bubbleEvent.isOpen) ||
@@ -372,7 +379,9 @@ export function mutatorOpenListener(e: Abstract) {
   if (type !== 'procedures_defnoreturn' && type !== 'procedures_defreturn') {
     return;
   }
-  const workspace = block.mutator!.getWorkspace() as WorkspaceSvg;
+  const workspace = (
+    block.getIcon(MutatorIcon.TYPE) as MutatorIcon
+  ).getWorkspace()!;
   updateMutatorFlyout(workspace);
   workspace.addChangeListener(mutatorChangeListener);
 }
@@ -384,9 +393,10 @@ export function mutatorOpenListener(e: Abstract) {
  */
 function mutatorChangeListener(e: Abstract) {
   if (
-    e.type !== eventUtils.BLOCK_CREATE &&
-    e.type !== eventUtils.BLOCK_DELETE &&
-    e.type !== eventUtils.BLOCK_CHANGE
+    !isBlockCreate(e) &&
+    !isBlockDelete(e) &&
+    !isBlockChange(e) &&
+    !isBlockFieldIntermediateChange(e)
   ) {
     return;
   }
@@ -451,13 +461,13 @@ export function mutateCallers(defBlock: Block) {
       // definition mutation.
       eventUtils.setRecordUndo(false);
       eventUtils.fire(
-        new (eventUtils.get(eventUtils.BLOCK_CHANGE))(
+        new (eventUtils.get(EventType.BLOCK_CHANGE))(
           caller,
           'mutation',
           null,
           oldMutation,
-          newMutation
-        )
+          newMutation,
+        ),
       );
       eventUtils.setRecordUndo(oldRecordUndo);
     }
@@ -473,7 +483,7 @@ export function mutateCallers(defBlock: Block) {
  */
 export function getDefinition(
   name: string,
-  workspace: Workspace
+  workspace: Workspace,
 ): Block | null {
   // Do not assume procedure is a top block. Some languages allow nested
   // procedures. Also do not assume it is one of the built-in blocks. Only
@@ -497,11 +507,11 @@ export function getDefinition(
 }
 
 export {
-  ObservableProcedureMap,
   IParameterModel,
   IProcedureBlock,
-  isProcedureBlock,
   IProcedureMap,
   IProcedureModel,
+  isProcedureBlock,
+  ObservableProcedureMap,
   ProcedureTuple,
 };

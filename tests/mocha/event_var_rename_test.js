@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.eventVarRename');
-
+import {assert} from '../../node_modules/chai/chai.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -27,14 +26,14 @@ suite('Var Rename Event', function () {
         this.workspace,
         'old name',
         'type',
-        'id'
+        'id',
       );
       const origEvent = new Blockly.Events.VarRename(varModel, 'new name');
 
       const json = origEvent.toJson();
       const newEvent = new Blockly.Events.fromJson(json, this.workspace);
 
-      chai.assert.deepEqual(newEvent, origEvent);
+      assert.deepEqual(newEvent, origEvent);
     });
   });
 });

@@ -10,12 +10,11 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.FieldLabel');
+// Former goog.module ID: Blockly.FieldLabel
 
-import * as dom from './utils/dom.js';
 import {Field, FieldConfig} from './field.js';
 import * as fieldRegistry from './field_registry.js';
+import * as dom from './utils/dom.js';
 import * as parsing from './utils/parsing.js';
 
 /**
@@ -49,7 +48,7 @@ export class FieldLabel extends Field<string> {
   constructor(
     value?: string | typeof Field.SKIP_SETUP,
     textClass?: string,
-    config?: FieldLabelConfig
+    config?: FieldLabelConfig,
   ) {
     super(Field.SKIP_SETUP);
 
@@ -69,8 +68,6 @@ export class FieldLabel extends Field<string> {
 
   /**
    * Create block UI for this label.
-   *
-   * @internal
    */
   override initView() {
     this.createTextElement_();
@@ -86,7 +83,7 @@ export class FieldLabel extends Field<string> {
    * @returns A valid string, or null if invalid.
    */
   protected override doClassValidation_(
-    newValue?: AnyDuringMigration
+    newValue?: AnyDuringMigration,
   ): string | null {
     if (newValue === null || newValue === undefined) {
       return null;
@@ -120,7 +117,7 @@ export class FieldLabel extends Field<string> {
    * @nocollapse
    * @internal
    */
-  static fromJson(options: FieldLabelFromJsonConfig): FieldLabel {
+  static override fromJson(options: FieldLabelFromJsonConfig): FieldLabel {
     const text = parsing.replaceMessageReferences(options.text);
     // `this` might be a subclass of FieldLabel if that class doesn't override
     // the static fromJson method.

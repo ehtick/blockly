@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.zelos.ConstantProvider');
+// Former goog.module ID: Blockly.zelos.ConstantProvider
 
 import {ConnectionType} from '../../connection_type.js';
 import type {RenderedConnection} from '../../rendered_connection.js';
@@ -14,8 +13,8 @@ import * as utilsColour from '../../utils/colour.js';
 import * as dom from '../../utils/dom.js';
 import {Svg} from '../../utils/svg.js';
 import * as svgPaths from '../../utils/svg_paths.js';
-import {ConstantProvider as BaseConstantProvider} from '../common/constants.js';
 import type {Shape} from '../common/constants.js';
+import {ConstantProvider as BaseConstantProvider} from '../common/constants.js';
 
 /** An object containing sizing and path information about inside corners. */
 export interface InsideCorners {
@@ -218,9 +217,9 @@ export class ConstantProvider extends BaseConstantProvider {
 
     this.FIELD_DROPDOWN_SVG_ARROW_PADDING = this.FIELD_BORDER_RECT_X_PADDING;
 
-    this.FIELD_COLOUR_DEFAULT_WIDTH = 2 * this.GRID_UNIT;
+    this.FIELD_COLOUR_DEFAULT_WIDTH = 6 * this.GRID_UNIT;
 
-    this.FIELD_COLOUR_DEFAULT_HEIGHT = 4 * this.GRID_UNIT;
+    this.FIELD_COLOUR_DEFAULT_HEIGHT = 8 * this.GRID_UNIT;
 
     this.FIELD_CHECKBOX_X_OFFSET = 1 * this.GRID_UNIT;
 
@@ -254,7 +253,7 @@ export class ConstantProvider extends BaseConstantProvider {
       theme.getComponentStyle('selectedGlowColour') ||
       this.SELECTED_GLOW_COLOUR;
     const selectedGlowSize = Number(
-      theme.getComponentStyle('selectedGlowSize')
+      theme.getComponentStyle('selectedGlowSize'),
     );
     this.SELECTED_GLOW_SIZE =
       selectedGlowSize && !isNaN(selectedGlowSize)
@@ -264,7 +263,7 @@ export class ConstantProvider extends BaseConstantProvider {
       theme.getComponentStyle('replacementGlowColour') ||
       this.REPLACEMENT_GLOW_COLOUR;
     const replacementGlowSize = Number(
-      theme.getComponentStyle('replacementGlowSize')
+      theme.getComponentStyle('replacementGlowSize'),
     );
     this.REPLACEMENT_GLOW_SIZE =
       replacementGlowSize && !isNaN(replacementGlowSize)
@@ -387,25 +386,26 @@ export class ConstantProvider extends BaseConstantProvider {
     function makeMainPath(
       blockHeight: number,
       up: boolean,
-      right: boolean
+      right: boolean,
     ): string {
       const remainingHeight =
         blockHeight > maxHeight ? blockHeight - maxHeight : 0;
       const height = blockHeight > maxHeight ? maxHeight : blockHeight;
       const radius = height / 2;
+      const sweep = right === up ? '0' : '1';
       return (
         svgPaths.arc(
           'a',
-          '0 0,1',
+          '0 0,' + sweep,
           radius,
-          svgPaths.point((up ? -1 : 1) * radius, (up ? -1 : 1) * radius)
+          svgPaths.point((right ? 1 : -1) * radius, (up ? -1 : 1) * radius),
         ) +
-        svgPaths.lineOnAxis('v', (right ? 1 : -1) * remainingHeight) +
+        svgPaths.lineOnAxis('v', (up ? -1 : 1) * remainingHeight) +
         svgPaths.arc(
           'a',
-          '0 0,1',
+          '0 0,' + sweep,
           radius,
-          svgPaths.point((up ? 1 : -1) * radius, (up ? -1 : 1) * radius)
+          svgPaths.point((right ? -1 : 1) * radius, (up ? -1 : 1) * radius),
         )
       );
     }
@@ -466,19 +466,20 @@ export class ConstantProvider extends BaseConstantProvider {
      */
     function makeMainPath(height: number, up: boolean, right: boolean): string {
       const innerHeight = height - radius * 2;
+      const sweep = right === up ? '0' : '1';
       return (
         svgPaths.arc(
           'a',
-          '0 0,1',
+          '0 0,' + sweep,
           radius,
-          svgPaths.point((up ? -1 : 1) * radius, (up ? -1 : 1) * radius)
+          svgPaths.point((right ? 1 : -1) * radius, (up ? -1 : 1) * radius),
         ) +
-        svgPaths.lineOnAxis('v', (right ? 1 : -1) * innerHeight) +
+        svgPaths.lineOnAxis('v', (up ? -1 : 1) * innerHeight) +
         svgPaths.arc(
           'a',
-          '0 0,1',
+          '0 0,' + sweep,
           radius,
-          svgPaths.point((up ? 1 : -1) * radius, (up ? -1 : 1) * radius)
+          svgPaths.point((right ? -1 : 1) * radius, (up ? -1 : 1) * radius),
         )
       );
     }
@@ -535,13 +536,13 @@ export class ConstantProvider extends BaseConstantProvider {
           }
         }
         // Includes doesn't work in IE.
-        if (checks && checks.indexOf('Boolean') !== -1) {
+        if (checks && checks.includes('Boolean')) {
           return this.HEXAGONAL!;
         }
-        if (checks && checks.indexOf('Number') !== -1) {
+        if (checks && checks.includes('Number')) {
           return this.ROUNDED!;
         }
-        if (checks && checks.indexOf('String') !== -1) {
+        if (checks && checks.includes('String')) {
           return this.ROUNDED!;
         }
         return this.ROUNDED!;
@@ -617,28 +618,28 @@ export class ConstantProvider extends BaseConstantProvider {
       'a',
       '0 0,0',
       radius,
-      svgPaths.point(-radius, radius)
+      svgPaths.point(-radius, radius),
     );
 
     const innerTopRightCorner = svgPaths.arc(
       'a',
       '0 0,1',
       radius,
-      svgPaths.point(-radius, radius)
+      svgPaths.point(-radius, radius),
     );
 
     const innerBottomLeftCorner = svgPaths.arc(
       'a',
       '0 0,0',
       radius,
-      svgPaths.point(radius, radius)
+      svgPaths.point(radius, radius),
     );
 
     const innerBottomRightCorner = svgPaths.arc(
       'a',
       '0 0,1',
       radius,
-      svgPaths.point(radius, radius)
+      svgPaths.point(radius, radius),
     );
 
     return {
@@ -680,23 +681,23 @@ export class ConstantProvider extends BaseConstantProvider {
         'y': '-30%',
         'x': '-40%',
       },
-      defs
+      defs,
     );
     dom.createSvgElement(
       Svg.FEGAUSSIANBLUR,
       {'in': 'SourceGraphic', 'stdDeviation': this.SELECTED_GLOW_SIZE},
-      selectedGlowFilter
+      selectedGlowFilter,
     );
     // Set all gaussian blur pixels to 1 opacity before applying flood
     const selectedComponentTransfer = dom.createSvgElement(
       Svg.FECOMPONENTTRANSFER,
       {'result': 'outBlur'},
-      selectedGlowFilter
+      selectedGlowFilter,
     );
     dom.createSvgElement(
       Svg.FEFUNCA,
       {'type': 'table', 'tableValues': '0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'},
-      selectedComponentTransfer
+      selectedComponentTransfer,
     );
     // Color the highlight
     dom.createSvgElement(
@@ -706,7 +707,7 @@ export class ConstantProvider extends BaseConstantProvider {
         'flood-opacity': 1,
         'result': 'outColor',
       },
-      selectedGlowFilter
+      selectedGlowFilter,
     );
     dom.createSvgElement(
       Svg.FECOMPOSITE,
@@ -716,7 +717,7 @@ export class ConstantProvider extends BaseConstantProvider {
         'operator': 'in',
         'result': 'outGlow',
       },
-      selectedGlowFilter
+      selectedGlowFilter,
     );
     this.selectedGlowFilterId = selectedGlowFilter.id;
     this.selectedGlowFilter = selectedGlowFilter;
@@ -732,23 +733,23 @@ export class ConstantProvider extends BaseConstantProvider {
         'y': '-30%',
         'x': '-40%',
       },
-      defs
+      defs,
     );
     dom.createSvgElement(
       Svg.FEGAUSSIANBLUR,
       {'in': 'SourceGraphic', 'stdDeviation': this.REPLACEMENT_GLOW_SIZE},
-      replacementGlowFilter
+      replacementGlowFilter,
     );
     // Set all gaussian blur pixels to 1 opacity before applying flood
     const replacementComponentTransfer = dom.createSvgElement(
       Svg.FECOMPONENTTRANSFER,
       {'result': 'outBlur'},
-      replacementGlowFilter
+      replacementGlowFilter,
     );
     dom.createSvgElement(
       Svg.FEFUNCA,
       {'type': 'table', 'tableValues': '0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'},
-      replacementComponentTransfer
+      replacementComponentTransfer,
     );
     // Color the highlight
     dom.createSvgElement(
@@ -758,7 +759,7 @@ export class ConstantProvider extends BaseConstantProvider {
         'flood-opacity': 1,
         'result': 'outColor',
       },
-      replacementGlowFilter
+      replacementGlowFilter,
     );
     dom.createSvgElement(
       Svg.FECOMPOSITE,
@@ -768,7 +769,7 @@ export class ConstantProvider extends BaseConstantProvider {
         'operator': 'in',
         'result': 'outGlow',
       },
-      replacementGlowFilter
+      replacementGlowFilter,
     );
     dom.createSvgElement(
       Svg.FECOMPOSITE,
@@ -777,7 +778,7 @@ export class ConstantProvider extends BaseConstantProvider {
         'in2': 'outGlow',
         'operator': 'over',
       },
-      replacementGlowFilter
+      replacementGlowFilter,
     );
     this.replacementGlowFilterId = replacementGlowFilter.id;
     this.replacementGlowFilter = replacementGlowFilter;
@@ -785,12 +786,15 @@ export class ConstantProvider extends BaseConstantProvider {
 
   override getCSS_(selector: string) {
     return [
-      /* eslint-disable indent */
       // Text.
       `${selector} .blocklyText,`,
       `${selector} .blocklyFlyoutLabelText {`,
       `font: ${this.FIELD_TEXT_FONTWEIGHT} ${this.FIELD_TEXT_FONTSIZE}` +
         `pt ${this.FIELD_TEXT_FONTFAMILY};`,
+      `}`,
+
+      `${selector} .blocklyTextInputBubble textarea {`,
+      `font-weight: normal;`,
       `}`,
 
       // Fields.
@@ -866,4 +870,3 @@ export class ConstantProvider extends BaseConstantProvider {
     ];
   }
 }
-/* eslint-enable indent */

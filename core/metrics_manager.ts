@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.MetricsManager');
+// Former goog.module ID: Blockly.MetricsManager
 
 import type {IFlyout} from './interfaces/i_flyout.js';
 import type {IMetricsManager} from './interfaces/i_metrics_manager.js';
@@ -64,7 +63,7 @@ export class MetricsManager implements IMetricsManager {
    */
   getFlyoutMetrics(opt_own?: boolean): ToolboxMetrics {
     const flyoutDimensions = this.getDimensionsPx_(
-      this.workspace_.getFlyout(opt_own)
+      this.workspace_.getFlyout(opt_own),
     );
     return {
       width: flyoutDimensions.width,
@@ -83,7 +82,7 @@ export class MetricsManager implements IMetricsManager {
    */
   getToolboxMetrics(): ToolboxMetrics {
     const toolboxDimensions = this.getDimensionsPx_(
-      this.workspace_.getToolbox()
+      this.workspace_.getToolbox(),
     );
 
     return {
@@ -112,26 +111,25 @@ export class MetricsManager implements IMetricsManager {
    */
   getAbsoluteMetrics(): AbsoluteMetrics {
     let absoluteLeft = 0;
+    let absoluteTop = 0;
+
     const toolboxMetrics = this.getToolboxMetrics();
-    const flyoutMetrics = this.getFlyoutMetrics(true);
-    const doesToolboxExist = !!this.workspace_.getToolbox();
-    const doesFlyoutExist = !!this.workspace_.getFlyout(true);
-    const toolboxPosition = doesToolboxExist
+    const flyoutMetrics = this.getFlyoutMetrics();
+    const respectToolbox = !!this.workspace_.getToolbox();
+    const respectFlyout = !this.workspace_.getFlyout()?.autoClose;
+    const toolboxPosition = respectToolbox
       ? toolboxMetrics.position
       : flyoutMetrics.position;
 
     const atLeft = toolboxPosition === toolboxUtils.Position.LEFT;
     const atTop = toolboxPosition === toolboxUtils.Position.TOP;
-    if (doesToolboxExist && atLeft) {
-      absoluteLeft = toolboxMetrics.width;
-    } else if (doesFlyoutExist && atLeft) {
-      absoluteLeft = flyoutMetrics.width;
+    if (atLeft) {
+      if (respectToolbox) absoluteLeft += toolboxMetrics.width;
+      if (respectFlyout) absoluteLeft += flyoutMetrics.width;
     }
-    let absoluteTop = 0;
-    if (doesToolboxExist && atTop) {
-      absoluteTop = toolboxMetrics.height;
-    } else if (doesFlyoutExist && atTop) {
-      absoluteTop = flyoutMetrics.height;
+    if (atTop) {
+      if (respectToolbox) absoluteTop += toolboxMetrics.height;
+      if (respectFlyout) absoluteTop += flyoutMetrics.height;
     }
 
     return {
@@ -153,36 +151,26 @@ export class MetricsManager implements IMetricsManager {
     const scale = opt_getWorkspaceCoordinates ? this.workspace_.scale : 1;
     const svgMetrics = this.getSvgMetrics();
     const toolboxMetrics = this.getToolboxMetrics();
-    const flyoutMetrics = this.getFlyoutMetrics(true);
-    const doesToolboxExist = !!this.workspace_.getToolbox();
-    const toolboxPosition = doesToolboxExist
+    const flyoutMetrics = this.getFlyoutMetrics();
+    const respectToolbox = !!this.workspace_.getToolbox();
+    const respectFlyout = !this.workspace_.getFlyout()?.autoClose;
+    const toolboxPosition = respectToolbox
       ? toolboxMetrics.position
       : flyoutMetrics.position;
 
-    if (this.workspace_.getToolbox()) {
-      if (
-        toolboxPosition === toolboxUtils.Position.TOP ||
-        toolboxPosition === toolboxUtils.Position.BOTTOM
-      ) {
-        svgMetrics.height -= toolboxMetrics.height;
-      } else if (
-        toolboxPosition === toolboxUtils.Position.LEFT ||
-        toolboxPosition === toolboxUtils.Position.RIGHT
-      ) {
-        svgMetrics.width -= toolboxMetrics.width;
-      }
-    } else if (this.workspace_.getFlyout(true)) {
-      if (
-        toolboxPosition === toolboxUtils.Position.TOP ||
-        toolboxPosition === toolboxUtils.Position.BOTTOM
-      ) {
-        svgMetrics.height -= flyoutMetrics.height;
-      } else if (
-        toolboxPosition === toolboxUtils.Position.LEFT ||
-        toolboxPosition === toolboxUtils.Position.RIGHT
-      ) {
-        svgMetrics.width -= flyoutMetrics.width;
-      }
+    const horizToolbox =
+      toolboxPosition === toolboxUtils.Position.TOP ||
+      toolboxPosition === toolboxUtils.Position.BOTTOM;
+    const vertToolbox =
+      toolboxPosition === toolboxUtils.Position.LEFT ||
+      toolboxPosition === toolboxUtils.Position.RIGHT;
+    if (horizToolbox) {
+      if (respectToolbox) svgMetrics.height -= toolboxMetrics.height;
+      if (respectFlyout) svgMetrics.height -= flyoutMetrics.height;
+    }
+    if (vertToolbox) {
+      if (respectToolbox) svgMetrics.width -= toolboxMetrics.width;
+      if (respectFlyout) svgMetrics.width -= flyoutMetrics.width;
     }
     return {
       height: svgMetrics.height / scale,
@@ -237,7 +225,7 @@ export class MetricsManager implements IMetricsManager {
    * @returns The fixed edges of the scroll area.
    */
   protected getComputedFixedEdges_(
-    opt_viewMetrics?: ContainerRegion
+    opt_viewMetrics?: ContainerRegion,
   ): FixedEdges {
     if (!this.hasFixedEdges()) {
       // Return early if there are no edges.
@@ -270,7 +258,7 @@ export class MetricsManager implements IMetricsManager {
    */
   protected getPaddedContent_(
     viewMetrics: ContainerRegion,
-    contentMetrics: ContainerRegion
+    contentMetrics: ContainerRegion,
   ): {top: number; bottom: number; left: number; right: number} {
     const contentBottom = contentMetrics.top + contentMetrics.height;
     const contentRight = contentMetrics.left + contentMetrics.width;
@@ -284,19 +272,19 @@ export class MetricsManager implements IMetricsManager {
     // Ensure padding is wide enough that blocks can scroll over entire screen.
     const top = Math.min(
       contentMetrics.top - halfHeight,
-      contentBottom - viewHeight
+      contentBottom - viewHeight,
     );
     const left = Math.min(
       contentMetrics.left - halfWidth,
-      contentRight - viewWidth
+      contentRight - viewWidth,
     );
     const bottom = Math.max(
       contentBottom + halfHeight,
-      contentMetrics.top + viewHeight
+      contentMetrics.top + viewHeight,
     );
     const right = Math.max(
       contentRight + halfWidth,
-      contentMetrics.left + viewWidth
+      contentMetrics.left + viewWidth,
     );
 
     return {top, bottom, left, right};
@@ -318,7 +306,7 @@ export class MetricsManager implements IMetricsManager {
   getScrollMetrics(
     opt_getWorkspaceCoordinates?: boolean,
     opt_viewMetrics?: ContainerRegion,
-    opt_contentMetrics?: ContainerRegion
+    opt_contentMetrics?: ContainerRegion,
   ): ContainerRegion {
     const scale = opt_getWorkspaceCoordinates ? this.workspace_.scale : 1;
     const viewMetrics = opt_viewMetrics || this.getViewMetrics(false);
@@ -406,7 +394,7 @@ export class MetricsManager implements IMetricsManager {
     const scrollMetrics = this.getScrollMetrics(
       false,
       viewMetrics,
-      contentMetrics
+      contentMetrics,
     );
 
     return {
@@ -494,5 +482,5 @@ export type UiMetrics = MetricsManager.UiMetrics;
 registry.register(
   registry.Type.METRICS_MANAGER,
   registry.DEFAULT,
-  MetricsManager
+  MetricsManager,
 );

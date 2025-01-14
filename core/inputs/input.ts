@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Input');
+// Former goog.module ID: Blockly.Input
 
 // Unused import preserved for side-effects. Remove if unneeded.
 import '../field_label.js';
@@ -18,14 +17,14 @@ import '../field_label.js';
 import type {Block} from '../block.js';
 import type {BlockSvg} from '../block_svg.js';
 import type {Connection} from '../connection.js';
+import type {ConnectionType} from '../connection_type.js';
 import type {Field} from '../field.js';
 import * as fieldRegistry from '../field_registry.js';
 import type {RenderedConnection} from '../rendered_connection.js';
+import {Align} from './align.js';
 import {inputTypes} from './input_types.js';
 
-/**
- * Class for an input with an optional field.
- */
+/** Class for an input with optional fields. */
 export class Input {
   fieldRow: Field[] = [];
   /** Alignment of input's fields (left, right or centre). */
@@ -36,18 +35,16 @@ export class Input {
 
   public readonly type: inputTypes = inputTypes.CUSTOM;
 
+  public connection: Connection | null = null;
+
   /**
    * @param name Language-neutral identifier which may used to find this input
    *     again.
    * @param sourceBlock The block containing this input.
-   * @param connection Optional connection for this input. If this is a custom
-   *     input, `null` will always be passed, and then the subclass can
-   *     optionally construct a connection.
    */
   constructor(
     public name: string,
     private sourceBlock: Block,
-    public connection: Connection | null
   ) {}
 
   /**
@@ -86,7 +83,7 @@ export class Input {
   insertFieldAt<T>(
     index: number,
     field: string | Field<T>,
-    opt_name?: string
+    opt_name?: string,
   ): number {
     if (index < 0 || index > this.fieldRow.length) {
       throw Error('index ' + index + ' out of bounds.');
@@ -106,10 +103,7 @@ export class Input {
     }
 
     field.setSourceBlock(this.sourceBlock);
-    if (this.sourceBlock.rendered) {
-      field.init();
-      field.applyColour();
-    }
+    if (this.sourceBlock.initialized) this.initField(field);
     field.name = opt_name;
     field.setVisible(this.isVisible());
 
@@ -127,8 +121,6 @@ export class Input {
 
     if (this.sourceBlock.rendered) {
       (this.sourceBlock as BlockSvg).queueRender();
-      // Adding a field will cause the block to change shape.
-      this.sourceBlock.bumpNeighbours();
     }
     return index;
   }
@@ -149,8 +141,6 @@ export class Input {
         this.fieldRow.splice(i, 1);
         if (this.sourceBlock.rendered) {
           (this.sourceBlock as BlockSvg).queueRender();
-          // Removing a field will cause the block to change shape.
-          this.sourceBlock.bumpNeighbours();
         }
         return true;
       }
@@ -277,18 +267,33 @@ export class Input {
 
   /** Initialize the fields on this input. */
   init() {
-    if (!this.sourceBlock.workspace.rendered) {
-      return; // Headless blocks don't need fields initialized.
+    for (const field of this.fieldRow) {
+      field.init();
     }
-    for (let i = 0; i < this.fieldRow.length; i++) {
-      this.fieldRow[i].init();
+  }
+
+  /**
+   * Initializes the fields on this input for a headless block.
+   *
+   * @internal
+   */
+  public initModel() {
+    for (const field of this.fieldRow) {
+      field.initModel();
+    }
+  }
+
+  /** Initializes the given field. */
+  private initField(field: Field) {
+    if (this.sourceBlock.rendered) {
+      field.init();
+    } else {
+      field.initModel();
     }
   }
 
   /**
    * Sever all links to this input.
-   *
-   * @suppress {checkTypes}
    */
   dispose() {
     for (let i = 0, field; (field = this.fieldRow[i]); i++) {
@@ -298,19 +303,16 @@ export class Input {
       this.connection.dispose();
     }
   }
-}
 
-export namespace Input {
   /**
-   * Enum for alignment of inputs.
+   * Constructs a connection based on the type of this input's source block.
+   * Properly handles constructing headless connections for headless blocks
+   * and rendered connections for rendered blocks.
    *
+   * @returns a connection of the given type, which is either a headless
+   *     or rendered connection, based on the type of this input's source block.
    */
-  export enum Align {
-    LEFT = -1,
-    CENTRE = 0,
-    RIGHT = 1,
+  protected makeConnection(type: ConnectionType): Connection {
+    return this.sourceBlock.makeConnection_(type);
   }
 }
-
-export type Align = Input.Align;
-export const Align = Input.Align;

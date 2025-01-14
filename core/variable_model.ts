@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.VariableModel');
+// Former goog.module ID: Blockly.VariableModel
 
 // Unused import preserved for side-effects. Remove if unneeded.
 import './events/events_var_create.js';
@@ -26,7 +25,7 @@ import type {Workspace} from './workspace.js';
  */
 export class VariableModel {
   type: string;
-  private readonly id_: string;
+  private readonly id: string;
 
   /**
    * @param workspace The variable's workspace.
@@ -41,7 +40,7 @@ export class VariableModel {
     public workspace: Workspace,
     public name: string,
     opt_type?: string,
-    opt_id?: string
+    opt_id?: string,
   ) {
     /**
      * The type of the variable, such as 'int' or 'sound_effect'. This may be
@@ -57,12 +56,12 @@ export class VariableModel {
      * not change, even if the name changes. In most cases this should be a
      * UUID.
      */
-    this.id_ = opt_id || idGenerator.genUid();
+    this.id = opt_id || idGenerator.genUid();
   }
 
   /** @returns The ID for the variable. */
   getId(): string {
-    return this.id_;
+    return this.id;
   }
 
   /**

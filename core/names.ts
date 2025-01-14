@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Names');
+// Former goog.module ID: Blockly.Names
 
 import {Msg} from './msg.js';
 // import * as Procedures from './procedures.js';
@@ -53,7 +52,7 @@ export class Names {
     this.variablePrefix = opt_variablePrefix || '';
 
     this.reservedWords = new Set<string>(
-      reservedWordsList ? reservedWordsList.split(',') : []
+      reservedWordsList ? reservedWordsList.split(',') : [],
     );
   }
 
@@ -90,7 +89,7 @@ export class Names {
           'defining a variable map. To fix, add the following code in your ' +
           "generator's init() function:\n" +
           'Blockly.YourGeneratorName.nameDB_.setVariableMap(' +
-          'workspace.getVariableMap());'
+          'workspace.getVariableMap());',
       );
       return null;
     }
@@ -122,7 +121,7 @@ export class Names {
   populateProcedures(workspace: Workspace) {
     throw new Error(
       'The implementation of populateProcedures should be ' +
-        'monkey-patched in by blockly.ts'
+        'monkey-patched in by blockly.ts',
     );
   }
 
@@ -219,7 +218,7 @@ export class Names {
       // https://github.com/google/blockly/issues/1654
       name = encodeURI(name.replace(/ /g, '_')).replace(/[^\w]/g, '_');
       // Most languages don't allow names with leading numbers.
-      if ('0123456789'.indexOf(name[0]) !== -1) {
+      if ('0123456789'.includes(name[0])) {
         name = 'my_' + name;
       }
     }

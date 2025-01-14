@@ -4,26 +4,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.zelos.RenderInfo');
+// Former goog.module ID: Blockly.zelos.RenderInfo
 
 import type {BlockSvg} from '../../block_svg.js';
-import {DummyInput} from '../../inputs/dummy_input.js';
 import {FieldImage} from '../../field_image.js';
 import {FieldLabel} from '../../field_label.js';
 import {FieldTextInput} from '../../field_textinput.js';
-import {Align, Input} from '../../inputs/input.js';
+import {Align} from '../../inputs/align.js';
+import {DummyInput} from '../../inputs/dummy_input.js';
+import {EndRowInput} from '../../inputs/end_row_input.js';
+import {Input} from '../../inputs/input.js';
+import {StatementInput} from '../../inputs/statement_input.js';
+import {ValueInput} from '../../inputs/value_input.js';
 import {RenderInfo as BaseRenderInfo} from '../common/info.js';
 import type {Measurable} from '../measurables/base.js';
 import {Field} from '../measurables/field.js';
 import {InRowSpacer} from '../measurables/in_row_spacer.js';
 import {InputConnection} from '../measurables/input_connection.js';
-import {StatementInput} from '../../inputs/statement_input.js';
 import type {Row} from '../measurables/row.js';
 import type {SpacerRow} from '../measurables/spacer_row.js';
 import {Types} from '../measurables/types.js';
-import {ValueInput} from '../../inputs/value_input.js';
-
 import type {ConstantProvider, InsideCorners} from './constants.js';
 import {BottomRow} from './measurables/bottom_row.js';
 import {StatementInput as StatementInputMeasurable} from './measurables/inputs.js';
@@ -117,21 +117,30 @@ export class RenderInfo extends BaseRenderInfo {
     this.finalize_();
   }
 
-  override shouldStartNewRow_(input: Input, lastInput: Input): boolean {
+  override shouldStartNewRow_(currInput: Input, prevInput: Input): boolean {
     // If this is the first input, just add to the existing row.
     // That row is either empty or has some icons in it.
-    if (!lastInput) {
+    if (!prevInput) {
       return false;
+    }
+    // If the previous input was an end-row input, then any following input
+    // should always be rendered on the next row.
+    if (prevInput instanceof EndRowInput) {
+      return true;
     }
     // A statement input or an input following one always gets a new row.
     if (
-      input instanceof StatementInput ||
-      lastInput instanceof StatementInput
+      currInput instanceof StatementInput ||
+      prevInput instanceof StatementInput
     ) {
       return true;
     }
-    // Value and dummy inputs get new row if inputs are not inlined.
-    if (input instanceof ValueInput || input instanceof DummyInput) {
+    // Value, dummy, and end-row inputs get new row if inputs are not inlined.
+    if (
+      currInput instanceof ValueInput ||
+      currInput instanceof DummyInput ||
+      currInput instanceof EndRowInput
+    ) {
       return !this.isInline || this.isMultiRow;
     }
     return false;
@@ -148,7 +157,7 @@ export class RenderInfo extends BaseRenderInfo {
 
   override getInRowSpacing_(
     prev: Measurable | null,
-    next: Measurable | null
+    next: Measurable | null,
   ): number {
     if (!prev || !next) {
       // No need for padding at the beginning or end of the row if the
@@ -204,7 +213,7 @@ export class RenderInfo extends BaseRenderInfo {
         (!this.outputConnection || this.hasStatementInput)
       ) {
         return Math.abs(
-          this.constants_.NOTCH_HEIGHT - this.constants_.CORNER_RADIUS
+          this.constants_.NOTCH_HEIGHT - this.constants_.CORNER_RADIUS,
         );
       }
       return this.constants_.NO_PADDING;
@@ -217,13 +226,13 @@ export class RenderInfo extends BaseRenderInfo {
             this.topRow.minHeight,
             Math.max(
               this.constants_.NOTCH_HEIGHT,
-              this.constants_.CORNER_RADIUS
-            )
+              this.constants_.CORNER_RADIUS,
+            ),
           ) - this.constants_.CORNER_RADIUS;
         return topHeight;
       } else if (!bottomRow.hasNextConnection && this.hasStatementInput) {
         return Math.abs(
-          this.constants_.NOTCH_HEIGHT - this.constants_.CORNER_RADIUS
+          this.constants_.NOTCH_HEIGHT - this.constants_.CORNER_RADIUS,
         );
       }
       return this.constants_.NO_PADDING;
@@ -266,9 +275,9 @@ export class RenderInfo extends BaseRenderInfo {
   override addInput_(input: Input, activeRow: Row) {
     // If we have two dummy inputs on the same row, one aligned left and the
     // other right, keep track of the right aligned dummy input so we can add
-    // padding later.
+    // padding later. An end-row input after a dummy input also counts.
     if (
-      input instanceof DummyInput &&
+      (input instanceof DummyInput || input instanceof EndRowInput) &&
       activeRow.hasDummyInput &&
       activeRow.align === Align.LEFT &&
       input.align === Align.RIGHT
@@ -277,7 +286,7 @@ export class RenderInfo extends BaseRenderInfo {
     } else if (input instanceof StatementInput) {
       // Handle statements without next connections correctly.
       activeRow.elements.push(
-        new StatementInputMeasurable(this.constants_, input)
+        new StatementInputMeasurable(this.constants_, input),
       );
       activeRow.hasStatement = true;
 
@@ -501,7 +510,7 @@ export class RenderInfo extends BaseRenderInfo {
     const connectionWidth = this.outputConnection.width;
     const outerShape = this.outputConnection.shape.type;
     const constants = this.constants_;
-    if (this.isMultiRow && this.inputRows.length > 1) {
+    if (this.inputRows.length > 1) {
       switch (outerShape) {
         case constants.SHAPES.ROUND: {
           // Special case for multi-row round reporter blocks.

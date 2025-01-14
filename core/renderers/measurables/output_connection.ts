@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.OutputConnection');
+// Former goog.module ID: Blockly.blockRendering.OutputConnection
 
 import type {RenderedConnection} from '../../rendered_connection.js';
 import type {ConstantProvider} from '../common/constants.js';
-
 import {Connection} from './connection.js';
 import {Types} from './types.js';
 
@@ -29,7 +27,7 @@ export class OutputConnection extends Connection {
    */
   constructor(
     constants: ConstantProvider,
-    connectionModel: RenderedConnection
+    connectionModel: RenderedConnection,
   ) {
     super(constants, connectionModel);
     this.type |= Types.OUTPUT_CONNECTION;

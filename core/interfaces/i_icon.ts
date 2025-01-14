@@ -4,16 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type {IconType} from '../icons/icon_types.js';
 import type {Coordinate} from '../utils/coordinate.js';
 import type {Size} from '../utils/size.js';
 
 export interface IIcon {
   /**
-   * @return the string representing the type of the icon.
-   * E.g. 'comment', 'warning', etc. This string should also be used when
-   * registering the icon class.
+   * @returns the IconType representing the type of the icon. This value should
+   *     also be used to register the icon via `Blockly.icons.registry.register`.
    */
-  getType(): string;
+  getType(): IconType<IIcon>;
 
   /**
    * Creates the SVG elements for the icon that will live on the block.
@@ -35,26 +35,32 @@ export interface IIcon {
   dispose(): void;
 
   /**
-   * @return the "weight" of the icon, which determines the static order which
+   * @returns the "weight" of the icon, which determines the static order which
    *     icons should be rendered in. More positive numbers are rendered farther
    *     toward the end of the block.
    */
   getWeight(): number;
 
-  /** @return The dimensions of the icon for use in rendering. */
+  /** @returns The dimensions of the icon for use in rendering. */
   getSize(): Size;
 
-  /** Notifies the icon that the block's colour has changed. */
+  /** Updates the icon's color when the block's color changes.. */
   applyColour(): void;
 
-  /** Notifies the icon that the block's editability has changed. */
+  /** Hides the icon when it is part of an insertion marker. */
+  hideForInsertionMarker(): void;
+
+  /** Updates the icon's editability when the block's editability changes. */
   updateEditable(): void;
 
-  /** Notifies the icon that the block's collapsed-ness has changed. */
+  /**
+   * Updates the icon's collapsed-ness/view when the block's collapsed-ness
+   * changes.
+   */
   updateCollapsed(): void;
 
   /**
-   * @return Whether this icon is shown when the block is collapsed. Used
+   * @returns Whether this icon is shown when the block is collapsed. Used
    *     to allow renderers to account for padding.
    */
   isShownWhenCollapsed(): boolean;
@@ -77,6 +83,15 @@ export interface IIcon {
    * Notifies the icon that it has been clicked.
    */
   onClick(): void;
+
+  /**
+   * Check whether the icon should be clickable while the block is in a flyout.
+   * If this function is not defined, the icon will be clickable in all flyouts.
+   *
+   * @param autoClosingFlyout true if the containing flyout is an auto-closing one.
+   * @returns Whether the icon should be clickable while the block is in a flyout.
+   */
+  isClickableInFlyout?(autoClosingFlyout: boolean): boolean;
 }
 
 /** Type guard that checks whether the given object is an IIcon. */
@@ -88,6 +103,7 @@ export function isIcon(obj: any): obj is IIcon {
     obj.getWeight !== undefined &&
     obj.getSize !== undefined &&
     obj.applyColour !== undefined &&
+    obj.hideForInsertionMarker !== undefined &&
     obj.updateEditable !== undefined &&
     obj.updateCollapsed !== undefined &&
     obj.isShownWhenCollapsed !== undefined &&

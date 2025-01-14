@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.uiPosition');
+// Former goog.module ID: Blockly.uiPosition
 
 import type {UiMetrics} from './metrics_manager.js';
 import {Scrollbar} from './scrollbar.js';
@@ -75,7 +74,7 @@ export function getStartPositionRect(
   horizontalPadding: number,
   verticalPadding: number,
   metrics: UiMetrics,
-  workspace: WorkspaceSvg
+  workspace: WorkspaceSvg,
 ): Rect {
   // Horizontal positioning.
   let left = 0;
@@ -129,7 +128,7 @@ export function getStartPositionRect(
  */
 export function getCornerOppositeToolbox(
   workspace: WorkspaceSvg,
-  metrics: UiMetrics
+  metrics: UiMetrics,
 ): Position {
   const leftCorner =
     metrics.toolboxMetrics.position !== toolbox.Position.LEFT &&
@@ -160,7 +159,7 @@ export function bumpPositionRect(
   startRect: Rect,
   margin: number,
   bumpDir: bumpDirection,
-  savedPositions: Rect[]
+  savedPositions: Rect[],
 ): Rect {
   let top = startRect.top;
   const left = startRect.left;

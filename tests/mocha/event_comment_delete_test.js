@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.eventCommentDelete');
-
+import {assert} from '../../node_modules/chai/chai.js';
 import {
   sharedTestSetup,
   sharedTestTeardown,
@@ -23,12 +22,9 @@ suite('Comment Delete Event', function () {
 
   suite('Serialization', function () {
     test('events round-trip through JSON', function () {
-      const comment = new Blockly.WorkspaceComment(
-        this.workspace,
-        'test text',
-        10,
-        10
-      );
+      const comment = new Blockly.comments.WorkspaceComment(this.workspace);
+      comment.setText('test text');
+      comment.moveTo(new Blockly.utils.Coordinate(10, 10));
       const origEvent = new Blockly.Events.CommentDelete(comment);
 
       const json = origEvent.toJson();
@@ -36,7 +32,7 @@ suite('Comment Delete Event', function () {
       delete origEvent.xml; // xml fails deep equals for some reason.
       delete newEvent.xml; // xml fails deep equals for some reason.
 
-      chai.assert.deepEqual(newEvent, origEvent);
+      assert.deepEqual(newEvent, origEvent);
     });
   });
 });

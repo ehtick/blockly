@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.eventSelected');
-
+import {assert} from '../../node_modules/chai/chai.js';
 import {defineRowBlock} from './test_helpers/block_definitions.js';
 import {
   sharedTestSetup,
@@ -30,13 +29,13 @@ suite('Selected Event', function () {
       const origEvent = new Blockly.Events.Selected(
         block1.id,
         block2.id,
-        this.workspace.id
+        this.workspace.id,
       );
 
       const json = origEvent.toJson();
       const newEvent = new Blockly.Events.fromJson(json, this.workspace);
 
-      chai.assert.deepEqual(newEvent, origEvent);
+      assert.deepEqual(newEvent, origEvent);
     });
   });
 });

@@ -4,25 +4,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.geras.RenderInfo');
+// Former goog.module ID: Blockly.geras.RenderInfo
 
 import type {BlockSvg} from '../../block_svg.js';
+import {DummyInput} from '../../inputs/dummy_input.js';
+import {EndRowInput} from '../../inputs/end_row_input.js';
 import type {Input} from '../../inputs/input.js';
+import {StatementInput} from '../../inputs/statement_input.js';
+import {ValueInput} from '../../inputs/value_input.js';
 import {RenderInfo as BaseRenderInfo} from '../common/info.js';
 import type {Measurable} from '../measurables/base.js';
 import type {BottomRow} from '../measurables/bottom_row.js';
-import {DummyInput} from '../../inputs/dummy_input.js';
 import {ExternalValueInput} from '../measurables/external_value_input.js';
 import type {Field} from '../measurables/field.js';
 import {InRowSpacer} from '../measurables/in_row_spacer.js';
 import type {InputRow} from '../measurables/input_row.js';
 import type {Row} from '../measurables/row.js';
-import {StatementInput} from '../../inputs/statement_input.js';
 import type {TopRow} from '../measurables/top_row.js';
 import {Types} from '../measurables/types.js';
-import {ValueInput} from '../../inputs/value_input.js';
-
 import type {ConstantProvider} from './constants.js';
 import {InlineInput} from './measurables/inline_input.js';
 import {StatementInput as StatementInputMeasurable} from './measurables/statement_input.js';
@@ -84,18 +83,18 @@ export class RenderInfo extends BaseRenderInfo {
       activeRow.hasInlineInput = true;
     } else if (input instanceof StatementInput) {
       activeRow.elements.push(
-        new StatementInputMeasurable(this.constants_, input)
+        new StatementInputMeasurable(this.constants_, input),
       );
       activeRow.hasStatement = true;
     } else if (input instanceof ValueInput) {
       activeRow.elements.push(new ExternalValueInput(this.constants_, input));
       activeRow.hasExternalInput = true;
-    } else if (input instanceof DummyInput) {
-      // Dummy inputs have no visual representation, but the information is
-      // still important.
+    } else if (input instanceof DummyInput || input instanceof EndRowInput) {
+      // Dummy and end-row inputs have no visual representation, but the
+      // information is still important.
       activeRow.minHeight = Math.max(
         activeRow.minHeight,
-        this.constants_.DUMMY_INPUT_MIN_HEIGHT
+        this.constants_.DUMMY_INPUT_MIN_HEIGHT,
       );
       activeRow.hasDummyInput = true;
     }
@@ -121,8 +120,8 @@ export class RenderInfo extends BaseRenderInfo {
         row.elements.push(
           new InRowSpacer(
             this.constants_,
-            this.getInRowSpacing_(null, oldElems[0])
-          )
+            this.getInRowSpacing_(null, oldElems[0]),
+          ),
         );
       }
       if (!oldElems.length) {
@@ -137,7 +136,7 @@ export class RenderInfo extends BaseRenderInfo {
       if (row.endsWithElemSpacer()) {
         let spacing = this.getInRowSpacing_(
           oldElems[oldElems.length - 1],
-          null
+          null,
         );
         if (hasExternalInputs && row.hasDummyInput) {
           spacing += this.constants_.TAB_WIDTH;
@@ -379,8 +378,12 @@ export class RenderInfo extends BaseRenderInfo {
           row.width < prevInput.width
         ) {
           rowNextRightEdges.set(row, prevInput.width);
-        } else {
+        } else if (row.hasStatement) {
           nextRightEdge = row.width;
+        } else {
+          // To keep right edges of consecutive non-statement rows aligned, use
+          // the maximum width.
+          nextRightEdge = Math.max(nextRightEdge, row.width);
         }
         prevInput = row;
       }
@@ -398,7 +401,7 @@ export class RenderInfo extends BaseRenderInfo {
         const currentWidth = row.width;
         const desiredWidth = Math.max(
           prevRightEdge,
-          rowNextRightEdges.get(row)
+          rowNextRightEdges.get(row),
         );
         const missingSpace = desiredWidth - currentWidth;
         if (missingSpace > 0) {
@@ -432,7 +435,7 @@ export class RenderInfo extends BaseRenderInfo {
 
       widestRowWithConnectedBlocks = Math.max(
         widestRowWithConnectedBlocks,
-        row.widthWithConnectedBlocks
+        row.widthWithConnectedBlocks,
       );
       // Add padding to the bottom row if block height is less than minimum
       const heightWithoutHat = yCursor - this.topRow.ascenderHeight;
@@ -457,7 +460,7 @@ export class RenderInfo extends BaseRenderInfo {
         // Include width of connected block in value to stack width measurement.
         widestRowWithConnectedBlocks = Math.max(
           widestRowWithConnectedBlocks,
-          target.getHeightWidth().width - this.constants_.DARK_PATH_OFFSET
+          target.getHeightWidth().width - this.constants_.DARK_PATH_OFFSET,
         );
       }
     }

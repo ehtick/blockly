@@ -1,25 +1,23 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
     <title>Advanced Blockly Playground</title>
 
-    <script>
-      var BLOCKLY_BOOTSTRAP_OPTIONS = {
-        additionalScripts: [
-          'build/msg/en.js',
-          'tests/playgrounds/screenshot.js',
-          'tests/themes/test_themes.js',
-          'node_modules/@blockly/dev-tools/dist/index.js',
-          'node_modules/@blockly/theme-modern/dist/index.js',
-        ],
-      };
-    </script>
-    <script src="../bootstrap.js"></script>
-
     <script type="module">
-      // Wait for Blockly to finish loading.
-      import '../bootstrap_done.mjs';
+      import {loadScript} from '../scripts/load.mjs';
+
+      import * as Blockly from '../../build/blockly.loader.mjs';
+      import '../../build/blocks.loader.mjs';
+      // Generators not needed (but see also bug #6597).
+
+      await loadScript('../../build/msg/en.js');
+      await loadScript('screenshot.js');
+      await loadScript('../themes/test_themes.js');
+      await loadScript('../../node_modules/@blockly/dev-tools/dist/index.js');
+      await loadScript(
+        '../../node_modules/@blockly/theme-modern/dist/index.js',
+      );
 
       function start() {
         setBackgroundColour();
@@ -28,7 +26,6 @@
 
       function createWorkspace(blocklyDiv, options) {
         var workspace = Blockly.inject(blocklyDiv, options);
-        workspace.configureContextMenu = configureContextMenu.bind(workspace);
         return workspace;
       }
 
@@ -55,7 +52,7 @@
       function initPlayground() {
         if (typeof window.createPlayground === 'undefined') {
           alert(
-            "You need to run 'npm install' in order to use this playground."
+            "You need to run 'npm install' in order to use this playground.",
           );
           return;
         }
@@ -103,12 +100,14 @@
           },
         };
 
+        Blockly.ContextMenuItems.registerCommentOptions();
+
         createPlayground(
           document.getElementById('root'),
           createWorkspace,
           defaultOptions,
           playgroundConfig,
-          'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.19.2/min/vs'
+          'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.19.2/min/vs',
         ).then(function (playground) {
           configurePlayground(playground);
         });
@@ -126,23 +125,6 @@
         ) {
           document.body.style.backgroundColor = '#d6d6ff'; // Familliar lilac.
         }
-      }
-
-      function configureContextMenu(menuOptions, e) {
-        var workspace = this;
-        var screenshotOption = {
-          text: 'Download Screenshot',
-          enabled: workspace.getTopBlocks().length,
-          callback: function () {
-            downloadScreenshot(workspace);
-          },
-        };
-        menuOptions.push(screenshotOption);
-
-        // Adds a default-sized workspace comment to the workspace.
-        menuOptions.push(
-          Blockly.ContextMenu.workspaceCommentOption(workspace, e)
-        );
       }
       start();
     </script>

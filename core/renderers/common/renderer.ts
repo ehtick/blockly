@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.Renderer');
+// Former goog.module ID: Blockly.blockRendering.Renderer
 
 import type {Block} from '../../block.js';
 import type {BlockSvg} from '../../block_svg.js';
@@ -19,8 +18,8 @@ import type {IRegistrable} from '../../interfaces/i_registrable.js';
 import type {Marker} from '../../keyboard_nav/marker.js';
 import type {RenderedConnection} from '../../rendered_connection.js';
 import type {BlockStyle, Theme} from '../../theme.js';
+import * as deprecation from '../../utils/deprecation.js';
 import type {WorkspaceSvg} from '../../workspace_svg.js';
-
 import {ConstantProvider} from './constants.js';
 import {Drawer} from './drawer.js';
 import type {IPathObject} from './i_path_object.js';
@@ -66,7 +65,7 @@ export class Renderer implements IRegistrable {
    */
   init(
     theme: Theme,
-    opt_rendererOverrides?: {[rendererConstant: string]: any}
+    opt_rendererOverrides?: {[rendererConstant: string]: any},
   ) {
     this.constants_ = this.makeConstants_();
     if (opt_rendererOverrides) {
@@ -90,7 +89,7 @@ export class Renderer implements IRegistrable {
     this.constants_.createDom(
       svg,
       this.name + '-' + theme.name,
-      '.' + this.getClassName() + '.' + theme.getClassName()
+      '.' + this.getClassName() + '.' + theme.getClassName(),
     );
   }
 
@@ -212,7 +211,7 @@ export class Renderer implements IRegistrable {
   protected orphanCanConnectAtEnd(
     topBlock: BlockSvg,
     orphanBlock: BlockSvg,
-    localType: number
+    localType: number,
   ): boolean {
     const orphanConnection =
       localType === ConnectionType.OUTPUT_VALUE
@@ -220,7 +219,7 @@ export class Renderer implements IRegistrable {
         : orphanBlock.previousConnection;
     return !!Connection.getConnectionForOrphanedConnection(
       topBlock as Block,
-      orphanConnection as Connection
+      orphanConnection as Connection,
     );
   }
 
@@ -232,12 +231,21 @@ export class Renderer implements IRegistrable {
    * @param local The connection currently being dragged.
    * @param topBlock The block currently being dragged.
    * @returns The preview type to display.
+   *
+   * @deprecated v10 - This function is no longer respected. A custom
+   *    IConnectionPreviewer may be able to fulfill the functionality.
    */
   getConnectionPreviewMethod(
     closest: RenderedConnection,
     local: RenderedConnection,
-    topBlock: BlockSvg
+    topBlock: BlockSvg,
   ): PreviewType {
+    deprecation.warn(
+      'getConnectionPreviewMethod',
+      'v10',
+      'v12',
+      'an IConnectionPreviewer, if it fulfills your use case.',
+    );
     if (
       local.type === ConnectionType.OUTPUT_VALUE ||
       local.type === ConnectionType.PREVIOUS_STATEMENT
@@ -247,7 +255,7 @@ export class Renderer implements IRegistrable {
         this.orphanCanConnectAtEnd(
           topBlock,
           closest.targetBlock() as BlockSvg,
-          local.type
+          local.type,
         )
       ) {
         return InsertionMarkerManager.PREVIEW_TYPE.INSERTION_MARKER;

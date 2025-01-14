@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.helpers.variables');
+import {assert} from '../../../node_modules/chai/chai.js';
 
 /**
  * Check if a variable with the given values exists.
@@ -16,8 +16,8 @@ goog.declareModuleId('Blockly.test.helpers.variables');
  */
 export function assertVariableValues(container, name, type, id) {
   const variable = container.getVariableById(id);
-  chai.assert.isDefined(variable);
-  chai.assert.equal(variable.name, name);
-  chai.assert.equal(variable.type, type);
-  chai.assert.equal(variable.getId(), id);
+  assert.isDefined(variable);
+  assert.equal(variable.name, name);
+  assert.equal(variable.type, type);
+  assert.equal(variable.getId(), id);
 }

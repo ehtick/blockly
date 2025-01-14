@@ -9,15 +9,14 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.FieldCheckbox');
+// Former goog.module ID: Blockly.FieldCheckbox
 
 // Unused import preserved for side-effects. Remove if unneeded.
 import './events/events_block_change.js';
 
-import * as dom from './utils/dom.js';
 import {Field, FieldConfig, FieldValidator} from './field.js';
 import * as fieldRegistry from './field_registry.js';
+import * as dom from './utils/dom.js';
 
 type BoolString = 'TRUE' | 'FALSE';
 type CheckboxBool = BoolString | boolean;
@@ -64,7 +63,7 @@ export class FieldCheckbox extends Field<CheckboxBool> {
   constructor(
     value?: CheckboxBool | typeof Field.SKIP_SETUP,
     validator?: FieldCheckboxValidator,
-    config?: FieldCheckboxConfig
+    config?: FieldCheckboxConfig,
   ) {
     super(Field.SKIP_SETUP);
 
@@ -110,8 +109,6 @@ export class FieldCheckbox extends Field<CheckboxBool> {
 
   /**
    * Create the block UI for this checkbox.
-   *
-   * @internal
    */
   override initView() {
     super.initView();
@@ -155,7 +152,7 @@ export class FieldCheckbox extends Field<CheckboxBool> {
    * @returns A valid value ('TRUE' or 'FALSE), or null if invalid.
    */
   protected override doClassValidation_(
-    newValue?: AnyDuringMigration
+    newValue?: AnyDuringMigration,
   ): BoolString | null {
     if (newValue === true || newValue === 'TRUE') {
       return 'TRUE';
@@ -173,7 +170,7 @@ export class FieldCheckbox extends Field<CheckboxBool> {
    *     that this is a either 'TRUE' or 'FALSE'.
    */
   protected override doValueUpdate_(newValue: BoolString) {
-    this.value_ = this.convertValueToBool_(newValue);
+    this.value_ = this.convertValueToBool(newValue);
     // Update visual.
     if (this.textElement_) {
       this.textElement_.style.display = this.value_ ? 'block' : 'none';
@@ -204,7 +201,7 @@ export class FieldCheckbox extends Field<CheckboxBool> {
    * @returns Text representing the value of this field ('true' or 'false').
    */
   override getText(): string {
-    return String(this.convertValueToBool_(this.value_));
+    return String(this.convertValueToBool(this.value_));
   }
 
   /**
@@ -216,7 +213,7 @@ export class FieldCheckbox extends Field<CheckboxBool> {
    * @param value The value to convert.
    * @returns The converted value.
    */
-  private convertValueToBool_(value: CheckboxBool | null): boolean {
+  private convertValueToBool(value: CheckboxBool | null): boolean {
     if (typeof value === 'string') return value === 'TRUE';
     return !!value;
   }
@@ -229,7 +226,9 @@ export class FieldCheckbox extends Field<CheckboxBool> {
    * @nocollapse
    * @internal
    */
-  static fromJson(options: FieldCheckboxFromJsonConfig): FieldCheckbox {
+  static override fromJson(
+    options: FieldCheckboxFromJsonConfig,
+  ): FieldCheckbox {
     // `this` might be a subclass of FieldCheckbox if that class doesn't
     // 'override' the static fromJson method.
     return new this(options.checked, undefined, options);

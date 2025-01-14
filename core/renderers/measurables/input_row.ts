@@ -4,11 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.blockRendering.InputRow');
+// Former goog.module ID: Blockly.blockRendering.InputRow
 
 import type {ConstantProvider} from '../common/constants.js';
-
 import {ExternalValueInput} from './external_value_input.js';
 import {InputConnection} from './input_connection.js';
 import {Row} from './row.js';

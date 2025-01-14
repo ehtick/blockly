@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.MenuItem');
+// Former goog.module ID: Blockly.MenuItem
 
 import * as aria from './utils/aria.js';
 import * as dom from './utils/dom.js';
@@ -42,7 +41,7 @@ export class MenuItem {
   private highlight = false;
 
   /** Bound function to call when this menu item is clicked. */
-  private actionHandler: Function | null = null;
+  private actionHandler: ((obj: this) => void) | null = null;
 
   /**
    * @param content Text caption to display as the content of the item, or a
@@ -51,7 +50,7 @@ export class MenuItem {
    */
   constructor(
     private readonly content: string | HTMLElement,
-    private readonly opt_value?: string
+    private readonly opt_value?: string,
   ) {}
 
   /**
@@ -98,7 +97,7 @@ export class MenuItem {
     aria.setState(
       element,
       aria.State.SELECTED,
-      (this.checkable && this.checked) || false
+      (this.checkable && this.checked) || false,
     );
     aria.setState(element, aria.State.DISABLED, !this.enabled);
 

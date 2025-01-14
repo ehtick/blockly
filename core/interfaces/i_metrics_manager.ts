@@ -4,16 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
+// Former goog.module ID: Blockly.IMetricsManager
+
 import type {
+  AbsoluteMetrics,
   ContainerRegion,
   ToolboxMetrics,
-  AbsoluteMetrics,
   UiMetrics,
 } from '../metrics_manager.js';
-import type {Size} from '../utils/size.js';
 import type {Metrics} from '../utils/metrics.js';
-goog.declareModuleId('Blockly.IMetricsManager');
+import type {Size} from '../utils/size.js';
 
 /**
  * Interface for a metrics manager.
@@ -43,7 +43,7 @@ export interface IMetricsManager {
   getScrollMetrics(
     opt_getWorkspaceCoordinates?: boolean,
     opt_viewMetrics?: ContainerRegion,
-    opt_contentMetrics?: ContainerRegion
+    opt_contentMetrics?: ContainerRegion,
   ): ContainerRegion;
 
   /**

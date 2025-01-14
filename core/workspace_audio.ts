@@ -10,8 +10,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.WorkspaceAudio');
+// Former goog.module ID: Blockly.WorkspaceAudio
 
 import * as userAgent from './utils/useragent.js';
 import type {WorkspaceSvg} from './workspace_svg.js';
@@ -30,7 +29,10 @@ export class WorkspaceAudio {
   private sounds = new Map<string, HTMLAudioElement>();
 
   /** Time that the last sound was played. */
-  private lastSound_: Date | null = null;
+  private lastSound: Date | null = null;
+
+  /** Whether the audio is muted or not. */
+  private muted: boolean = false;
 
   /**
    * @param parentWorkspace The parent of the workspace this audio object
@@ -62,7 +64,7 @@ export class WorkspaceAudio {
     let audioTest;
     try {
       audioTest = new globalThis['Audio']();
-    } catch (e) {
+    } catch {
       // No browser support for Audio.
       // IE can throw an error even if the Audio object exists.
       return;
@@ -99,7 +101,7 @@ export class WorkspaceAudio {
         // https://developers.google.com/web/updates/2017/06/play-request-was-interrupted
         playPromise.then(sound.pause).catch(
           // Play without user interaction was prevented.
-          function () {}
+          function () {},
         );
       } else {
         sound.pause();
@@ -122,17 +124,20 @@ export class WorkspaceAudio {
    * @param opt_volume Volume of sound (0-1).
    */
   play(name: string, opt_volume?: number) {
+    if (this.muted) {
+      return;
+    }
     const sound = this.sounds.get(name);
     if (sound) {
       // Don't play one sound on top of another.
       const now = new Date();
       if (
-        this.lastSound_ !== null &&
-        now.getTime() - this.lastSound_.getTime() < SOUND_LIMIT
+        this.lastSound !== null &&
+        now.getTime() - this.lastSound.getTime() < SOUND_LIMIT
       ) {
         return;
       }
-      this.lastSound_ = now;
+      this.lastSound = now;
       let mySound;
       if (userAgent.IPAD || userAgent.ANDROID) {
         // Creating a new audio node causes lag in Android and iPad.  Android
@@ -148,5 +153,19 @@ export class WorkspaceAudio {
       // Maybe a workspace on a lower level knows about this sound.
       this.parentWorkspace.getAudioManager().play(name, opt_volume);
     }
+  }
+
+  /**
+   * @param muted If true, mute sounds. Otherwise, play them.
+   */
+  setMuted(muted: boolean) {
+    this.muted = muted;
+  }
+
+  /**
+   * @returns Whether the audio is currently muted or not.
+   */
+  getMuted(): boolean {
+    return this.muted;
   }
 }

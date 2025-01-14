@@ -4,12 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.WidgetDiv');
+// Former goog.module ID: Blockly.WidgetDiv
 
 import * as common from './common.js';
+import {Field} from './field.js';
 import * as dom from './utils/dom.js';
-import type {Field} from './field.js';
 import type {Rect} from './utils/rect.js';
 import type {Size} from './utils/size.js';
 import type {WorkspaceSvg} from './workspace_svg.js';
@@ -17,8 +16,14 @@ import type {WorkspaceSvg} from './workspace_svg.js';
 /** The object currently using this container. */
 let owner: unknown = null;
 
+/** The workspace associated with the owner currently using this container. */
+let ownerWorkspace: WorkspaceSvg | null = null;
+
 /** Optional cleanup function set by whichever object uses the widget. */
 let dispose: (() => void) | null = null;
+
+/** A class name representing the current owner's workspace container. */
+const containerClassName = 'blocklyWidgetDiv';
 
 /** A class name representing the current owner's workspace renderer. */
 let rendererClassName = '';
@@ -46,20 +51,25 @@ export function getDiv(): HTMLDivElement | null {
  */
 export function testOnly_setDiv(newDiv: HTMLDivElement | null) {
   containerDiv = newDiv;
+  if (newDiv === null) {
+    document.querySelector('.' + containerClassName)?.remove();
+  }
 }
 
 /**
  * Create the widget div and inject it onto the page.
  */
 export function createDom() {
-  if (containerDiv) {
-    return; // Already created.
+  const container = common.getParentContainer() || document.body;
+
+  if (document.querySelector('.' + containerClassName)) {
+    containerDiv = document.querySelector('.' + containerClassName);
+  } else {
+    containerDiv = document.createElement('div') as HTMLDivElement;
+    containerDiv.className = containerClassName;
   }
 
-  containerDiv = document.createElement('div') as HTMLDivElement;
-  containerDiv.className = 'blocklyWidgetDiv';
-  const container = common.getParentContainer() || document.body;
-  container.appendChild(containerDiv);
+  container.appendChild(containerDiv!);
 }
 
 /**
@@ -69,8 +79,14 @@ export function createDom() {
  * @param rtl Right-to-left (true) or left-to-right (false).
  * @param newDispose Optional cleanup function to be run when the widget is
  *     closed.
+ * @param workspace The workspace associated with the widget owner.
  */
-export function show(newOwner: unknown, rtl: boolean, newDispose: () => void) {
+export function show(
+  newOwner: unknown,
+  rtl: boolean,
+  newDispose: () => void,
+  workspace?: WorkspaceSvg | null,
+) {
   hide();
   owner = newOwner;
   dispose = newDispose;
@@ -78,9 +94,16 @@ export function show(newOwner: unknown, rtl: boolean, newDispose: () => void) {
   if (!div) return;
   div.style.direction = rtl ? 'rtl' : 'ltr';
   div.style.display = 'block';
-  const mainWorkspace = common.getMainWorkspace() as WorkspaceSvg;
-  rendererClassName = mainWorkspace.getRenderer().getClassName();
-  themeClassName = mainWorkspace.getTheme().getClassName();
+  if (!workspace && newOwner instanceof Field) {
+    // For backward compatibility with plugin fields that do not provide a
+    // workspace to this function, attempt to derive it from the field.
+    workspace = (newOwner as Field).getSourceBlock()?.workspace as WorkspaceSvg;
+  }
+  ownerWorkspace = workspace ?? null;
+  const rendererWorkspace =
+    workspace ?? (common.getMainWorkspace() as WorkspaceSvg);
+  rendererClassName = rendererWorkspace.getRenderer().getClassName();
+  themeClassName = rendererWorkspace.getTheme().getClassName();
   if (rendererClassName) {
     dom.addClass(div, rendererClassName);
   }
@@ -103,7 +126,7 @@ export function hide() {
   div.style.display = 'none';
   div.style.left = '';
   div.style.top = '';
-  dispose && dispose();
+  if (dispose) dispose();
   dispose = null;
   div.textContent = '';
 
@@ -138,6 +161,19 @@ export function hideIfOwner(oldOwner: unknown) {
     hide();
   }
 }
+
+/**
+ * Destroy the widget and hide the div if it is being used by an object in the
+ * specified workspace, or if it is used by an unknown workspace.
+ *
+ * @param oldOwnerWorkspace The workspace that was using this container.
+ */
+export function hideIfOwnerIsInWorkspace(oldOwnerWorkspace: WorkspaceSvg) {
+  if (ownerWorkspace === null || ownerWorkspace === oldOwnerWorkspace) {
+    hide();
+  }
+}
+
 /**
  * Set the widget div's position and height.  This function does nothing clever:
  * it will not ensure that your widget div ends up in the visible window.
@@ -172,7 +208,7 @@ export function positionWithAnchor(
   viewportBBox: Rect,
   anchorBBox: Rect,
   widgetSize: Size,
-  rtl: boolean
+  rtl: boolean,
 ) {
   const y = calculateY(viewportBBox, anchorBBox, widgetSize);
   const x = calculateX(viewportBBox, anchorBBox, widgetSize, rtl);
@@ -201,7 +237,7 @@ function calculateX(
   viewportBBox: Rect,
   anchorBBox: Rect,
   widgetSize: Size,
-  rtl: boolean
+  rtl: boolean,
 ): number {
   if (rtl) {
     // Try to align the right side of the field and the right side of widget.
@@ -234,7 +270,7 @@ function calculateX(
 function calculateY(
   viewportBBox: Rect,
   anchorBBox: Rect,
-  widgetSize: Size
+  widgetSize: Size,
 ): number {
   // Flip the widget vertically if off the bottom.
   // The widget could go off the top of the window, but it would also go off

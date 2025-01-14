@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.utils.colour');
+// Former goog.module ID: Blockly.utils.colour
 
 /**
  * The richness of block colours, regardless of the hue.
@@ -212,7 +211,7 @@ export function hsvToHex(h: number, s: number, v: number): string {
 export function blend(
   colour1: string,
   colour2: string,
-  factor: number
+  factor: number,
 ): string | null {
   const hex1 = parse(colour1);
   if (!hex1) {

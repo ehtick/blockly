@@ -1,26 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
     <title>Blockly Playground</title>
 
-    <!-- This script loads uncompressed when on localhost and loads
-     compressed when it is being hosted or on Internet Explorer.  -->
-    <script>
-      var BLOCKLY_BOOTSTRAP_OPTIONS = {
-        additionalScripts: [
-          'build/msg/en.js',
-          'tests/playgrounds/screenshot.js',
-          'node_modules/@blockly/dev-tools/dist/index.js',
-        ],
-      };
-    </script>
-    <script src="bootstrap.js"></script>
     <script type="module">
-      // Wait for Blockly to finish loading.
-      import './bootstrap_done.mjs';
+      import {COMPRESSED, loadScript} from './scripts/load.mjs';
 
-      const IS_UNCOMPRESSED = !window.bootstrapInfo.compressed; // See bootstrap.js
+      import * as Blockly from '../build/blockly.loader.mjs';
+      import '../build/blocks.loader.mjs';
+      import {dartGenerator} from '../build/dart.loader.mjs';
+      import {luaGenerator} from '../build/lua.loader.mjs';
+      import {javascriptGenerator} from '../build/javascript.loader.mjs';
+      import {phpGenerator} from '../build/php.loader.mjs';
+      import {pythonGenerator} from '../build/python.loader.mjs';
+
+      await loadScript('../build/msg/en.js');
+      await loadScript('playgrounds/screenshot.js');
+      await loadScript('../node_modules/@blockly/dev-tools/dist/index.js');
+
       var workspace = null;
 
       function start() {
@@ -71,7 +69,10 @@
           },
         });
         initToolbox(workspace);
+
         workspace.configureContextMenu = configureContextMenu;
+        Blockly.ContextMenuItems.registerCommentOptions();
+
         // Restore previously displayed text.
         if (sessionStorage) {
           var text = sessionStorage.getItem('textarea');
@@ -96,9 +97,12 @@
         addEventHandlers();
       }
 
+      /**
+       * Set background colour to differentiate between compressed and
+       * uncompressed mode.
+       */
       function setBackgroundColour() {
-        // Set background colour to differentiate between compressed and uncompressed mode.
-        if (IS_UNCOMPRESSED) {
+        if (!COMPRESSED) {
           document.body.style.backgroundColor = '#d6d6ff'; // Familiar lilac.
         } else {
           document.body.style.backgroundColor = '#60fcfc'; // Unfamiliar blue.
@@ -119,7 +123,7 @@
             return toolboxTestBlocks;
           } else {
             alert(
-              "You need to run 'npm install' in order to use the test blocks."
+              "You need to run 'npm install' in order to use the test blocks.",
             );
             toolboxSuffix = 'categories';
           }
@@ -247,7 +251,8 @@
         if (sessionStorage) {
           sessionStorage.setItem('logFlyoutEvents', Number(state));
         }
-        var flyoutWorkspace = workspace.getFlyout().getWorkspace();
+        var flyoutWorkspace = workspace.getFlyout()?.getWorkspace();
+        if (!flyoutWorkspace) return;
         if (state) {
           flyoutWorkspace.addChangeListener(logger);
         } else {
@@ -264,18 +269,13 @@
           },
         };
         menuOptions.push(screenshotOption);
-
-        // Adds a default-sized workspace comment to the workspace.
-        menuOptions.push(
-          Blockly.ContextMenu.workspaceCommentOption(workspace, e)
-        );
       }
 
       function logger(e) {
         console.log(e);
       }
 
-      function airstrike(n) {
+      function scatter(n) {
         var prototypes = [];
         var toolbox = getToolboxElement();
         var blocks = toolbox.getElementsByTagName('block');
@@ -295,7 +295,7 @@
                 Math.round(Math.random() * 450 + 40) +
                 ', ' +
                 Math.round(Math.random() * 600 + 40) +
-                ')'
+                ')',
             );
           block.render();
         }
@@ -306,7 +306,7 @@
         for (var i = 0; i < n; i++) {
           xml = xml.replace(
             /(<(statement|next)( name="DO0")?>)<\//g,
-            '$1' + spaghettiXml + '</'
+            '$1' + spaghettiXml + '</',
           );
         }
         xml =
@@ -440,8 +440,8 @@
           .addEventListener('click', () => toCode('Dart'));
 
         document
-          .getElementById('airstrike')
-          .addEventListener('click', () => airstrike(100));
+          .getElementById('scatter')
+          .addEventListener('click', () => scatter(100));
         document
           .getElementById('spaghetti-xml')
           .addEventListener('click', () => spaghetti(8));
@@ -566,7 +566,7 @@
 
     <p>
       Stress test: &nbsp;
-      <input id="airstrike" type="button" value="Airstrike!" />
+      <input id="scatter" type="button" value="Scatter!" />
       <input id="spaghetti-xml" type="button" value="Spaghetti!" />
       <input id="spaghetti-js" type="button" value="JS Spaghetti!" />
     </p>
@@ -764,7 +764,6 @@
       </category>
       <category name="Text" categorystyle="text_category">
         <block type="text"></block>
-        <block type="text_multiline"></block>
         <block type="text_join"></block>
         <block type="text_append">
           <value name="TEXT">
@@ -916,44 +915,6 @@
         </block>
         <block type="lists_sort"></block>
         <block type="lists_reverse"></block>
-      </category>
-      <category name="Colour" categorystyle="colour_category">
-        <block type="colour_picker"></block>
-        <block type="colour_random"></block>
-        <block type="colour_rgb">
-          <value name="RED">
-            <shadow type="math_number">
-              <field name="NUM">100</field>
-            </shadow>
-          </value>
-          <value name="GREEN">
-            <shadow type="math_number">
-              <field name="NUM">50</field>
-            </shadow>
-          </value>
-          <value name="BLUE">
-            <shadow type="math_number">
-              <field name="NUM">0</field>
-            </shadow>
-          </value>
-        </block>
-        <block type="colour_blend">
-          <value name="COLOUR1">
-            <shadow type="colour_picker">
-              <field name="COLOUR">#ff0000</field>
-            </shadow>
-          </value>
-          <value name="COLOUR2">
-            <shadow type="colour_picker">
-              <field name="COLOUR">#3333ff</field>
-            </shadow>
-          </value>
-          <value name="RATIO">
-            <shadow type="math_number">
-              <field name="NUM">0.5</field>
-            </shadow>
-          </value>
-        </block>
       </category>
       <sep></sep>
       <category
@@ -1115,7 +1076,6 @@
       </category>
       <category name="Text" categorystyle="text_category">
         <block type="text"></block>
-        <block type="text_multiline"></block>
         <block type="text_join"></block>
         <block type="text_append">
           <value name="TEXT">

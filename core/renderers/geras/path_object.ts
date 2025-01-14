@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.geras.PathObject');
+// Former goog.module ID: Blockly.geras.PathObject
 
 import type {BlockSvg} from '../../block_svg.js';
 import type {BlockStyle} from '../../theme.js';
@@ -13,7 +12,6 @@ import * as colour from '../../utils/colour.js';
 import * as dom from '../../utils/dom.js';
 import {Svg} from '../../utils/svg.js';
 import {PathObject as BasePathObject} from '../common/path_object.js';
-
 import type {ConstantProvider} from './constants.js';
 
 /**
@@ -37,7 +35,7 @@ export class PathObject extends BasePathObject {
   constructor(
     root: SVGElement,
     style: BlockStyle,
-    public override constants: ConstantProvider
+    public override constants: ConstantProvider,
   ) {
     super(root, style, constants);
 
@@ -55,7 +53,7 @@ export class PathObject extends BasePathObject {
     this.svgPathLight = dom.createSvgElement(
       Svg.PATH,
       {'class': 'blocklyPathLight'},
-      this.svgRoot
+      this.svgRoot,
     );
   }
 
@@ -86,7 +84,7 @@ export class PathObject extends BasePathObject {
     if (!this.style.colourTertiary) {
       throw new Error(
         'The renderer did not properly initialize the tertiary colour of ' +
-          'the block style'
+          'the block style',
       );
     }
     this.svgPathLight.setAttribute('stroke', this.style.colourTertiary);
@@ -107,7 +105,7 @@ export class PathObject extends BasePathObject {
     if (highlighted) {
       this.svgPath.setAttribute(
         'filter',
-        'url(#' + this.constants.embossFilterId + ')'
+        'url(#' + this.constants.embossFilterId + ')',
       );
       this.svgPathLight.style.display = 'none';
     } else {
@@ -122,7 +120,7 @@ export class PathObject extends BasePathObject {
       if (!this.style.colourSecondary) {
         throw new Error(
           'The renderer did not properly initialize the secondary colour ' +
-            'of the block style block style'
+            'of the block style block style',
         );
       }
       this.svgPathDark.setAttribute('fill', this.style.colourSecondary);

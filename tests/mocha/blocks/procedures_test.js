@@ -4,14 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-goog.declareModuleId('Blockly.test.procedures');
-
 import * as Blockly from '../../../build/src/core/blockly.js';
+import {assert} from '../../../node_modules/chai/chai.js';
+import {defineRowBlock} from '../test_helpers/block_definitions.js';
 import {
   assertCallBlockStructure,
   assertDefBlockStructure,
-  createProcDefBlock,
   createProcCallBlock,
+  createProcDefBlock,
   MockProcedureModel,
 } from '../test_helpers/procedures.js';
 import {runSerializationTestSuite} from '../test_helpers/serialization.js';
@@ -21,7 +21,6 @@ import {
   sharedTestTeardown,
   workspaceTeardown,
 } from '../test_helpers/setup_teardown.js';
-import {defineRowBlock} from '../test_helpers/block_definitions.js';
 
 suite('Procedures', function () {
   setup(function () {
@@ -31,7 +30,7 @@ suite('Procedures', function () {
     this.workspace.createVariable(
       'preCreatedTypedVar',
       'type',
-      'preCreatedTypedVarId'
+      'preCreatedTypedVarId',
     );
     defineRowBlock();
   });
@@ -47,10 +46,10 @@ suite('Procedures', function () {
 
       defBlock.setFieldValue('new name', 'NAME');
 
-      chai.assert.equal(
+      assert.equal(
         callBlock.getFieldValue('NAME'),
         'new name',
-        'Expected the procedure block to be renamed'
+        'Expected the procedure block to be renamed',
       );
     });
 
@@ -63,35 +62,36 @@ suite('Procedures', function () {
           this.workspace,
           undefined,
           undefined,
-          'procB'
+          'procB',
         );
         const callBlockB = createProcCallBlock(
           this.workspace,
           undefined,
-          'procB'
+          'procB',
         );
 
         defBlockB.setFieldValue('procA', 'NAME');
 
-        chai.assert.notEqual(
+        assert.notEqual(
           defBlockB.getFieldValue('NAME'),
           'procA',
-          'Expected the procedure def block to have a legal name'
+          'Expected the procedure def block to have a legal name',
         );
-        chai.assert.notEqual(
+        assert.notEqual(
           callBlockB.getFieldValue('NAME'),
           'procA',
-          'Expected the procedure call block to have a legal name'
+          'Expected the procedure call block to have a legal name',
         );
-      }
+      },
     );
   });
 
   suite('adding procedure parameters', function () {
-    test('the mutator flyout updates to avoid parameter name conflicts', function () {
+    test('the mutator flyout updates to avoid parameter name conflicts', async function () {
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const origFlyoutParamName = mutatorWorkspace
         .getFlyout()
         .getWorkspace()
@@ -104,7 +104,7 @@ suite('Procedures', function () {
             'NAME': origFlyoutParamName,
           },
         },
-        mutatorWorkspace
+        mutatorWorkspace,
       );
       this.clock.runAll();
 
@@ -113,18 +113,19 @@ suite('Procedures', function () {
         .getWorkspace()
         .getTopBlocks(true)[0]
         .getFieldValue('NAME');
-      chai.assert.notEqual(
+      assert.notEqual(
         newFlyoutParamName,
         origFlyoutParamName,
-        'Expected the flyout param to have updated to not conflict'
+        'Expected the flyout param to have updated to not conflict',
       );
     });
 
-    test('adding a parameter to the procedure updates procedure defs', function () {
+    test('adding a parameter to the procedure updates procedure defs', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -133,22 +134,23 @@ suite('Procedures', function () {
         .connection.connect(paramBlock.previousConnection);
       this.clock.runAll();
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         defBlock.getField('PARAMS'),
-        'Expected the params field to exist'
+        'Expected the params field to exist',
       );
-      chai.assert.isTrue(
+      assert.isTrue(
         defBlock.getFieldValue('PARAMS').includes('param1'),
-        'Expected the params field to contain the name of the new param'
+        'Expected the params field to contain the name of the new param',
       );
     });
 
-    test('adding a parameter to the procedure updates procedure callers', function () {
+    test('adding a parameter to the procedure updates procedure callers', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
       const callBlock = createProcCallBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -157,22 +159,23 @@ suite('Procedures', function () {
         .connection.connect(paramBlock.previousConnection);
       this.clock.runAll();
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         callBlock.getInput('ARG0'),
-        'Expected the param input to exist'
+        'Expected the param input to exist',
       );
-      chai.assert.equal(
+      assert.equal(
         callBlock.getFieldValue('ARGNAME0'),
         'param1',
-        'Expected the params field to match the name of the new param'
+        'Expected the params field to match the name of the new param',
       );
     });
 
-    test('undoing adding a procedure parameter removes it', function () {
+    test('undoing adding a procedure parameter removes it', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -183,20 +186,21 @@ suite('Procedures', function () {
 
       this.workspace.undo();
 
-      chai.assert.isFalse(
+      assert.isFalse(
         defBlock.getFieldValue('PARAMS').includes('param1'),
-        'Expected the params field to not contain the name of the new param'
+        'Expected the params field to not contain the name of the new param',
       );
     });
 
     test(
       'undoing and redoing adding a procedure parameter maintains ' +
         'the same state',
-      function () {
+      async function () {
         // Create a stack of container, parameter.
         const defBlock = createProcDefBlock(this.workspace);
-        defBlock.mutator.setVisible(true);
-        const mutatorWorkspace = defBlock.mutator.getWorkspace();
+        const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+        await mutatorIcon.setBubbleVisible(true);
+        const mutatorWorkspace = mutatorIcon.getWorkspace();
         const containerBlock = mutatorWorkspace.getTopBlocks()[0];
         const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
         paramBlock.setFieldValue('param1', 'NAME');
@@ -208,24 +212,25 @@ suite('Procedures', function () {
         this.workspace.undo();
         this.workspace.undo(/* redo= */ true);
 
-        chai.assert.isNotNull(
+        assert.isNotNull(
           defBlock.getField('PARAMS'),
-          'Expected the params field to exist'
+          'Expected the params field to exist',
         );
-        chai.assert.isTrue(
+        assert.isTrue(
           defBlock.getFieldValue('PARAMS').includes('param1'),
-          'Expected the params field to contain the name of the new param'
+          'Expected the params field to contain the name of the new param',
         );
-      }
+      },
     );
   });
 
   suite('deleting procedure parameters', function () {
-    test('deleting a parameter from the procedure updates procedure defs', function () {
+    test('deleting a parameter from the procedure updates procedure defs', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -237,18 +242,19 @@ suite('Procedures', function () {
       paramBlock.checkAndDelete();
       this.clock.runAll();
 
-      chai.assert.isFalse(
+      assert.isFalse(
         defBlock.getFieldValue('PARAMS').includes('param1'),
-        'Expected the params field to not contain the name of the new param'
+        'Expected the params field to not contain the name of the new param',
       );
     });
 
-    test('deleting a parameter from the procedure udpates procedure callers', function () {
+    test('deleting a parameter from the procedure udpates procedure callers', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
       const callBlock = createProcCallBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -260,17 +266,18 @@ suite('Procedures', function () {
       paramBlock.checkAndDelete();
       this.clock.runAll();
 
-      chai.assert.isNull(
+      assert.isNull(
         callBlock.getInput('ARG0'),
-        'Expected the param input to not exist'
+        'Expected the param input to not exist',
       );
     });
 
-    test('undoing deleting a procedure parameter adds it', function () {
+    test('undoing deleting a procedure parameter adds it', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -283,20 +290,21 @@ suite('Procedures', function () {
 
       this.workspace.undo();
 
-      chai.assert.isTrue(
+      assert.isTrue(
         defBlock.getFieldValue('PARAMS').includes('param1'),
-        'Expected the params field to contain the name of the new param'
+        'Expected the params field to contain the name of the new param',
       );
     });
 
     test(
       'undoing and redoing deleting a procedure parameter maintains ' +
         'the same state',
-      function () {
+      async function () {
         // Create a stack of container, parameter.
         const defBlock = createProcDefBlock(this.workspace);
-        defBlock.mutator.setVisible(true);
-        const mutatorWorkspace = defBlock.mutator.getWorkspace();
+        const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+        await mutatorIcon.setBubbleVisible(true);
+        const mutatorWorkspace = mutatorIcon.getWorkspace();
         const containerBlock = mutatorWorkspace.getTopBlocks()[0];
         const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
         paramBlock.setFieldValue('param1', 'NAME');
@@ -310,20 +318,21 @@ suite('Procedures', function () {
         this.workspace.undo();
         this.workspace.undo(/* redo= */ true);
 
-        chai.assert.isFalse(
+        assert.isFalse(
           defBlock.getFieldValue('PARAMS').includes('param1'),
-          'Expected the params field to not contain the name of the new param'
+          'Expected the params field to not contain the name of the new param',
         );
-      }
+      },
     );
   });
 
   suite('renaming procedure parameters', function () {
-    test('defs are updated for parameter renames', function () {
+    test('defs are updated for parameter renames', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -335,21 +344,22 @@ suite('Procedures', function () {
       paramBlock.setFieldValue('new name', 'NAME');
       this.clock.runAll();
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         defBlock.getField('PARAMS'),
-        'Expected the params field to exist'
+        'Expected the params field to exist',
       );
-      chai.assert.isTrue(
+      assert.isTrue(
         defBlock.getFieldValue('PARAMS').includes('new name'),
-        'Expected the params field to contain the new name of the param'
+        'Expected the params field to contain the new name of the param',
       );
     });
 
-    test('defs are updated for parameter renames when two params exist', function () {
+    test('defs are updated for parameter renames when two params exist', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock1 = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock1.setFieldValue('param1', 'NAME');
@@ -364,22 +374,23 @@ suite('Procedures', function () {
       paramBlock1.setFieldValue('new name', 'NAME');
       this.clock.runAll();
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         defBlock.getField('PARAMS'),
-        'Expected the params field to exist'
+        'Expected the params field to exist',
       );
-      chai.assert.isTrue(
+      assert.isTrue(
         defBlock.getFieldValue('PARAMS').includes('new name'),
-        'Expected the params field to contain the new name of the param'
+        'Expected the params field to contain the new name of the param',
       );
     });
 
-    test('callers are updated for parameter renames', function () {
+    test('callers are updated for parameter renames', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
       const callBlock = createProcCallBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -391,23 +402,24 @@ suite('Procedures', function () {
       paramBlock.setFieldValue('new name', 'NAME');
       this.clock.runAll();
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         callBlock.getInput('ARG0'),
-        'Expected the param input to exist'
+        'Expected the param input to exist',
       );
-      chai.assert.equal(
+      assert.equal(
         callBlock.getFieldValue('ARGNAME0'),
         'new name',
-        'Expected the params field to match the name of the new param'
+        'Expected the params field to match the name of the new param',
       );
     });
 
-    test('variables associated with procedure parameters are not renamed', function () {
+    test('variables associated with procedure parameters are not renamed', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
       const callBlock = createProcCallBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -419,17 +431,18 @@ suite('Procedures', function () {
       paramBlock.setFieldValue('param2', 'NAME');
       this.clock.runAll();
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         this.workspace.getVariable('param1', ''),
-        'Expected the old variable to continue to exist'
+        'Expected the old variable to continue to exist',
       );
     });
 
-    test('renaming a variable associated with a parameter updates procedure defs', function () {
+    test('renaming a variable associated with a parameter updates procedure defs', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -437,26 +450,27 @@ suite('Procedures', function () {
         .getInput('STACK')
         .connection.connect(paramBlock.previousConnection);
       this.clock.runAll();
-      defBlock.mutator.setVisible(false);
+      mutatorIcon.setBubbleVisible(false);
 
       const variable = this.workspace.getVariable('param1', '');
       this.workspace.renameVariableById(variable.getId(), 'new name');
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         defBlock.getField('PARAMS'),
-        'Expected the params field to exist'
+        'Expected the params field to exist',
       );
-      chai.assert.isTrue(
+      assert.isTrue(
         defBlock.getFieldValue('PARAMS').includes('new name'),
-        'Expected the params field to contain the new name of the param'
+        'Expected the params field to contain the new name of the param',
       );
     });
 
-    test('renaming a variable associated with a parameter updates mutator parameters', function () {
+    test('renaming a variable associated with a parameter updates mutator parameters', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -468,19 +482,20 @@ suite('Procedures', function () {
       const variable = this.workspace.getVariable('param1', '');
       this.workspace.renameVariableById(variable.getId(), 'new name');
 
-      chai.assert.equal(
+      assert.equal(
         paramBlock.getFieldValue('NAME'),
         'new name',
-        'Expected the params field to contain the new name of the param'
+        'Expected the params field to contain the new name of the param',
       );
     });
 
-    test('renaming a variable associated with a parameter updates procedure callers', function () {
+    test('renaming a variable associated with a parameter updates procedure callers', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
       const callBlock = createProcCallBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -488,27 +503,28 @@ suite('Procedures', function () {
         .getInput('STACK')
         .connection.connect(paramBlock.previousConnection);
       this.clock.runAll();
-      defBlock.mutator.setVisible(false);
+      mutatorIcon.setBubbleVisible(false);
 
       const variable = this.workspace.getVariable('param1', '');
       this.workspace.renameVariableById(variable.getId(), 'new name');
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         callBlock.getInput('ARG0'),
-        'Expected the param input to exist'
+        'Expected the param input to exist',
       );
-      chai.assert.equal(
+      assert.equal(
         callBlock.getFieldValue('ARGNAME0'),
         'new name',
-        'Expected the params field to match the name of the new param'
+        'Expected the params field to match the name of the new param',
       );
     });
 
-    test('coalescing a variable associated with a parameter updates procedure defs', function () {
+    test('coalescing a variable associated with a parameter updates procedure defs', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -516,26 +532,27 @@ suite('Procedures', function () {
         .getInput('STACK')
         .connection.connect(paramBlock.previousConnection);
       this.clock.runAll();
-      defBlock.mutator.setVisible(false);
+      mutatorIcon.setBubbleVisible(false);
 
       const variable = this.workspace.getVariable('param1', '');
       this.workspace.renameVariableById(variable.getId(), 'preCreatedVar');
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         defBlock.getField('PARAMS'),
-        'Expected the params field to exist'
+        'Expected the params field to exist',
       );
-      chai.assert.isTrue(
+      assert.isTrue(
         defBlock.getFieldValue('PARAMS').includes('preCreatedVar'),
-        'Expected the params field to contain the new name of the param'
+        'Expected the params field to contain the new name of the param',
       );
     });
 
-    test('coalescing a variable associated with a parameter updates mutator parameters', function () {
+    test('coalescing a variable associated with a parameter updates mutator parameters', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -547,19 +564,20 @@ suite('Procedures', function () {
       const variable = this.workspace.getVariable('param1', '');
       this.workspace.renameVariableById(variable.getId(), 'preCreatedVar');
 
-      chai.assert.equal(
+      assert.equal(
         paramBlock.getFieldValue('NAME'),
         'preCreatedVar',
-        'Expected the params field to contain the new name of the param'
+        'Expected the params field to contain the new name of the param',
       );
     });
 
-    test('coalescing a variable associated with a parameter updates procedure callers', function () {
+    test('coalescing a variable associated with a parameter updates procedure callers', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
       const callBlock = createProcCallBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -567,33 +585,34 @@ suite('Procedures', function () {
         .getInput('STACK')
         .connection.connect(paramBlock.previousConnection);
       this.clock.runAll();
-      defBlock.mutator.setVisible(false);
+      mutatorIcon.setBubbleVisible(false);
 
       const variable = this.workspace.getVariable('param1', '');
       this.workspace.renameVariableById(variable.getId(), 'preCreatedVar');
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         callBlock.getInput('ARG0'),
-        'Expected the param input to exist'
+        'Expected the param input to exist',
       );
-      chai.assert.equal(
+      assert.equal(
         callBlock.getFieldValue('ARGNAME0'),
         'preCreatedVar',
-        'Expected the params field to match the name of the new param'
+        'Expected the params field to match the name of the new param',
       );
     });
 
     test.skip(
       'renaming a variable such that you get a parameter ' +
         'conflict does... something!',
-      function () {}
+      function () {},
     );
 
-    test('undoing renaming a procedure parameter reverts the change', function () {
+    test('undoing renaming a procedure parameter reverts the change', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -613,17 +632,18 @@ suite('Procedures', function () {
       this.workspace.undo();
       this.clock.runAll();
 
-      chai.assert.isTrue(
+      assert.isTrue(
         defBlock.getFieldValue('PARAMS').includes('param1'),
-        'Expected the params field to contain the old name of the param'
+        'Expected the params field to contain the old name of the param',
       );
     });
 
-    test('undoing and redoing renaming a procedure maintains the same state', function () {
+    test('undoing and redoing renaming a procedure maintains the same state', async function () {
       // Create a stack of container, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock.setFieldValue('param1', 'NAME');
@@ -643,19 +663,20 @@ suite('Procedures', function () {
       this.workspace.undo();
       this.workspace.undo(/* redo= */ true);
 
-      chai.assert.isTrue(
+      assert.isTrue(
         defBlock.getFieldValue('PARAMS').includes('new'),
-        'Expected the params field to contain the new name of the param'
+        'Expected the params field to contain the new name of the param',
       );
     });
   });
 
   suite('reordering procedure parameters', function () {
-    test('reordering procedure parameters updates procedure blocks', function () {
+    test('reordering procedure parameters updates procedure blocks', async function () {
       // Create a stack of container, parameter, parameter.
       const defBlock = createProcDefBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock1 = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock1.setFieldValue('param1', 'NAME');
@@ -676,22 +697,23 @@ suite('Procedures', function () {
       paramBlock2.nextConnection.connect(paramBlock1.previousConnection);
       this.clock.runAll();
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         defBlock.getField('PARAMS'),
-        'Expected the params field to exist'
+        'Expected the params field to exist',
       );
-      chai.assert.isTrue(
+      assert.isTrue(
         defBlock.getFieldValue('PARAMS').includes('param2, param1'),
-        'Expected the params field order to match the parameter order'
+        'Expected the params field order to match the parameter order',
       );
     });
 
-    test('reordering procedure parameters updates caller blocks', function () {
+    test('reordering procedure parameters updates caller blocks', async function () {
       // Create a stack of container, parameter, parameter.
       const defBlock = createProcDefBlock(this.workspace);
       const callBlock = createProcCallBlock(this.workspace);
-      defBlock.mutator.setVisible(true);
-      const mutatorWorkspace = defBlock.mutator.getWorkspace();
+      const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+      await mutatorIcon.setBubbleVisible(true);
+      const mutatorWorkspace = mutatorIcon.getWorkspace();
       const containerBlock = mutatorWorkspace.getTopBlocks()[0];
       const paramBlock1 = mutatorWorkspace.newBlock('procedures_mutatorarg');
       paramBlock1.setFieldValue('param1', 'NAME');
@@ -712,35 +734,36 @@ suite('Procedures', function () {
       paramBlock2.nextConnection.connect(paramBlock1.previousConnection);
       this.clock.runAll();
 
-      chai.assert.isNotNull(
+      assert.isNotNull(
         callBlock.getInput('ARG0'),
-        'Expected the param input to exist'
+        'Expected the param input to exist',
       );
-      chai.assert.equal(
+      assert.equal(
         callBlock.getFieldValue('ARGNAME0'),
         'param2',
-        'Expected the params field to match the name of the second param'
+        'Expected the params field to match the name of the second param',
       );
-      chai.assert.isNotNull(
+      assert.isNotNull(
         callBlock.getInput('ARG1'),
-        'Expected the param input to exist'
+        'Expected the param input to exist',
       );
-      chai.assert.equal(
+      assert.equal(
         callBlock.getFieldValue('ARGNAME1'),
         'param1',
-        'Expected the params field to match the name of the first param'
+        'Expected the params field to match the name of the first param',
       );
     });
 
     test(
       'reordering procedure parameters reorders the blocks ' +
         'attached to caller inputs',
-      function () {
+      async function () {
         // Create a stack of container, parameter, parameter.
         const defBlock = createProcDefBlock(this.workspace);
         const callBlock = createProcCallBlock(this.workspace);
-        defBlock.mutator.setVisible(true);
-        const mutatorWorkspace = defBlock.mutator.getWorkspace();
+        const mutatorIcon = defBlock.getIcon(Blockly.icons.MutatorIcon.TYPE);
+        await mutatorIcon.setBubbleVisible(true);
+        const mutatorWorkspace = mutatorIcon.getWorkspace();
         const containerBlock = mutatorWorkspace.getTopBlocks()[0];
         const paramBlock1 = mutatorWorkspace.newBlock('procedures_mutatorarg');
         paramBlock1.setFieldValue('param1', 'NAME');
@@ -767,17 +790,17 @@ suite('Procedures', function () {
         paramBlock2.nextConnection.connect(paramBlock1.previousConnection);
         this.clock.runAll();
 
-        chai.assert.equal(
+        assert.equal(
           callBlock.getInputTargetBlock('ARG0'),
           block2,
-          'Expected the second block to be in the first slot'
+          'Expected the second block to be in the first slot',
         );
-        chai.assert.equal(
+        assert.equal(
           callBlock.getInputTargetBlock('ARG1'),
           block1,
-          'Expected the first block to be in the second slot'
+          'Expected the first block to be in the second slot',
         );
-      }
+      },
     );
   });
 
@@ -789,14 +812,31 @@ suite('Procedures', function () {
         const defBlock = createProcDefBlock(this.workspace);
         const callBlock = createProcCallBlock(this.workspace);
 
-        defBlock.setEnabled(false);
+        defBlock.setDisabledReason(true, 'MANUALLY_DISABLED');
         this.clock.runAll();
 
-        chai.assert.isFalse(
+        assert.isFalse(
           callBlock.isEnabled(),
-          'Expected the caller block to be disabled'
+          'Expected the caller block to be disabled',
         );
-      }
+      },
+    );
+
+    test(
+      'if a procedure definition is invalid, the procedure caller ' +
+        'is also invalid',
+      function () {
+        const defBlock = createProcDefBlock(this.workspace);
+        const callBlock = createProcCallBlock(this.workspace);
+
+        defBlock.setDisabledReason(true, 'test reason');
+        this.clock.runAll();
+
+        assert.isFalse(
+          callBlock.isEnabled(),
+          'Expected the caller block to be invalid',
+        );
+      },
     );
 
     test(
@@ -805,40 +845,71 @@ suite('Procedures', function () {
       function () {
         const defBlock = createProcDefBlock(this.workspace);
         const callBlock = createProcCallBlock(this.workspace);
-        defBlock.setEnabled(false);
+        defBlock.setDisabledReason(true, 'MANUALLY_DISABLED');
         this.clock.runAll();
 
-        defBlock.setEnabled(true);
+        defBlock.setDisabledReason(false, 'MANUALLY_DISABLED');
         this.clock.runAll();
 
-        chai.assert.isTrue(
+        assert.isTrue(
           callBlock.isEnabled(),
-          'Expected the caller block to be enabled'
+          'Expected the caller block to be enabled',
         );
-      }
+      },
     );
 
     test(
       'if a procedure caller block was already disabled before ' +
         'its definition was disabled, it is not reenabled',
       function () {
+        this.workspace.options.disable = true;
         const defBlock = createProcDefBlock(this.workspace);
         const callBlock = createProcCallBlock(this.workspace);
         this.clock.runAll();
-        callBlock.setEnabled(false);
+        callBlock.setDisabledReason(true, 'MANUALLY_DISABLED');
         this.clock.runAll();
-        defBlock.setEnabled(false);
-        this.clock.runAll();
-
-        defBlock.setEnabled(true);
+        defBlock.setDisabledReason(true, 'MANUALLY_DISABLED');
         this.clock.runAll();
 
-        chai.assert.isFalse(
+        defBlock.setDisabledReason(false, 'MANUALLY_DISABLED');
+        this.clock.runAll();
+
+        assert.isFalse(
           callBlock.isEnabled(),
-          'Expected the caller block to continue to be disabled'
+          'Expected the caller block to continue to be disabled',
         );
-      }
+      },
     );
+  });
+
+  suite('procedures_ifreturn blocks', function () {
+    test('ifreturn block is invalid outside of def block', function () {
+      const ifreturnBlock = Blockly.serialization.blocks.append(
+        {'type': 'procedures_ifreturn'},
+        this.workspace,
+      );
+      this.clock.runAll();
+      assert.isFalse(
+        ifreturnBlock.isEnabled(),
+        'Expected the ifreturn block to be invalid',
+      );
+    });
+
+    test('ifreturn block is valid inside of def block', function () {
+      const defBlock = createProcDefBlock(this.workspace);
+      const ifreturnBlock = Blockly.serialization.blocks.append(
+        {'type': 'procedures_ifreturn'},
+        this.workspace,
+      );
+      defBlock
+        .getInput('STACK')
+        .connection.connect(ifreturnBlock.previousConnection);
+      this.clock.runAll();
+      assert.isTrue(
+        ifreturnBlock.isEnabled(),
+        'Expected the ifreturn block to be valid',
+      );
+    });
   });
 
   suite('deleting procedure blocks', function () {
@@ -854,15 +925,15 @@ suite('Procedures', function () {
         defBlock.dispose();
         this.clock.runAll();
 
-        chai.assert.isTrue(
+        assert.isTrue(
           callBlock1.disposed,
-          'Expected the first caller to be disposed'
+          'Expected the first caller to be disposed',
         );
-        chai.assert.isTrue(
+        assert.isTrue(
           callBlock2.disposed,
-          'Expected the second caller to be disposed'
+          'Expected the second caller to be disposed',
         );
-      }
+      },
     );
   });
 
@@ -879,12 +950,12 @@ suite('Procedures', function () {
             <block type="procedures_callreturn">
               <mutation name="do something"/>
             </block>`),
-          this.workspace
+          this.workspace,
         );
         this.clock.runAll();
         assertDefBlockStructure(
           this.workspace.getBlocksByType('procedures_defreturn')[0],
-          true
+          true,
         );
         assertCallBlockStructure(callBlock, [], [], 'do something');
       });
@@ -892,14 +963,14 @@ suite('Procedures', function () {
       test('callers without mutations create unnamed defs', function () {
         const callBlock = Blockly.Xml.domToBlock(
           Blockly.utils.xml.textToDom(
-            '<block type="procedures_callreturn"></block>'
+            '<block type="procedures_callreturn"></block>',
           ),
-          this.workspace
+          this.workspace,
         );
         this.clock.runAll();
         assertDefBlockStructure(
           this.workspace.getBlocksByType('procedures_defreturn')[0],
-          true
+          true,
         );
         assertCallBlockStructure(callBlock, [], [], 'unnamed');
       });
@@ -914,15 +985,15 @@ suite('Procedures', function () {
               </mutation>
             </block>
         `),
-          this.workspace
+          this.workspace,
         );
         const callBlock = Blockly.Xml.domToBlock(
           Blockly.utils.xml.textToDom(
             '<block type="procedures_callreturn">' +
               '  <mutation name="do something"/>' +
-              '</block>'
+              '</block>',
           ),
-          this.workspace
+          this.workspace,
         );
         this.clock.runAll();
         assertDefBlockStructure(defBlock, true, ['x'], ['arg']);
@@ -939,7 +1010,7 @@ suite('Procedures', function () {
               </mutation>
             </block>
         `),
-          this.workspace
+          this.workspace,
         );
         const callBlock = Blockly.Xml.domToBlock(
           Blockly.utils.xml.textToDom(`
@@ -949,7 +1020,7 @@ suite('Procedures', function () {
               </mutation>
             </block>
         `),
-          this.workspace
+          this.workspace,
         );
         this.clock.runAll();
         assertDefBlockStructure(defBlock, true, ['x'], ['arg']);
@@ -957,7 +1028,7 @@ suite('Procedures', function () {
           callBlock,
           ['y'],
           [this.TEST_VAR_ID],
-          'do something2'
+          'do something2',
         );
       });
 
@@ -978,14 +1049,14 @@ suite('Procedures', function () {
                   </block>
                 </xml>
             `),
-          this.workspace
+          this.workspace,
         );
         this.clock.runAll();
         const defBlock = this.workspace.getBlocksByType(
-          'procedures_defreturn'
+          'procedures_defreturn',
         )[0];
         const callBlock = this.workspace.getBlocksByType(
-          'procedures_callreturn'
+          'procedures_callreturn',
         )[0];
         // TODO: Currently the callers are creating variables with different
         //   IDs than those serialized to XML, so these assertions fail.
@@ -1004,12 +1075,12 @@ suite('Procedures', function () {
             },
           },
           this.workspace,
-          {recordUndo: true}
+          {recordUndo: true},
         );
         this.clock.runAll();
         assertDefBlockStructure(
           this.workspace.getBlocksByType('procedures_defreturn')[0],
-          true
+          true,
         );
         assertCallBlockStructure(callBlock, [], [], 'do something');
       });
@@ -1021,12 +1092,12 @@ suite('Procedures', function () {
             'type': 'procedures_callreturn',
           },
           this.workspace,
-          {recordUndo: true}
+          {recordUndo: true},
         );
         this.clock.runAll();
         assertDefBlockStructure(
           this.workspace.getBlocksByType('procedures_defreturn')[0],
-          true
+          true,
         );
         assertCallBlockStructure(callBlock, [], [], 'unnamed');
       });
@@ -1047,7 +1118,7 @@ suite('Procedures', function () {
               ],
             },
           },
-          this.workspace
+          this.workspace,
         );
         const callBlock = Blockly.serialization.blocks.append(
           {
@@ -1057,7 +1128,7 @@ suite('Procedures', function () {
             },
           },
           this.workspace,
-          {recordUndo: true}
+          {recordUndo: true},
         );
         this.clock.runAll();
         assertDefBlockStructure(defBlock, true, ['x'], ['arg']);
@@ -1080,7 +1151,7 @@ suite('Procedures', function () {
               ],
             },
           },
-          this.workspace
+          this.workspace,
         );
         const callBlock = Blockly.serialization.blocks.append(
           {
@@ -1091,7 +1162,7 @@ suite('Procedures', function () {
             },
           },
           this.workspace,
-          {recordUndo: true}
+          {recordUndo: true},
         );
         this.clock.runAll();
         assertDefBlockStructure(defBlock, true, ['x'], ['arg']);
@@ -1099,7 +1170,7 @@ suite('Procedures', function () {
           callBlock,
           ['y'],
           [this.TEST_VAR_ID],
-          'do something2'
+          'do something2',
         );
       });
 
@@ -1132,14 +1203,14 @@ suite('Procedures', function () {
               ],
             },
           },
-          this.workspace
+          this.workspace,
         );
         this.clock.runAll();
         const defBlock = this.workspace.getBlocksByType(
-          'procedures_defreturn'
+          'procedures_defreturn',
         )[0];
         const callBlock = this.workspace.getBlocksByType(
-          'procedures_callreturn'
+          'procedures_callreturn',
         )[0];
         // TODO: Currently the callers are creating variables with different
         //   IDs than those serialized to JSON, so these assertions fail.
@@ -1158,15 +1229,15 @@ suite('Procedures', function () {
             'NAME': 'test name',
           },
         },
-        this.workspace
+        this.workspace,
       );
 
       const options = [];
       def.customContextMenu(options);
 
-      chai.assert.isTrue(
+      assert.isTrue(
         options[0].text.includes('test name'),
-        'Expected the context menu to have an option to create the caller'
+        'Expected the context menu to have an option to create the caller',
       );
     });
 
@@ -1192,19 +1263,19 @@ suite('Procedures', function () {
             ],
           },
         },
-        this.workspace
+        this.workspace,
       );
 
       const options = [];
       def.customContextMenu(options);
 
-      chai.assert.isTrue(
+      assert.isTrue(
         options[1].text.includes('testParam1'),
-        'Expected the context menu to have an option to create the first param'
+        'Expected the context menu to have an option to create the first param',
       );
-      chai.assert.isTrue(
+      assert.isTrue(
         options[2].text.includes('testParam2'),
-        'Expected the context menu to have an option to create the second param'
+        'Expected the context menu to have an option to create the second param',
       );
     });
   });
@@ -1217,13 +1288,13 @@ suite('Procedures', function () {
       returnBlock.setFieldValue('return', 'NAME');
 
       const allProcedures = Blockly.Procedures.allProcedures(this.workspace);
-      chai.assert.lengthOf(allProcedures, 2);
+      assert.lengthOf(allProcedures, 2);
 
-      chai.assert.lengthOf(allProcedures[0], 1);
-      chai.assert.equal(allProcedures[0][0][0], 'no return');
+      assert.lengthOf(allProcedures[0], 1);
+      assert.equal(allProcedures[0][0][0], 'no return');
 
-      chai.assert.lengthOf(allProcedures[1], 1);
-      chai.assert.equal(allProcedures[1][0][0], 'return');
+      assert.lengthOf(allProcedures[1], 1);
+      assert.equal(allProcedures[1][0][0], 'return');
     });
 
     test('Multiple Blocks', function () {
@@ -1236,51 +1307,49 @@ suite('Procedures', function () {
       const _ = this.workspace.newBlock('controls_if');
 
       const allProcedures = Blockly.Procedures.allProcedures(this.workspace);
-      chai.assert.lengthOf(allProcedures, 2);
+      assert.lengthOf(allProcedures, 2);
 
-      chai.assert.lengthOf(allProcedures[0], 1);
-      chai.assert.equal(allProcedures[0][0][0], 'no return');
+      assert.lengthOf(allProcedures[0], 1);
+      assert.equal(allProcedures[0][0][0], 'no return');
 
-      chai.assert.lengthOf(allProcedures[1], 2);
-      chai.assert.equal(allProcedures[1][0][0], 'return');
-      chai.assert.equal(allProcedures[1][1][0], 'return2');
+      assert.lengthOf(allProcedures[1], 2);
+      assert.equal(allProcedures[1][0][0], 'return');
+      assert.equal(allProcedures[1][1][0], 'return2');
     });
 
     test('No Procedures', function () {
       const _ = this.workspace.newBlock('controls_if');
       const allProcedures = Blockly.Procedures.allProcedures(this.workspace);
-      chai.assert.lengthOf(allProcedures, 2);
-      chai.assert.lengthOf(
+      assert.lengthOf(allProcedures, 2);
+      assert.lengthOf(
         allProcedures[0],
         0,
-        'No procedures_defnoreturn blocks expected'
+        'No procedures_defnoreturn blocks expected',
       );
-      chai.assert.lengthOf(
+      assert.lengthOf(
         allProcedures[1],
         0,
-        'No procedures_defreturn blocks expected'
+        'No procedures_defreturn blocks expected',
       );
     });
   });
 
   suite('isNameUsed', function () {
     test('returns false if no blocks or models exists', function () {
-      chai.assert.isFalse(
-        Blockly.Procedures.isNameUsed('proc name', this.workspace)
+      assert.isFalse(
+        Blockly.Procedures.isNameUsed('proc name', this.workspace),
       );
     });
 
     test('returns true if an associated block exists', function () {
       createProcDefBlock(this.workspace, false, [], 'proc name');
-      chai.assert.isTrue(
-        Blockly.Procedures.isNameUsed('proc name', this.workspace)
-      );
+      assert.isTrue(Blockly.Procedures.isNameUsed('proc name', this.workspace));
     });
 
     test('return false if an associated block does not exist', function () {
       createProcDefBlock(this.workspace, false, [], 'proc name');
-      chai.assert.isFalse(
-        Blockly.Procedures.isNameUsed('other proc name', this.workspace)
+      assert.isFalse(
+        Blockly.Procedures.isNameUsed('other proc name', this.workspace),
       );
     });
 
@@ -1288,17 +1357,15 @@ suite('Procedures', function () {
       this.workspace
         .getProcedureMap()
         .add(new MockProcedureModel().setName('proc name'));
-      chai.assert.isTrue(
-        Blockly.Procedures.isNameUsed('proc name', this.workspace)
-      );
+      assert.isTrue(Blockly.Procedures.isNameUsed('proc name', this.workspace));
     });
 
     test('returns false if an associated procedure model exists', function () {
       this.workspace
         .getProcedureMap()
         .add(new MockProcedureModel().setName('proc name'));
-      chai.assert.isFalse(
-        Blockly.Procedures.isNameUsed('other proc name', this.workspace)
+      assert.isFalse(
+        Blockly.Procedures.isNameUsed('other proc name', this.workspace),
       );
     });
   });
@@ -1308,48 +1375,48 @@ suite('Procedures', function () {
       workspace,
       noReturnNames,
       returnNames,
-      hasCallers
+      hasCallers,
     ) {
       const allProcedures = Blockly.Procedures.allProcedures(workspace);
       const defNoReturnBlocks = allProcedures[0];
-      chai.assert.lengthOf(
+      assert.lengthOf(
         defNoReturnBlocks,
         noReturnNames.length,
-        `Expected the number of no return blocks to be ${noReturnNames.length}`
+        `Expected the number of no return blocks to be ${noReturnNames.length}`,
       );
       for (let i = 0; i < noReturnNames.length; i++) {
         const expectedName = noReturnNames[i];
-        chai.assert.equal(defNoReturnBlocks[i][0], expectedName);
+        assert.equal(defNoReturnBlocks[i][0], expectedName);
         if (hasCallers) {
           const callers = Blockly.Procedures.getCallers(
             expectedName,
-            workspace
+            workspace,
           );
-          chai.assert.lengthOf(
+          assert.lengthOf(
             callers,
             1,
-            `Expected there to be one caller of the ${expectedName} block`
+            `Expected there to be one caller of the ${expectedName} block`,
           );
         }
       }
       const defReturnBlocks = allProcedures[1];
-      chai.assert.lengthOf(
+      assert.lengthOf(
         defReturnBlocks,
         returnNames.length,
-        `Expected the number of return blocks to be ${returnNames.length}`
+        `Expected the number of return blocks to be ${returnNames.length}`,
       );
       for (let i = 0; i < returnNames.length; i++) {
         const expectedName = returnNames[i];
-        chai.assert.equal(defReturnBlocks[i][0], expectedName);
+        assert.equal(defReturnBlocks[i][0], expectedName);
         if (hasCallers) {
           const callers = Blockly.Procedures.getCallers(
             expectedName,
-            workspace
+            workspace,
           );
-          chai.assert.lengthOf(
+          assert.lengthOf(
             callers,
             1,
-            `Expected there to be one caller of the ${expectedName} block`
+            `Expected there to be one caller of the ${expectedName} block`,
           );
         }
       }
@@ -1360,7 +1427,7 @@ suite('Procedures', function () {
         expectedCount *= 2;
       }
       const blocks = workspace.getAllBlocks(false);
-      chai.assert.lengthOf(blocks, expectedCount);
+      assert.lengthOf(blocks, expectedCount);
     }
 
     suite('no name renamed to unnamed', function () {
@@ -1377,7 +1444,7 @@ suite('Procedures', function () {
           this.workspace,
           ['unnamed'],
           ['unnamed2'],
-          false
+          false,
         );
       });
 
@@ -1394,7 +1461,7 @@ suite('Procedures', function () {
           this.workspace,
           ['unnamed2'],
           ['unnamed'],
-          false
+          false,
         );
       });
 
@@ -1463,7 +1530,7 @@ suite('Procedures', function () {
       // Do not require procedures to be the built-in procedures.
       const defBlock = this.workspace.newBlock('new_proc');
       const def = Blockly.Procedures.getDefinition('test', this.workspace);
-      chai.assert.equal(def, defBlock);
+      assert.equal(def, defBlock);
     });
 
     test('Stacked procedures', function () {
@@ -1473,7 +1540,7 @@ suite('Procedures', function () {
       blockB.name = 'b';
       blockA.nextConnection.connect(blockB.previousConnection);
       const def = Blockly.Procedures.getDefinition('b', this.workspace);
-      chai.assert.equal(def, blockB);
+      assert.equal(def, blockB);
     });
   });
 
@@ -1509,7 +1576,7 @@ suite('Procedures', function () {
               'type': testSuite.callType,
             },
             this.workspace,
-            {recordUndo: true}
+            {recordUndo: true},
           );
           this.callBlock.setFieldValue('proc name', 'NAME');
           this.clock.runAll();
@@ -1525,7 +1592,7 @@ suite('Procedures', function () {
                 'NAME': 'proc name',
               },
             },
-            this.workspace
+            this.workspace,
           );
           this.callBlock = Blockly.serialization.blocks.append(
             {
@@ -1534,43 +1601,43 @@ suite('Procedures', function () {
                 'NAME': 'proc name',
               },
             },
-            this.workspace
+            this.workspace,
           );
           sinon.stub(this.defBlock.getField('NAME'), 'resizeEditor_');
         });
         test('Simple, Programmatic', function () {
           this.defBlock.setFieldValue(
             this.defBlock.getFieldValue('NAME') + '2',
-            'NAME'
+            'NAME',
           );
-          chai.assert.equal(this.defBlock.getFieldValue('NAME'), 'proc name2');
-          chai.assert.equal(this.callBlock.getFieldValue('NAME'), 'proc name2');
+          assert.equal(this.defBlock.getFieldValue('NAME'), 'proc name2');
+          assert.equal(this.callBlock.getFieldValue('NAME'), 'proc name2');
         });
         test('Simple, Input', function () {
           const defInput = this.defBlock.getField('NAME');
           defInput.htmlInput_ = document.createElement('input');
           defInput.htmlInput_.setAttribute(
             'data-untyped-default-value',
-            'proc name'
+            'proc name',
           );
 
           defInput.htmlInput_.value = 'proc name2';
-          defInput.onHtmlInputChange_(null);
-          chai.assert.equal(this.defBlock.getFieldValue('NAME'), 'proc name2');
-          chai.assert.equal(this.callBlock.getFieldValue('NAME'), 'proc name2');
+          defInput.onHtmlInputChange(null);
+          assert.equal(this.defBlock.getFieldValue('NAME'), 'proc name2');
+          assert.equal(this.callBlock.getFieldValue('NAME'), 'proc name2');
         });
         test('lower -> CAPS', function () {
           const defInput = this.defBlock.getField('NAME');
           defInput.htmlInput_ = document.createElement('input');
           defInput.htmlInput_.setAttribute(
             'data-untyped-default-value',
-            'proc name'
+            'proc name',
           );
 
           defInput.htmlInput_.value = 'PROC NAME';
-          defInput.onHtmlInputChange_(null);
-          chai.assert.equal(this.defBlock.getFieldValue('NAME'), 'PROC NAME');
-          chai.assert.equal(this.callBlock.getFieldValue('NAME'), 'PROC NAME');
+          defInput.onHtmlInputChange(null);
+          assert.equal(this.defBlock.getFieldValue('NAME'), 'PROC NAME');
+          assert.equal(this.callBlock.getFieldValue('NAME'), 'PROC NAME');
         });
         test('CAPS -> lower', function () {
           this.defBlock.setFieldValue('PROC NAME', 'NAME');
@@ -1579,62 +1646,59 @@ suite('Procedures', function () {
           defInput.htmlInput_ = document.createElement('input');
           defInput.htmlInput_.setAttribute(
             'data-untyped-default-value',
-            'PROC NAME'
+            'PROC NAME',
           );
 
           defInput.htmlInput_.value = 'proc name';
-          defInput.onHtmlInputChange_(null);
-          chai.assert.equal(this.defBlock.getFieldValue('NAME'), 'proc name');
-          chai.assert.equal(this.callBlock.getFieldValue('NAME'), 'proc name');
+          defInput.onHtmlInputChange(null);
+          assert.equal(this.defBlock.getFieldValue('NAME'), 'proc name');
+          assert.equal(this.callBlock.getFieldValue('NAME'), 'proc name');
         });
         test('Whitespace', function () {
           const defInput = this.defBlock.getField('NAME');
           defInput.htmlInput_ = document.createElement('input');
           defInput.htmlInput_.setAttribute(
             'data-untyped-default-value',
-            'proc name'
+            'proc name',
           );
 
           defInput.htmlInput_.value = 'proc name ';
-          defInput.onHtmlInputChange_(null);
-          chai.assert.equal(this.defBlock.getFieldValue('NAME'), 'proc name');
-          chai.assert.equal(this.callBlock.getFieldValue('NAME'), 'proc name');
+          defInput.onHtmlInputChange(null);
+          assert.equal(this.defBlock.getFieldValue('NAME'), 'proc name');
+          assert.equal(this.callBlock.getFieldValue('NAME'), 'proc name');
         });
         test('Whitespace then Text', function () {
           const defInput = this.defBlock.getField('NAME');
           defInput.htmlInput_ = document.createElement('input');
           defInput.htmlInput_.setAttribute(
             'data-untyped-default-value',
-            'proc name'
+            'proc name',
           );
 
           defInput.htmlInput_.value = 'proc name ';
-          defInput.onHtmlInputChange_(null);
+          defInput.onHtmlInputChange(null);
           defInput.htmlInput_.value = 'proc name 2';
-          defInput.onHtmlInputChange_(null);
-          chai.assert.equal(this.defBlock.getFieldValue('NAME'), 'proc name 2');
-          chai.assert.equal(
-            this.callBlock.getFieldValue('NAME'),
-            'proc name 2'
-          );
+          defInput.onHtmlInputChange(null);
+          assert.equal(this.defBlock.getFieldValue('NAME'), 'proc name 2');
+          assert.equal(this.callBlock.getFieldValue('NAME'), 'proc name 2');
         });
         test('Set Empty', function () {
           const defInput = this.defBlock.getField('NAME');
           defInput.htmlInput_ = document.createElement('input');
           defInput.htmlInput_.setAttribute(
             'data-untyped-default-value',
-            'proc name'
+            'proc name',
           );
 
           defInput.htmlInput_.value = '';
-          defInput.onHtmlInputChange_(null);
-          chai.assert.equal(
+          defInput.onHtmlInputChange(null);
+          assert.equal(
             this.defBlock.getFieldValue('NAME'),
-            Blockly.Msg['UNNAMED_KEY']
+            Blockly.Msg['UNNAMED_KEY'],
           );
-          chai.assert.equal(
+          assert.equal(
             this.callBlock.getFieldValue('NAME'),
-            Blockly.Msg['UNNAMED_KEY']
+            Blockly.Msg['UNNAMED_KEY'],
           );
         });
         test('Set Empty, and Create New', function () {
@@ -1642,20 +1706,20 @@ suite('Procedures', function () {
           defInput.htmlInput_ = document.createElement('input');
           defInput.htmlInput_.setAttribute(
             'data-untyped-default-value',
-            'proc name'
+            'proc name',
           );
 
           defInput.htmlInput_.value = '';
-          defInput.onHtmlInputChange_(null);
+          defInput.onHtmlInputChange(null);
           const newDefBlock = this.workspace.newBlock(testSuite.defType);
           newDefBlock.setFieldValue('new name', 'NAME');
-          chai.assert.equal(
+          assert.equal(
             this.defBlock.getFieldValue('NAME'),
-            Blockly.Msg['UNNAMED_KEY']
+            Blockly.Msg['UNNAMED_KEY'],
           );
-          chai.assert.equal(
+          assert.equal(
             this.callBlock.getFieldValue('NAME'),
-            Blockly.Msg['UNNAMED_KEY']
+            Blockly.Msg['UNNAMED_KEY'],
           );
         });
       });
@@ -1668,7 +1732,7 @@ suite('Procedures', function () {
                 'NAME': 'proc name',
               },
             },
-            this.workspace
+            this.workspace,
           );
           this.callBlock = Blockly.serialization.blocks.append(
             {
@@ -1677,16 +1741,16 @@ suite('Procedures', function () {
                 'NAME': 'proc name',
               },
             },
-            this.workspace
+            this.workspace,
           );
         });
         test('Simple', function () {
           const callers = Blockly.Procedures.getCallers(
             'proc name',
-            this.workspace
+            this.workspace,
           );
-          chai.assert.equal(callers.length, 1);
-          chai.assert.equal(callers[0], this.callBlock);
+          assert.equal(callers.length, 1);
+          assert.equal(callers[0], this.callBlock);
         });
         test('Multiple Callers', function () {
           const caller2 = this.workspace.newBlock(testSuite.callType);
@@ -1696,12 +1760,12 @@ suite('Procedures', function () {
 
           const callers = Blockly.Procedures.getCallers(
             'proc name',
-            this.workspace
+            this.workspace,
           );
-          chai.assert.equal(callers.length, 3);
-          chai.assert.equal(callers[0], this.callBlock);
-          chai.assert.equal(callers[1], caller2);
-          chai.assert.equal(callers[2], caller3);
+          assert.equal(callers.length, 3);
+          assert.equal(callers[0], this.callBlock);
+          assert.equal(callers[1], caller2);
+          assert.equal(callers[2], caller3);
         });
         test('Multiple Procedures', function () {
           const def2 = this.workspace.newBlock(testSuite.defType);
@@ -1711,10 +1775,10 @@ suite('Procedures', function () {
 
           const callers = Blockly.Procedures.getCallers(
             'proc name',
-            this.workspace
+            this.workspace,
           );
-          chai.assert.equal(callers.length, 1);
-          chai.assert.equal(callers[0], this.callBlock);
+          assert.equal(callers.length, 1);
+          assert.equal(callers[0], this.callBlock);
         });
         // This can occur if you:
         //  1) Create an uppercase definition and call block.
@@ -1728,10 +1792,10 @@ suite('Procedures', function () {
           this.callBlock.setFieldValue('PROC NAME', 'NAME');
           const callers = Blockly.Procedures.getCallers(
             'proc name',
-            this.workspace
+            this.workspace,
           );
-          chai.assert.equal(callers.length, 1);
-          chai.assert.equal(callers[0], this.callBlock);
+          assert.equal(callers.length, 1);
+          assert.equal(callers[0], this.callBlock);
         });
         test('Multiple Workspaces', function () {
           const workspace = new Blockly.Workspace();
@@ -1743,14 +1807,14 @@ suite('Procedures', function () {
 
             let callers = Blockly.Procedures.getCallers(
               'proc name',
-              this.workspace
+              this.workspace,
             );
-            chai.assert.equal(callers.length, 1);
-            chai.assert.equal(callers[0], this.callBlock);
+            assert.equal(callers.length, 1);
+            assert.equal(callers[0], this.callBlock);
 
             callers = Blockly.Procedures.getCallers('proc name', workspace);
-            chai.assert.equal(callers.length, 1);
-            chai.assert.equal(callers[0], caller2);
+            assert.equal(callers.length, 1);
+            assert.equal(callers[0], caller2);
           } finally {
             workspaceTeardown.call(this, workspace);
           }
@@ -1765,7 +1829,7 @@ suite('Procedures', function () {
                 'NAME': 'proc name',
               },
             },
-            this.workspace
+            this.workspace,
           );
           this.callBlock = Blockly.serialization.blocks.append(
             {
@@ -1774,15 +1838,15 @@ suite('Procedures', function () {
                 'NAME': 'proc name',
               },
             },
-            this.workspace
+            this.workspace,
           );
         });
         test('Simple', function () {
           const def = Blockly.Procedures.getDefinition(
             'proc name',
-            this.workspace
+            this.workspace,
           );
-          chai.assert.equal(def, this.defBlock);
+          assert.equal(def, this.defBlock);
         });
         test('Multiple Procedures', function () {
           const def2 = this.workspace.newBlock(testSuite.defType);
@@ -1792,9 +1856,9 @@ suite('Procedures', function () {
 
           const def = Blockly.Procedures.getDefinition(
             'proc name',
-            this.workspace
+            this.workspace,
           );
-          chai.assert.equal(def, this.defBlock);
+          assert.equal(def, this.defBlock);
         });
         test('Multiple Workspaces', function () {
           const workspace = new Blockly.Workspace();
@@ -1806,12 +1870,12 @@ suite('Procedures', function () {
 
             let def = Blockly.Procedures.getDefinition(
               'proc name',
-              this.workspace
+              this.workspace,
             );
-            chai.assert.equal(def, this.defBlock);
+            assert.equal(def, this.defBlock);
 
             def = Blockly.Procedures.getDefinition('proc name', workspace);
-            chai.assert.equal(def, def2);
+            assert.equal(def, def2);
           } finally {
             workspaceTeardown.call(this, workspace);
           }
@@ -1827,7 +1891,7 @@ suite('Procedures', function () {
                 'NAME': 'proc name',
               },
             },
-            this.workspace
+            this.workspace,
           );
           this.callBlock = Blockly.serialization.blocks.append(
             {
@@ -1836,7 +1900,7 @@ suite('Procedures', function () {
                 'name': 'proc name',
               },
             },
-            this.workspace
+            this.workspace,
           );
         });
         suite('Composition', function () {
@@ -1845,7 +1909,7 @@ suite('Procedures', function () {
               const mutatorWorkspace = new Blockly.Workspace(
                 new Blockly.Options({
                   parentWorkspace: mainWorkspace,
-                })
+                }),
               );
               defBlock.decompose(mutatorWorkspace);
               const containerBlock = mutatorWorkspace.getTopBlocks()[0];
@@ -1856,11 +1920,11 @@ suite('Procedures', function () {
             if (testSuite.defType === 'procedures_defreturn') {
               test('Has Statements', function () {
                 setStatementValue(this.workspace, this.defBlock, true);
-                chai.assert.isTrue(this.defBlock.hasStatements_);
+                assert.isTrue(this.defBlock.hasStatements_);
               });
               test('Has No Statements', function () {
                 setStatementValue(this.workspace, this.defBlock, false);
-                chai.assert.isFalse(this.defBlock.hasStatements_);
+                assert.isFalse(this.defBlock.hasStatements_);
               });
               test('Saving Statements', function () {
                 const blockXml = Blockly.utils.xml.textToDom(
@@ -1868,34 +1932,37 @@ suite('Procedures', function () {
                     '  <statement name="STACK">' +
                     '    <block type="procedures_ifreturn" id="test"></block>' +
                     '  </statement> ' +
-                    '</block>'
+                    '</block>',
                 );
                 const defBlock = Blockly.Xml.domToBlock(
                   blockXml,
-                  this.workspace
+                  this.workspace,
                 );
                 setStatementValue(this.workspace, defBlock, false);
-                chai.assert.isNull(defBlock.getInput('STACK'));
+                assert.isNull(defBlock.getInput('STACK'));
                 setStatementValue(this.workspace, defBlock, true);
-                chai.assert.isNotNull(defBlock.getInput('STACK'));
+                assert.isNotNull(defBlock.getInput('STACK'));
                 const statementBlocks = defBlock.getChildren();
-                chai.assert.equal(statementBlocks.length, 1);
+                assert.equal(statementBlocks.length, 1);
                 const block = statementBlocks[0];
-                chai.assert.equal(block.type, 'procedures_ifreturn');
-                chai.assert.equal(block.id, 'test');
+                assert.equal(block.type, 'procedures_ifreturn');
+                assert.equal(block.id, 'test');
               });
             }
           });
           suite('Untyped Arguments', function () {
-            function createMutator(argArray) {
-              this.defBlock.mutator.setVisible(true);
-              this.mutatorWorkspace = this.defBlock.mutator.getWorkspace();
+            async function createMutator(argArray) {
+              const mutatorIcon = this.defBlock.getIcon(
+                Blockly.icons.MutatorIcon.TYPE,
+              );
+              await mutatorIcon.setBubbleVisible(true);
+              this.mutatorWorkspace = mutatorIcon.getWorkspace();
               this.containerBlock = this.mutatorWorkspace.getTopBlocks()[0];
               this.connection =
                 this.containerBlock.getInput('STACK').connection;
               for (let i = 0; i < argArray.length; i++) {
                 this.argBlock = this.mutatorWorkspace.newBlock(
-                  'procedures_mutatorarg'
+                  'procedures_mutatorarg',
                 );
                 this.argBlock.setFieldValue(argArray[i], 'NAME');
                 this.connection.connect(this.argBlock.previousConnection);
@@ -1904,75 +1971,75 @@ suite('Procedures', function () {
               this.clock.runAll();
             }
             function assertArgs(argArray) {
-              chai.assert.equal(
+              assert.equal(
                 this.defBlock.getVars().length,
                 argArray.length,
-                'Expected the def to have the right number of arguments'
+                'Expected the def to have the right number of arguments',
               );
               for (let i = 0; i < argArray.length; i++) {
-                chai.assert.equal(this.defBlock.getVars()[i], argArray[i]);
+                assert.equal(this.defBlock.getVars()[i], argArray[i]);
               }
-              chai.assert.equal(
+              assert.equal(
                 this.callBlock.getVars().length,
                 argArray.length,
-                'Expected the call to have the right number of arguments'
+                'Expected the call to have the right number of arguments',
               );
               for (let i = 0; i < argArray.length; i++) {
-                chai.assert.equal(this.callBlock.getVars()[i], argArray[i]);
+                assert.equal(this.callBlock.getVars()[i], argArray[i]);
               }
             }
-            test('Simple Add Arg', function () {
+            test('Simple Add Arg', async function () {
               const args = ['arg1'];
-              createMutator.call(this, args);
+              await createMutator.call(this, args);
               assertArgs.call(this, args);
             });
-            test('Multiple Args', function () {
+            test('Multiple Args', async function () {
               const args = ['arg1', 'arg2', 'arg3'];
-              createMutator.call(this, args);
+              await createMutator.call(this, args);
               assertArgs.call(this, args);
             });
-            test('Simple Change Arg', function () {
-              createMutator.call(this, ['arg1']);
+            test('Simple Change Arg', async function () {
+              await createMutator.call(this, ['arg1']);
               this.argBlock.setFieldValue('arg2', 'NAME');
               this.defBlock.compose(this.containerBlock);
               assertArgs.call(this, ['arg2']);
             });
-            test('lower -> CAPS', function () {
-              createMutator.call(this, ['arg']);
+            test('lower -> CAPS', async function () {
+              await createMutator.call(this, ['arg']);
               this.argBlock.setFieldValue('ARG', 'NAME');
               this.defBlock.compose(this.containerBlock);
               assertArgs.call(this, ['ARG']);
             });
-            test('CAPS -> lower', function () {
-              createMutator.call(this, ['ARG']);
+            test('CAPS -> lower', async function () {
+              await createMutator.call(this, ['ARG']);
               this.argBlock.setFieldValue('arg', 'NAME');
               this.defBlock.compose(this.containerBlock);
               assertArgs.call(this, ['arg']);
             });
             // Test case for #1958
-            test('Set Arg Empty', function () {
+            test('Set Arg Empty', async function () {
               const args = ['arg1'];
-              createMutator.call(this, args);
+              await createMutator.call(this, args);
               this.argBlock.setFieldValue('', 'NAME');
               this.defBlock.compose(this.containerBlock);
               assertArgs.call(this, args);
             });
-            test('Whitespace', function () {
+            test('Whitespace', async function () {
               const args = ['arg1'];
-              createMutator.call(this, args);
+              await createMutator.call(this, args);
               this.argBlock.setFieldValue(' ', 'NAME');
               this.defBlock.compose(this.containerBlock);
               assertArgs.call(this, args);
             });
-            test('Whitespace and Text', function () {
-              createMutator.call(this, ['arg1']);
+            test('Whitespace and Text', async function () {
+              await createMutator.call(this, ['arg1']);
               this.argBlock.setFieldValue(' text ', 'NAME');
               this.defBlock.compose(this.containerBlock);
               assertArgs.call(this, ['text']);
             });
-            test('<>', function () {
+            test('<>', async function () {
               const args = ['<>'];
-              createMutator.call(this, args);
+              await createMutator.call(this, args);
               assertArgs.call(this, args);
             });
           });
@@ -1984,54 +2051,54 @@ suite('Procedures', function () {
                 const mutatorWorkspace = new Blockly.Workspace(
                   new Blockly.Options({
                     parentWorkspace: this.workspace,
-                  })
+                  }),
                 );
                 this.defBlock.decompose(mutatorWorkspace);
                 const statementInput = mutatorWorkspace
                   .getTopBlocks()[0]
                   .getInput('STATEMENT_INPUT');
-                chai.assert.isNotNull(statementInput);
+                assert.isNotNull(statementInput);
               });
               test('Has Statements', function () {
                 this.defBlock.hasStatements_ = true;
                 const mutatorWorkspace = new Blockly.Workspace(
                   new Blockly.Options({
                     parentWorkspace: this.workspace,
-                  })
+                  }),
                 );
                 this.defBlock.decompose(mutatorWorkspace);
                 const statementValue = mutatorWorkspace
                   .getTopBlocks()[0]
                   .getField('STATEMENTS')
                   .getValueBoolean();
-                chai.assert.isTrue(statementValue);
+                assert.isTrue(statementValue);
               });
               test('No Has Statements', function () {
                 this.defBlock.hasStatements_ = false;
                 const mutatorWorkspace = new Blockly.Workspace(
                   new Blockly.Options({
                     parentWorkspace: this.workspace,
-                  })
+                  }),
                 );
                 this.defBlock.decompose(mutatorWorkspace);
                 const statementValue = mutatorWorkspace
                   .getTopBlocks()[0]
                   .getField('STATEMENTS')
                   .getValueBoolean();
-                chai.assert.isFalse(statementValue);
+                assert.isFalse(statementValue);
               });
             } else {
               test('Has no Statement Input', function () {
                 const mutatorWorkspace = new Blockly.Workspace(
                   new Blockly.Options({
                     parentWorkspace: this.workspace,
-                  })
+                  }),
                 );
                 this.defBlock.decompose(mutatorWorkspace);
                 const statementInput = mutatorWorkspace
                   .getTopBlocks()[0]
                   .getInput('STATEMENT_INPUT');
-                chai.assert.isNull(statementInput);
+                assert.isNull(statementInput);
               });
             }
           });
@@ -2103,7 +2170,7 @@ suite('Procedures', function () {
               block,
               testSuite.hasReturn,
               ['x', 'y'],
-              ['arg1', 'arg2']
+              ['arg1', 'arg2'],
             );
           },
         },
@@ -2133,7 +2200,7 @@ suite('Procedures', function () {
               block,
               testSuite.hasReturn,
               ['preCreatedVar'],
-              ['preCreatedVarId']
+              ['preCreatedVarId'],
             );
           },
         },
@@ -2210,7 +2277,7 @@ suite('Procedures', function () {
             assertCallBlockStructure(
               block,
               ['preCreatedVar'],
-              ['preCreatedVarId']
+              ['preCreatedVarId'],
             );
           },
         },
@@ -2293,7 +2360,7 @@ suite('Procedures', function () {
               block,
               testSuite.hasReturn,
               ['x', 'y'],
-              ['arg1', 'arg2']
+              ['arg1', 'arg2'],
             );
           },
         },
@@ -2333,7 +2400,7 @@ suite('Procedures', function () {
               block,
               testSuite.hasReturn,
               ['preCreatedVar'],
-              ['preCreatedVarId']
+              ['preCreatedVarId'],
             );
           },
         },
@@ -2418,7 +2485,7 @@ suite('Procedures', function () {
             assertCallBlockStructure(
               block,
               ['preCreatedVar'],
-              ['preCreatedVarId']
+              ['preCreatedVarId'],
             );
           },
         },

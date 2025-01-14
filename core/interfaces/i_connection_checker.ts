@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as goog from '../../closure/goog/goog.js';
+// Former goog.module ID: Blockly.IConnectionChecker
+
 import type {Connection} from '../connection.js';
 import type {RenderedConnection} from '../rendered_connection.js';
-goog.declareModuleId('Blockly.IConnectionChecker');
 
 /**
  * Class for connection type checking logic.
@@ -28,7 +28,7 @@ export interface IConnectionChecker {
     a: Connection | null,
     b: Connection | null,
     isDragging: boolean,
-    opt_distance?: number
+    opt_distance?: number,
   ): boolean;
 
   /**
@@ -47,7 +47,7 @@ export interface IConnectionChecker {
     a: Connection | null,
     b: Connection | null,
     isDragging: boolean,
-    opt_distance?: number
+    opt_distance?: number,
   ): number;
 
   /**
@@ -61,7 +61,7 @@ export interface IConnectionChecker {
   getErrorMessage(
     errorCode: number,
     a: Connection | null,
-    b: Connection | null
+    b: Connection | null,
   ): string;
 
   /**
@@ -96,6 +96,6 @@ export interface IConnectionChecker {
   doDragChecks(
     a: RenderedConnection,
     b: RenderedConnection,
-    distance: number
+    distance: number,
   ): boolean;
 }

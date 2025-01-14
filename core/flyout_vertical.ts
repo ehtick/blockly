@@ -9,8 +9,7 @@
  *
  * @class
  */
-import * as goog from '../closure/goog/goog.js';
-goog.declareModuleId('Blockly.VerticalFlyout');
+// Former goog.module ID: Blockly.VerticalFlyout
 
 import * as browserEvents from './browser_events.js';
 import * as dropDownDiv from './dropdowndiv.js';
@@ -59,7 +58,7 @@ export class VerticalFlyout extends Flyout {
     }
     this.workspace_.translate(
       this.workspace_.scrollX + absoluteMetrics.left,
-      this.workspace_.scrollY + absoluteMetrics.top
+      this.workspace_.scrollY + absoluteMetrics.top,
     );
   }
 
@@ -167,7 +166,7 @@ export class VerticalFlyout extends Flyout {
       0,
       atRight ? 0 : 1,
       atRight ? -this.CORNER_RADIUS : this.CORNER_RADIUS,
-      this.CORNER_RADIUS
+      this.CORNER_RADIUS,
     );
     // Side closest to workspace.
     path.push('v', Math.max(0, height));
@@ -180,7 +179,7 @@ export class VerticalFlyout extends Flyout {
       0,
       atRight ? 0 : 1,
       atRight ? this.CORNER_RADIUS : -this.CORNER_RADIUS,
-      this.CORNER_RADIUS
+      this.CORNER_RADIUS,
     );
     // Bottom.
     path.push('h', atRight ? width : -width);
@@ -210,7 +209,7 @@ export class VerticalFlyout extends Flyout {
       this.workspace_.scrollbar?.setY(pos);
       // When the flyout moves from a wheel event, hide WidgetDiv and
       // dropDownDiv.
-      WidgetDiv.hide();
+      WidgetDiv.hideIfOwnerIsInWorkspace(this.workspace_);
       dropDownDiv.hideWithoutAnimation();
     }
     // Don't scroll the page.
@@ -234,29 +233,32 @@ export class VerticalFlyout extends Flyout {
     for (let i = 0, item; (item = contents[i]); i++) {
       if (item.type === 'block') {
         const block = item.block;
-        const allBlocks = block!.getDescendants(false);
+        if (!block) {
+          continue;
+        }
+        const allBlocks = block.getDescendants(false);
         for (let j = 0, child; (child = allBlocks[j]); j++) {
           // Mark blocks as being inside a flyout.  This is used to detect and
           // prevent the closure of the flyout if the user right-clicks on such
           // a block.
           child.isInFlyout = true;
         }
-        const root = block!.getSvgRoot();
-        const blockHW = block!.getHeightWidth();
-        const moveX = block!.outputConnection
+        const root = block.getSvgRoot();
+        const blockHW = block.getHeightWidth();
+        const moveX = block.outputConnection
           ? cursorX - this.tabWidth_
           : cursorX;
-        block!.moveBy(moveX, cursorY);
+        block.moveBy(moveX, cursorY);
 
         const rect = this.createRect_(
-          block!,
+          block,
           this.RTL ? moveX - blockHW.width : moveX,
           cursorY,
           blockHW,
-          i
+          i,
         );
 
-        this.addBlockListeners_(root, block!, rect);
+        this.addBlockListeners_(root, block, rect);
 
         cursorY += blockHW.height + gaps[i];
       } else if (item.type === 'button') {
@@ -275,7 +277,6 @@ export class VerticalFlyout extends Flyout {
    * @param currentDragDeltaXY How far the pointer has moved from the position
    *     at mouse down, in pixel units.
    * @returns True if the drag is toward the workspace.
-   * @internal
    */
   override isDragTowardWorkspace(currentDragDeltaXY: Coordinate): boolean {
     const dx = currentDragDeltaXY.x;
@@ -376,22 +377,26 @@ export class VerticalFlyout extends Flyout {
         }
       }
 
+      // TODO(#7689): Remove this.
+      // Workspace with no scrollbars where this is permanently
+      // open on the left.
+      // If scrollbars exist they properly update the metrics.
       if (
-        this.targetWorkspace!.toolboxPosition === this.toolboxPosition_ &&
-        this.toolboxPosition_ === toolbox.Position.LEFT &&
-        !this.targetWorkspace!.getToolbox()
+        !this.targetWorkspace.scrollbar &&
+        !this.autoClose &&
+        this.targetWorkspace.getFlyout() === this &&
+        this.toolboxPosition_ === toolbox.Position.LEFT
       ) {
-        // This flyout is a simple toolbox. Reposition the workspace so that
-        // (0,0) is in the correct position relative to the new absolute edge
-        // (ie toolbox edge).
-        this.targetWorkspace!.translate(
-          this.targetWorkspace!.scrollX + flyoutWidth,
-          this.targetWorkspace!.scrollY
+        this.targetWorkspace.translate(
+          this.targetWorkspace.scrollX + flyoutWidth,
+          this.targetWorkspace.scrollY,
         );
       }
+
       this.width_ = flyoutWidth;
       this.position();
-      this.targetWorkspace!.recordDragTargets();
+      this.targetWorkspace.resizeContents();
+      this.targetWorkspace.recordDragTargets();
     }
   }
 }
@@ -399,5 +404,5 @@ export class VerticalFlyout extends Flyout {
 registry.register(
   registry.Type.FLYOUTS_VERTICAL_TOOLBOX,
   registry.DEFAULT,
-  VerticalFlyout
+  VerticalFlyout,
 );

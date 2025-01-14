@@ -9,14 +9,13 @@
  *
  * @class
  */
-import * as goog from '../../closure/goog/goog.js';
-goog.declareModuleId('Blockly.Events.ToolboxItemSelect');
+// Former goog.module ID: Blockly.Events.ToolboxItemSelect
 
 import * as registry from '../registry.js';
+import type {Workspace} from '../workspace.js';
 import {AbstractEventJson} from './events_abstract.js';
 import {UiBase} from './events_ui_base.js';
-import * as eventUtils from './utils.js';
-import type {Workspace} from '../workspace.js';
+import {EventType} from './type.js';
 
 /**
  * Notifies listeners that a toolbox item has been selected.
@@ -28,7 +27,7 @@ export class ToolboxItemSelect extends UiBase {
   /** The newly selected toolbox item. */
   newItem?: string;
 
-  override type = eventUtils.TOOLBOX_ITEM_SELECT;
+  override type = EventType.TOOLBOX_ITEM_SELECT;
 
   /**
    * @param opt_oldItem The previously selected toolbox item.
@@ -41,7 +40,7 @@ export class ToolboxItemSelect extends UiBase {
   constructor(
     opt_oldItem?: string | null,
     opt_newItem?: string | null,
-    opt_workspaceId?: string
+    opt_workspaceId?: string,
   ) {
     super(opt_workspaceId);
     this.oldItem = opt_oldItem ?? undefined;
@@ -72,12 +71,12 @@ export class ToolboxItemSelect extends UiBase {
   static fromJson(
     json: ToolboxItemSelectJson,
     workspace: Workspace,
-    event?: any
+    event?: any,
   ): ToolboxItemSelect {
     const newEvent = super.fromJson(
       json,
       workspace,
-      event ?? new ToolboxItemSelect()
+      event ?? new ToolboxItemSelect(),
     ) as ToolboxItemSelect;
     newEvent.oldItem = json['oldItem'];
     newEvent.newItem = json['newItem'];
@@ -92,6 +91,6 @@ export interface ToolboxItemSelectJson extends AbstractEventJson {
 
 registry.register(
   registry.Type.EVENT,
-  eventUtils.TOOLBOX_ITEM_SELECT,
-  ToolboxItemSelect
+  EventType.TOOLBOX_ITEM_SELECT,
+  ToolboxItemSelect,
 );
